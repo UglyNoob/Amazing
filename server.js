@@ -1,5 +1,5 @@
-import * as fs from 'node:fs';
-import * as net from 'node:net';
+const net = require('node:net');
+const fs = require('node:fs');
 const CLIENT_GREETING = "Client for the application";
 const SERVER_GREETING = "Server for the application";
 
