@@ -40,6 +40,15 @@ export function realTypeof(value) {
 }
 
 /**
+ * @param {mc.Player} player
+ */
+export function getGameMode(player) {
+    for(let gameMode of Object.values(mc.GameMode)) {
+        if(player.matches({gameMode: gameMode})) return gameMode;
+    }
+}
+
+/**
  * @param {mc.Player} player The player to show the object to
  * @param {Object} object The object to show
  */

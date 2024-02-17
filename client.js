@@ -4,20 +4,22 @@ const fs = require('node:fs');
 const CLIENT_GREETING = "Client for the application";
 const SERVER_GREETING = "Server for the application";
 
-let PATH_PREFIX = process.argv.slice(2).join(" ");
+let host = process.argv[2];
+let PATH_PREFIX = process.argv.slice(3).join(" ");
 
 main: {
+if(host == "") {
+    console.error("Please specify the host.");
+    break main;
+}
 if(PATH_PREFIX == "") {
     console.error("Please specify path.");
     break main;
 }
+if(PATH_PREFIX[PATH_PREFIX.length - 1] != '/') PATH_PREFIX += '/';
+console.log(`Working on ${PATH_PREFIX}\nConnecting to ${host}:8000`);
 
-console.log(`Specified path: ${PATH_PREFIX}\nNote: the path should end with / or \\`);
-
-
-let server = net.createConnection({port: 8000});
-server.on("error", () => console.log(`${Date()}: Connection lost.`));
-server.on("connect", () => {
+let server = net.createConnection(8000, host, () => {
     server.write(CLIENT_GREETING);
     server.once("data", chunk => {
         if(chunk.toString() != SERVER_GREETING) {
@@ -28,6 +30,8 @@ server.on("connect", () => {
         server.on('data', onReceiveData);
     });
 });
+server.on("error", () => console.log(`${Date()}: Connection lost.`));
+
 /**
  * @param {string[]} array
  */

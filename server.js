@@ -3,7 +3,7 @@ const fs = require('node:fs');
 const CLIENT_GREETING = "Client for the application";
 const SERVER_GREETING = "Server for the application";
 
-const PATH_PREFIX = "C:\\Users\\Administrator\\AppData\\Local\\Packages\\Microsoft.MinecraftUWP_8wekyb3d8bbwe\\LocalState\\games\\com.mojang\\development_behavior_packs\\Amazing\\";
+const PATH_PREFIX = "C:/Users/Administrator/AppData/Local/Packages/Microsoft.MinecraftUWP_8wekyb3d8bbwe/LocalState/games/com.mojang/development_behavior_packs/Amazing/";
 
 let server = net.createServer(client => {
     client.write(SERVER_GREETING);
@@ -20,8 +20,16 @@ let server = net.createServer(client => {
          * @param {string} filepath
          */
         function publish(filepath) {
-            let file = fs.openSync(PATH_PREFIX + filepath);
-            client.write(`{"filepath":"${filepath}","length":${fs.fstatSync(file).size}}`.replace('\\', '\\\\'));
+            let fullPath = PATH_PREFIX + filepath;
+            let stat = fs.statSync(fullPath);
+            if(stat.isDirectory()) {
+                for(let filename of fs.readdirSync(fullPath)) {
+                    publish(filepath + '/' + filename);
+                }
+                return;
+            }
+            let file = fs.openSync(fullPath);
+            client.write(`{"filepath":"${filepath}","length":${fs.fstatSync(file).size}}`);
             while(true) {
                 let bytesRead = fs.readSync(file, readBuffer);
                 if(bytesRead == 0) break;
@@ -31,9 +39,7 @@ let server = net.createServer(client => {
         }
         function onInput() {
             publish("manifest.json");
-            for(let filename of fs.readdirSync(PATH_PREFIX + "scripts\\")) {
-                publish(`scripts\\${filename}`);
-            }
+            publish("scripts")
 
             console.log(`${Date()}: Publish complete.`);
         }

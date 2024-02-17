@@ -88,8 +88,8 @@ mc.world.beforeEvents.itemUse.subscribe(event => {
             if(entity == player) continue;
             if(FIRESWORD_TARGET_EXCLUDE.includes(entity.typeId)) continue;
 
-            entity.applyDamage(power.damage, {cause: "fire", damagingEntity: player});
             entity.setOnFire(power.fireLasts);
+            entity.applyDamage(power.damage, {cause: "fire", damagingEntity: player});
         }
         mc.world.playSound("lt.reaction.fire", player.location);
         mc.world.playSound("fire.ignite", player.location);

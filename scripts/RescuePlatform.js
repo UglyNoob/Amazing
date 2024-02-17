@@ -1,11 +1,14 @@
 import * as mc from '@minecraft/server';
 
+import { getGameMode } from './utility';
+
 const PLATFORM_ITEM = (function() {
     let item = new mc.ItemStack("minecraft:blaze_rod", 1);
     item.nameTag = "§r§2Rescue Platform";
     item.setLore(["", "§r§eSave you from the void"]);
     return item;
 })();
+// mc.world.getPlayers()[0].getComponent("minecraft:inventory").container.addItem(PLATFORM_ITEM);
 
 const PLATFORM_COOLDOWN = 200; // in ticks
 const PLATFORM_MAX_AGE = 200; // in ticks
@@ -75,9 +78,20 @@ mc.world.beforeEvents.itemUse.subscribe(event => {
     platformLoc.y = Math.floor(platformLoc.y) - 1;
     platformLoc.z = Math.floor(platformLoc.z) - 2;
     let toLocation = event.source.location;
+    let playerGameMode = getGameMode(event.source);
     mc.system.run(() => {
         addPlatform(platformLoc, event.source.dimension);
         event.source.teleport(toLocation);
+        if(playerGameMode == mc.GameMode.survival || playerGameMode == mc.GameMode.adventure) {
+            /** @type mc.Container */
+            let container = event.source.getComponent("minecraft:inventory").container;
+            if(event.itemStack.amount > 1) {
+                event.itemStack.amount -= 1;
+                container.setItem(event.source.selectedSlot, event.itemStack);
+            } else {
+                container.setItem(event.source.selectedSlot, null);
+            }
+        }
     });
 
     alivePlatforms.push({location: platformLoc, dimension: event.source.dimension, timeStamp: mc.system.currentTick});
