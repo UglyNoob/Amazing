@@ -8,7 +8,7 @@ let host = process.argv[2];
 let PATH_PREFIX = process.argv.slice(3).join(" ");
 
 main: {
-if(host == "") {
+if(!host) {
     console.error("Please specify the host.");
     break main;
 }
