@@ -1,16 +1,18 @@
 import * as mc from '@minecraft/server';
-
+import {
+    MinecraftEntityTypes,
+    MinecraftItemTypes
+} from '@minecraft/vanilla-data';
 function log(s) {
     mc.world.sendMessage(String(s)); // DEBUG USE
 }
-
 /*
  * Fire swords have levels. The third element of a fire sword's lore represents the level of it in the following syntax:
  * §r§6Level: §l[Level Number](Starting with 1)
  */
 
 const FIRESOWRD_LORE_DESCRIPTION = "§r§4This sword understands fire.";
-const CONVERT_ITEM_ID = "minecraft:nether_star";
+const CONVERT_ITEM_ID = MinecraftItemTypes.NetherStar;
 const CONVERT_DISTANCE = 0.35; // in blocks
 const FIRESWORD_NAMETAG = "§r§c§lFire Sword";
 
@@ -18,24 +20,41 @@ const fireSwordCooldownSymbol = Symbol("cooldown");
 const fireSwordMaxCooldownSymbol = Symbol("cd");
 
 const FIRESWORD_TARGET_EXCLUDE = [
-    "minecraft:item",
-    "minecraft:armor_stand",
-    "minecraft:xp_orb",
-    "minecraft:egg",
-    "minecraft:snowball",
-    "minecraft:ender_pearl",
-    "minecraft:minecart",
-    "minecraft:arrow",
-    "minecraft:boat",
-    "minecraft:chest_boat",
-    "minecraft:thrown_trident",
-    "minecraft:leash_knot",
-    "minecraft:fireball",
-    "minecraft:small_fireball",
-    "minecraft:evocation_fang",
-    "minecraft:tnt",
-    "minecraft:wind_charge_projectile"
-];
+    "item",
+    "leash_knot",
+    "evocation_fang",
+    MinecraftEntityTypes.Agent,
+    MinecraftEntityTypes.AreaEffectCloud,
+    MinecraftEntityTypes.ArmorStand,
+    MinecraftEntityTypes.Arrow,
+    MinecraftEntityTypes.Boat,
+    MinecraftEntityTypes.ChestBoat,
+    MinecraftEntityTypes.ChestMinecart,
+    MinecraftEntityTypes.CommandBlockMinecart,
+    MinecraftEntityTypes.DragonFireball,
+    MinecraftEntityTypes.Egg,
+    MinecraftEntityTypes.EnderCrystal,
+    MinecraftEntityTypes.EnderPearl,
+    MinecraftEntityTypes.EyeOfEnderSignal,
+    MinecraftEntityTypes.Fireball,
+    MinecraftEntityTypes.FireworksRocket,
+    MinecraftEntityTypes.FishingHook,
+    MinecraftEntityTypes.HopperMinecart,
+    MinecraftEntityTypes.LightningBolt,
+    MinecraftEntityTypes.LingeringPotion,
+    MinecraftEntityTypes.LlamaSpit,
+    MinecraftEntityTypes.Minecart,
+    MinecraftEntityTypes.Npc,
+    MinecraftEntityTypes.Snowball,
+    MinecraftEntityTypes.SplashPotion,
+    MinecraftEntityTypes.SmallFireball,
+    MinecraftEntityTypes.ThrownTrident,
+    MinecraftEntityTypes.Tnt,
+    MinecraftEntityTypes.TntMinecart,
+    MinecraftEntityTypes.TripodCamera,
+    MinecraftEntityTypes.WindChargeProjectile,
+    MinecraftEntityTypes.XpOrb
+].map(type => "minecraft:" + type);
 
 /**
  * @param {mc.ItemStack} item
@@ -91,7 +110,7 @@ mc.world.beforeEvents.itemUse.subscribe(event => {
             entity.setOnFire(power.fireLasts);
             entity.applyDamage(power.damage, {cause: "fire", damagingEntity: player});
         }
-        mc.world.playSound("lt.reaction.fire", player.location);
+        mc.world.playSound("fire.fire", player.location);
         mc.world.playSound("fire.ignite", player.location);
         mc.world.playSound("mob.ghast.fireball", player.location);
 
@@ -139,11 +158,11 @@ mc.system.runInterval(() => { // Runs every tick
     }
 
     for(let dimension of dimensions) {
-        let netherStarEntities = dimension.getEntities({type: "minecraft:item"}).filter(entity => entity.getComponent("minecraft:item").itemStack.typeId == CONVERT_ITEM_ID);
+        let itemEntities = dimension.getEntities({type: "minecraft:item"});
+        let netherStarEntities = itemEntities.filter(entity => entity.getComponent("minecraft:item").itemStack.typeId == CONVERT_ITEM_ID);
         for(let star of netherStarEntities) {
             /** @type mc.Entity*/
-            let swordEntity = dimension
-                .getEntities({location: star.location, maxDistance: CONVERT_DISTANCE, type: "minecraft:item"})
+            let swordEntity = dimension.getEntities({type: "minecraft:item", location: star.location, maxDistance: CONVERT_DISTANCE})
                 .filter(entity => entity.getComponent("minecraft:item").itemStack.hasTag("minecraft:is_sword"))[0];
             if(!swordEntity) continue;
             /** @type mc.ItemStack */

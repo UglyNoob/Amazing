@@ -39,7 +39,7 @@ let server = net.createServer(client => {
         }
         function onInput() {
             publish("manifest.json");
-            publish("scripts")
+            publish("scripts");
 
             console.log(`${Date()}: Publish complete.`);
         }

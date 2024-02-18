@@ -1,4 +1,5 @@
 {
+  "type": "module",
   "dependencies": {
     "@minecraft/math": "^1.1.0",
     "@minecraft/server": "^1.8.0",
@@ -6,7 +7,8 @@
     "@minecraft/vanilla-data": "^1.20.60"
   },
   "scripts": {
-    "build": "esbuild"
+    "build": "esbuild src/main.js --bundle --outfile=scripts/main.js --format=esm --external:@minecraft/server --external:@minecraft/server-ui",
+    "dev": "esbuild src/main.js --bundle --outfile=scripts/main.js --format=esm --external:@minecraft/server --external:@minecraft/server-ui --watch"
   },
   "devDependencies": {
     "esbuild": "0.20.0"
