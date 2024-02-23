@@ -1,11 +1,7 @@
 import * as mc from '@minecraft/server';
 import * as ui from '@minecraft/server-ui';
 
-/**
- * @param {mc.ItemStack} a
- * @param {mc.ItemStack} b
- */
-export function itemEqual(a, b, compareAmount = false) {
+export function itemEqual(a: mc.ItemStack, b: mc.ItemStack, compareAmount = false) {
     let loreA = a.getLore(), loreB = b.getLore();
     return loreA.length == loreB.length &&
            (compareAmount ? a.amount == b.amount : true) &&
@@ -16,33 +12,22 @@ export function itemEqual(a, b, compareAmount = false) {
 /**
  * @param {string} name
  */
-export function getPlayerByName(name) {
+export function getPlayerByName(name: string) {
     return mc.world.getPlayers({name: name})[0];
 }
-/**
- * @param {mc.Vector3} vector1
- * @param {mc.Vector3} vector2
- */
-export function calculateDistance(vector1, vector2) {
+
+export function calculateDistance(vector1: mc.Vector3, vector2: mc.Vector3) {
     let dx = vector1.x - vector2.x;
     let dy = vector1.y - vector2.y;
     let dz = vector1.z - vector2.z;
     return Math.sqrt(dx * dx + dy * dy + dz * dz);
 }
 
-export function normalize({x = 0, y = 0, z = 0}) {
-    let mod = Math.sqrt(x * x + y * y + z * z);
-    return { x: x/mod, y: y/mod, z: z/mod };
-}
-
-export function realTypeof(value) {
+export function realTypeof(value: any) {
     return value === null ? 'null' : typeof value;
 }
 
-/**
- * @param {mc.Player} player
- */
-export function getGameMode(player) {
+export function getGameMode(player: mc.Player): mc.GameMode {
     for(let gameMode of Object.values(mc.GameMode)) {
         if(player.matches({gameMode: gameMode})) return gameMode;
     }
@@ -52,14 +37,11 @@ export function getGameMode(player) {
  * @param {mc.Player} player The player to show the object to
  * @param {Object} object The object to show
  */
-export function showObjectToPlayer(player, object) {
+export function showObjectToPlayer(player: mc.Player, object: Object) {
     /**
-    * @param {mc.Player} player
-    * @param {Object} object
-    *
-    * @returns {Promise<Boolean>} returning true means that the player cancelled.
-    */
-    async function _showObjectToPlayer(player, object, derivedObject) {
+     * @returns {Promise<Boolean>} returning true means that the player cancelled.
+     */
+    async function _showObjectToPlayer(player: mc.Player, object: Object, derivedObject: any): Promise<boolean> {
         let data = new ui.ActionFormData();
         let type = realTypeof(object);
         if(type != 'object' && type != 'function') {
@@ -70,7 +52,7 @@ export function showObjectToPlayer(player, object) {
             return response.canceled;
         }
 
-        let getObjectName = obj => obj?.constructor?.name ?? "Object";
+        let getObjectName = (obj: Object) => obj?.constructor?.name ?? "Object";
         let objectName = getObjectName(object);
         data.title(objectName);
 
@@ -109,7 +91,8 @@ export function showObjectToPlayer(player, object) {
             } else if (response.selection == 1 && hasBackButton) { // Go back
                 return false;
             } else { // Child objects and functions
-                let childIndex = hasBackButton ? response.selection - 2 : response.selection - 1;
+                let selection = response.selection as number;
+                let childIndex = hasBackButton ? selection - 2 : selection - 1;
                 if(childIndex >= childObjects.length) { // Child function
                     let child = childFunctions[childIndex - childObjects.length];
                     let result = await _showObjectToPlayer(player, child?.prototype, child?.prototype);
@@ -125,12 +108,8 @@ export function showObjectToPlayer(player, object) {
     _showObjectToPlayer(player, object, null);
 }
 
-/**
- * @param {string[]} elements Array of elements
- */
-export function defineEnum(elements) {
-    return elements.reduce((result, value, index) => {
-        result[result[index] = value] = index;
-        return result;
-    }, {});
+export function *containerIterator(container: mc.Container) {
+    for(let i = 0; i < container.size; ++i) {
+        yield container.getItem(i);
+    }
 }

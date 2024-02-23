@@ -15,13 +15,16 @@ mc.world.beforeEvents.itemUse.subscribe(event => {
         mc.system.run(() => data.show(event.source).then(response => {
             if(response.canceled) return;
             try {
-                let caller = event.source;
-                let result = new Function('mc', 'ui', 'util', 'mcMath', 'caller', `return ${response.formValues[0]}`)(
+                const caller = event.source;
+                const formValues = response.formValues as string[];
+                let result = new Function('mc', 'ui', 'util', 'mcMath', 'caller', `return ${formValues[0]}`)(
                     mc, ui, util, mcMath, caller
                 );
                 util.showObjectToPlayer(event.source, result);
             } catch(e) {
-                event.source.sendMessage(`§c${e.name}: ${e.message}\n${e?.stack}`);
+                if(e instanceof Error) {
+                    event.source.sendMessage(`§c${e.name}: ${e.message}\n${e?.stack}`);
+                }
             }
         }));
     }

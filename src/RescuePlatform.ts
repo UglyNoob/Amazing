@@ -1,6 +1,6 @@
 import * as mc from '@minecraft/server';
 
-import { getGameMode } from './utility';
+import { getGameMode } from './utility.js';
 
 const PLATFORM_ITEM = (function() {
     let item = new mc.ItemStack("minecraft:blaze_rod", 1);
@@ -8,7 +8,7 @@ const PLATFORM_ITEM = (function() {
     item.setLore(["", "§r§eSave you from the void"]);
     return item;
 })();
-// mc.world.getPlayers()[0].getComponent("minecraft:inventory").container.addItem(PLATFORM_ITEM);
+(globalThis as any).getI = (player: mc.Player) => player.getComponent("minecraft:inventory")?.container?.addItem(PLATFORM_ITEM);
 
 const PLATFORM_COOLDOWN = 200; // in ticks
 const PLATFORM_MAX_AGE = 200; // in ticks
@@ -16,23 +16,20 @@ const platformCooldownSymbol = Symbol("cooldown");
 const RESCUE_PLATFORM_PERM = mc.BlockPermutation.resolve("minecraft:slime");
 const AIR_PERM = mc.BlockPermutation.resolve("minecraft:air");
 
+type Player = mc.Player & {
+    [platformCooldownSymbol]: number
+};
+
 /**
  * @type Array<{location: mc.Vector3, dimension: mc.Dimension, timeStamp: number}> Records alive platform
  */
-let alivePlatforms = [];
+let alivePlatforms: Array<{location: mc.Vector3; dimension: mc.Dimension; timeStamp: number;}> = [];
 
-/**
- * @param {mc.ItemStack} item
- */
-function isItemRescuePlatform(item) {
+function isItemRescuePlatform(item: mc.ItemStack) {
     return item.getLore()[1] == PLATFORM_ITEM.getLore()[1];
 }
 
-/**
- * @param {mc.Vector3} location
- * @param {mc.Dimension} dimension
- */
-function addPlatform(location, dimension) {
+function addPlatform(location: mc.Vector3, dimension: mc.Dimension) {
     let begin = {x: location.x, y: location.y, z: location.z + 1};
     let end = {x: location.x, y: location.y, z: location.z + 3};
     dimension.fillBlocks(begin, end, RESCUE_PLATFORM_PERM, {matchingBlock: AIR_PERM});
@@ -46,11 +43,7 @@ function addPlatform(location, dimension) {
     dimension.fillBlocks(begin, end, RESCUE_PLATFORM_PERM, {matchingBlock: AIR_PERM});
 }
 
-/**
- * @param {mc.Vector3} location
- * @param {mc.Dimension} dimension
- */
-function removePlatform(location, dimension) {
+function removePlatform(location: mc.Vector3, dimension: mc.Dimension) {
     let begin = {x: location.x, y: location.y, z: location.z + 1};
     let end = {x: location.x, y: location.y, z: location.z + 3};
     dimension.fillBlocks(begin, end, AIR_PERM, {matchingBlock: RESCUE_PLATFORM_PERM});
@@ -66,43 +59,39 @@ function removePlatform(location, dimension) {
 
 mc.world.beforeEvents.itemUse.subscribe(event => {
     if(!isItemRescuePlatform(event.itemStack)) return;
-    let cooldown = event.source[platformCooldownSymbol];
+    let player = event.source as Player;
+    let cooldown = player[platformCooldownSymbol];
     if(cooldown > 0) {
         mc.system.run(() => {
-            event.source.onScreenDisplay.setActionBar(`§2Rescue Platform §cis not available before ${(cooldown / 20).toFixed(1)} seconds.`);
+            player.onScreenDisplay.setActionBar(`§2Rescue Platform §cis not available before ${(cooldown / 20).toFixed(1)} seconds.`);
         });
         return;
     }
-    let platformLoc = event.source.location;
+    let platformLoc = player.location;
     platformLoc.x = Math.floor(platformLoc.x) - 2;
     platformLoc.y = Math.floor(platformLoc.y) - 1;
     platformLoc.z = Math.floor(platformLoc.z) - 2;
-    let toLocation = event.source.location;
-    let playerGameMode = getGameMode(event.source);
+    let toLocation = player.location;
+    let playerGameMode = getGameMode(player);
     mc.system.run(() => {
-        addPlatform(platformLoc, event.source.dimension);
-        event.source.teleport(toLocation);
+        addPlatform(platformLoc, player.dimension);
+        player.teleport(toLocation);
         if(playerGameMode == mc.GameMode.survival || playerGameMode == mc.GameMode.adventure) {
-            /** @type mc.Container */
-            let container = event.source.getComponent("minecraft:inventory").container;
+            let container = player.getComponent("minecraft:inventory")?.container as mc.Container;
             if(event.itemStack.amount > 1) {
                 event.itemStack.amount -= 1;
-                container.setItem(event.source.selectedSlot, event.itemStack);
+                container.setItem(player.selectedSlot, event.itemStack);
             } else {
-                container.setItem(event.source.selectedSlot, null);
+                container.setItem(player.selectedSlot);
             }
         }
     });
 
-    alivePlatforms.push({location: platformLoc, dimension: event.source.dimension, timeStamp: mc.system.currentTick});
-    event.source[platformCooldownSymbol] = PLATFORM_COOLDOWN;
+    alivePlatforms.push({location: platformLoc, dimension: player.dimension, timeStamp: mc.system.currentTick});
+    player[platformCooldownSymbol] = PLATFORM_COOLDOWN;
 });
 
-/**
- * @param {mc.Vector3} platformLoc
- * @param {mc.Vector3} blockLoc
- */
-function isPartOfPlatform(platformLoc, blockLoc) {
+function isPartOfPlatform(platformLoc: mc.Vector3, blockLoc: mc.Vector3) {
     if(!(blockLoc.x >= platformLoc.x &&
         blockLoc.z >= platformLoc.z &&
         blockLoc.y == platformLoc.y &&
@@ -123,7 +112,7 @@ mc.world.beforeEvents.playerBreakBlock.subscribe(event => {
 });
 
 mc.system.runInterval(() => {
-    for(let player of mc.world.getAllPlayers()) {
+    for(let player of mc.world.getAllPlayers() as Iterable<Player>) {
         if(!player[platformCooldownSymbol]) player[platformCooldownSymbol] = 0;
         if(player[platformCooldownSymbol] > 0) -- player[platformCooldownSymbol];
     }

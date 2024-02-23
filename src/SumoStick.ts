@@ -1,20 +1,19 @@
-import {
-    normalize
-} from './utility.js'
-
 import * as mc from '@minecraft/server';
+import {
+    Vector3Utils
+} from '@minecraft/math';
 import {
     MinecraftEntityTypes,
     MinecraftItemTypes
 } from '@minecraft/vanilla-data';
 
-function log(s) {
+function log(s: any) {
     mc.world.sendMessage(String(s)); // FOR DEBUG USE
 }
 
 const THE_STICK_ITEM = (() => {
     let item = new mc.ItemStack(MinecraftItemTypes.Stick, 1);
-    item.nameTag = "§r§eA Regular Stick";
+    item.nameTag = "§r§eSumo Stick";
     item.setLore(["", "§r§bThe stick of §g§oNETHERITE§r§b."]);
     return item;
 })();
@@ -25,6 +24,9 @@ const POWER_COOLDOWN = 50; // in ticks
 const POWER_EFFECTS_RAMGE = 5; // in blocks
 const POWER_SLOWNESS_EFFECT_DURATION = 15; // in ticks
 const powerCooldownSymbol = Symbol("powerCooldown");
+type Player = mc.Player & {
+    [powerCooldownSymbol]: number
+};
 const POWER_TARGET_EXCLUDES = [
     "item",
     "leash_knot",
@@ -40,17 +42,11 @@ const POWER_TARGET_EXCLUDES = [
     MinecraftEntityTypes.XpOrb
 ].map(type => "minecraft:" + type);
 
-/**
- * @param {mc.ItemStack} item
- */
-function isTheStick(item) {
+function isItemSumoStick(item: mc.ItemStack) {
     return item.getLore()[1] == THE_STICK_ITEM.getLore()[1];
 }
 
-/**
- * @param {mc.Player} player
- */
-function performPower(player) {
+function performPower(player: mc.Player) {
     let dimension = player.dimension;
     // Entities within range
     let entities = player.dimension.getEntities({
@@ -60,18 +56,19 @@ function performPower(player) {
     for(let entity of entities) {
         let success = false;
         try {
-            let vector = normalize({
+            let vector = Vector3Utils.normalize({
                 x: entity.location.x - player.location.x,
                 y: entity.location.y - player.location.y + 0.4,
                 z: entity.location.z - player.location.z
             });
-            for(let i in vector) vector[i] *= 2.5;
+            vector = Vector3Utils.scale(vector, 2.5)
             entity.applyImpulse(vector);
             success = true;
         } catch {
             try{
-                let {x, z} = normalize({
+                let {x, z} = Vector3Utils.normalize({
                     x: entity.location.x - player.location.x,
+                    y: 0,
                     z: entity.location.z - player.location.z
                 });
                 entity.applyKnockback(x, z, 4, 0.7);
@@ -95,9 +92,9 @@ function performPower(player) {
 }
 
 mc.world.beforeEvents.itemUse.subscribe((event) => {
-    if(!isTheStick(event.itemStack)) return;
+    if(!isItemSumoStick(event.itemStack)) return;
     mc.system.run(() => {
-        let player = event.source;
+        let player = event.source as Player;
         let cooldown = player[powerCooldownSymbol];
         if(cooldown === undefined) return;
         if(cooldown != 0) {
@@ -121,9 +118,8 @@ mc.world.beforeEvents.itemUse.subscribe((event) => {
 });
 
 mc.system.runInterval(() => {
-    /** @type Set<mc.Dimension> */
-    let dimensions = new Set();
-    for(let player of mc.world.getAllPlayers()) {
+    let dimensions: Set<mc.Dimension> = new Set();
+    for(let player of mc.world.getAllPlayers() as Iterable<Player>) {
         dimensions.add(player.dimension);
 
         if(player[powerCooldownSymbol] === undefined) {
@@ -132,9 +128,9 @@ mc.system.runInterval(() => {
         if(player[powerCooldownSymbol] > 0) --player[powerCooldownSymbol];
 
         if(mc.system.currentTick % 4 == 0) {
-            let inventory = player.getComponent("minecraft:inventory").container;
+            let inventory = player.getComponent("minecraft:inventory")?.container as mc.Container;
             let selectedItem = inventory.getItem(player.selectedSlot);
-            if(selectedItem && isTheStick(selectedItem)) {
+            if(selectedItem && isItemSumoStick(selectedItem)) {
                 if(player[powerCooldownSymbol] == 0)
                     player.onScreenDisplay.setActionBar("§b§lThe §mpower §bis ready");
                 else
@@ -143,25 +139,22 @@ mc.system.runInterval(() => {
         }
     }
     for(let dimension of dimensions) {
-        const convertItemEntities = dimension.getEntities({type: "minecraft:item"}).filter(i => i.getComponent("minecraft:item").itemStack.typeId == CONVERT_ITEM_ID);
+        const convertItemEntities = dimension.getEntities({type: "minecraft:item"}).filter(i => i.getComponent("minecraft:item")?.itemStack.typeId == CONVERT_ITEM_ID);
         for(let convertItemEntity of convertItemEntities) {
-            /** @type mc.ItemStack */
-            let convertItem = convertItemEntity.getComponent("minecraft:item").itemStack;
+            let convertItem = convertItemEntity.getComponent("minecraft:item")?.itemStack as mc.ItemStack;
             let convertItemAmount = convertItem.amount;
             let itemEntitiesToConvert = dimension.getEntities({
                 type: "minecraft:item",
                 location: convertItemEntity.location,
                 maxDistance: CONVERT_DISTANCE
             }).filter(entity => {
-                /** @type mc.ItemStack */
-                let itemStack = entity.getComponent("minecraft:item").itemStack;
+                let itemStack = entity.getComponent("minecraft:item")?.itemStack as mc.ItemStack;
                 return itemStack.typeId == THE_STICK_ITEM.typeId &&
-                       !isTheStick(itemStack);
+                       !isItemSumoStick(itemStack);
             });
             if(itemEntitiesToConvert.length == 0) continue;
             for(let itemEntityToConvert of itemEntitiesToConvert) {
-                /** @type mc.ItemStack */
-                let itemToConvert = itemEntityToConvert.getComponent("minecraft:item").itemStack;
+                let itemToConvert = itemEntityToConvert.getComponent("minecraft:item")?.itemStack as mc.ItemStack;
                 let convertAmount = Math.min(convertItem.amount, itemToConvert.amount);
                 let convertedItemStack = THE_STICK_ITEM.clone();
                 convertedItemStack.amount = convertAmount;

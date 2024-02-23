@@ -1,5 +1,7 @@
 import * as mc from '@minecraft/server';
-import { defineEnum, showObjectToPlayer } from './utility.js';
+import { showObjectToPlayer } from './utility.js';
+
+function defineEnum() {}
 
 /*
  * Bed occupies two blocks
