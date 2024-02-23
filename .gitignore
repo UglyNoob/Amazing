@@ -1,2 +1,5 @@
 node_modules/
 scripts/
+
+pnpm-lock.yaml
+package-lock.json
