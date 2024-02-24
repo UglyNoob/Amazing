@@ -1,5 +1,8 @@
-const net = require('node:net');
-const fs = require('node:fs');
+// const net = require('node:net');
+// const fs = require('node:fs');
+import * as net from 'node:net';
+import * as fs from 'node:fs';
+
 const CLIENT_GREETING = "Client for the application";
 const SERVER_GREETING = "Server for the application";
 
@@ -50,4 +53,4 @@ let server = net.createServer(client => {
         });
     });
 });
-server.listen(8000);
+server.listen(8537);

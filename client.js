@@ -1,5 +1,7 @@
-const net = require('node:net');
-const fs = require('node:fs');
+// const net = require('node:net');
+// const fs = require('node:fs');
+import * as net from 'node:net';
+import * as fs from 'node:fs';
 
 const CLIENT_GREETING = "Client for the application";
 const SERVER_GREETING = "Server for the application";
@@ -17,9 +19,9 @@ if(PATH_PREFIX == "") {
     break main;
 }
 if(PATH_PREFIX[PATH_PREFIX.length - 1] != '/') PATH_PREFIX += '/';
-console.log(`Working on ${PATH_PREFIX}\nConnecting to ${host}:8000`);
+console.log(`Working on ${PATH_PREFIX}\nConnecting to ${host}:8537`);
 
-let server = net.createConnection(8000, host, () => {
+let server = net.createConnection(8537, host, () => {
     server.write(CLIENT_GREETING);
     server.once("data", chunk => {
         if(chunk.toString() != SERVER_GREETING) {

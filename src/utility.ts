@@ -12,7 +12,7 @@ export function itemEqual(a: mc.ItemStack, b: mc.ItemStack, compareAmount = fals
 /**
  * @param {string} name
  */
-export function getPlayerByName(name: string) {
+export function getPlayerByName(name: string): mc.Player | undefined {
     return mc.world.getPlayers({name: name})[0];
 }
 
@@ -31,6 +31,7 @@ export function getGameMode(player: mc.Player): mc.GameMode {
     for(let gameMode of Object.values(mc.GameMode)) {
         if(player.matches({gameMode: gameMode})) return gameMode;
     }
+    throw new Error("Player's gamemode doesn't match");
 }
 
 /**

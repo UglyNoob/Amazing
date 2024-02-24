@@ -8,7 +8,7 @@
   },
   "scripts": {
     "build": "esbuild src/main.ts --bundle --minify --outfile=scripts/main.js --format=esm --external:@minecraft/server --external:@minecraft/server-ui",
-    "dev": "esbuild src/main.ts --bundle --sourcemap --outfile=scripts/main.js --format=esm --external:@minecraft/server --external:@minecraft/server-ui --watch"
+    "dev": "esbuild src/main.ts --bundle --outfile=scripts/main.js --format=esm --external:@minecraft/server --external:@minecraft/server-ui --watch"
   },
   "devDependencies": {
     "esbuild": "0.20.1"
