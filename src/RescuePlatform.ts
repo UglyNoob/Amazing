@@ -3,7 +3,7 @@ import * as mc from '@minecraft/server';
 import { getGameMode } from './utility.js';
 
 const PLATFORM_ITEM = (function() {
-    let item = new mc.ItemStack("minecraft:blaze_rod", 1);
+    const item = new mc.ItemStack("minecraft:blaze_rod", 1);
     item.nameTag = "§r§2Rescue Platform";
     item.setLore(["", "§r§eSave you from the void"]);
     return item;
@@ -23,7 +23,7 @@ type Player = mc.Player & {
 /**
  * @type Array<{location: mc.Vector3, dimension: mc.Dimension, timeStamp: number}> Records alive platform
  */
-let alivePlatforms: Array<{ location: mc.Vector3; dimension: mc.Dimension; timeStamp: number; }> = [];
+const alivePlatforms: Array<{ location: mc.Vector3; dimension: mc.Dimension; timeStamp: number; }> = [];
 
 function isItemRescuePlatform(item: mc.ItemStack) {
     return item.getLore()[1] == PLATFORM_ITEM.getLore()[1];
@@ -70,25 +70,25 @@ function removePlatform(location: mc.Vector3, dimension: mc.Dimension) {
 
 mc.world.beforeEvents.itemUse.subscribe(event => {
     if (!isItemRescuePlatform(event.itemStack)) return;
-    let player = event.source as Player;
-    let cooldown = player[platformCooldownSymbol];
+    const player = event.source as Player;
+    const cooldown = player[platformCooldownSymbol];
     if (cooldown > 0) {
         mc.system.run(() => {
-            player.onScreenDisplay.setActionBar(`§cPlease wait §4${(cooldown / 20).toFixed(1)} seconds`);
+            player.onScreenDisplay.setActionBar(`§cPlease wait §g${(cooldown / 20).toFixed(1)} §cseconds`);
         });
         return;
     }
-    let platformLoc = player.location;
+    const platformLoc = player.location;
     platformLoc.x = Math.floor(platformLoc.x) - 2;
     platformLoc.y = Math.floor(platformLoc.y) - 1;
     platformLoc.z = Math.floor(platformLoc.z) - 2;
-    let toLocation = player.location;
-    let playerGameMode = getGameMode(player);
+    const toLocation = player.location;
+    const playerGameMode = getGameMode(player);
     mc.system.run(() => {
         addPlatform(platformLoc, player.dimension);
         player.teleport(toLocation);
         if (playerGameMode == mc.GameMode.survival || playerGameMode == mc.GameMode.adventure) {
-            let container = player.getComponent("minecraft:inventory")?.container as mc.Container;
+            const container = player.getComponent("minecraft:inventory")?.container as mc.Container;
             if (event.itemStack.amount > 1) {
                 event.itemStack.amount -= 1;
                 container.setItem(player.selectedSlot, event.itemStack);
@@ -103,7 +103,7 @@ mc.world.beforeEvents.itemUse.subscribe(event => {
 });
 
 mc.world.beforeEvents.playerBreakBlock.subscribe(event => {
-    for (let platform of alivePlatforms) {
+    for (const platform of alivePlatforms) {
         if (event.dimension != platform.dimension) continue;
         if (!isPartOfPlatform(platform.location, event.block.location)) continue;
         if (event.block.permutation == RESCUE_PLATFORM_PERM)
@@ -112,12 +112,12 @@ mc.world.beforeEvents.playerBreakBlock.subscribe(event => {
 });
 
 mc.system.runInterval(() => {
-    for (let player of mc.world.getAllPlayers() as Iterable<Player>) {
+    for (const player of mc.world.getAllPlayers() as Iterable<Player>) {
         if (!player[platformCooldownSymbol]) player[platformCooldownSymbol] = 0;
         if (player[platformCooldownSymbol] > 0) --player[platformCooldownSymbol];
     }
-    let current = mc.system.currentTick;
-    let deadPlatformIndices: number[] = [];
+    const current = mc.system.currentTick;
+    const deadPlatformIndices: number[] = [];
     let index = 0;
     for (let platform of alivePlatforms) {
         if (current - platform.timeStamp >= PLATFORM_MAX_AGE) {

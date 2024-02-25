@@ -5,24 +5,24 @@ import * as mcMath from '@minecraft/math';
 import * as util from './utility.js';
 
 mc.world.beforeEvents.itemUse.subscribe(event => {
-    if(event.itemStack.nameTag === "Debug Stick") {
-        if(!event.source.isOp()) return;
+    if (!event.source.isOp()) return;
+    if (event.itemStack.nameTag === "Debug Stick") {
         event.cancel = true;
 
         let data = new ui.ModalFormData();
         data.title("Debug Stick");
-        data.textField("Enter expersion", "expersion...");
+        data.textField("Enter expression", "expression...");
         mc.system.run(() => data.show(event.source).then(response => {
-            if(response.canceled) return;
+            if (response.canceled) return;
             try {
-                const caller = event.source;
-                const formValues = response.formValues as string[];
-                let result = new Function('mc', 'ui', 'util', 'mcMath', 'caller', `return ${formValues[0]}`)(
-                    mc, ui, util, mcMath, caller
+                const me = event.source;
+                const formValues = response.formValues;
+                let result = new Function('mc', 'ui', 'util', 'mcMath', 'me', `return ${formValues[0]}`)(
+                    mc, ui, util, mcMath, me
                 );
                 util.showObjectToPlayer(event.source, result);
-            } catch(e) {
-                if(e instanceof Error) {
+            } catch (e) {
+                if (e instanceof Error) {
                     event.source.sendMessage(`§c${e.name}: ${e.message}\n${e?.stack}`);
                 }
             }

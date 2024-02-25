@@ -1,6 +1,6 @@
 import * as mc from '@minecraft/server';
 import {
-    Vector3Utils
+    Vector3Builder
 } from '@minecraft/math';
 import {
     MinecraftEntityTypes,
@@ -12,7 +12,7 @@ function log(s: any) {
 }
 
 const THE_STICK_ITEM = (() => {
-    let item = new mc.ItemStack(MinecraftItemTypes.Stick, 1);
+    const item = new mc.ItemStack(MinecraftItemTypes.Stick, 1);
     item.nameTag = "§r§eSumo Stick";
     item.setLore(["", "§r§bThe stick of §g§oNETHERITE§r§b."]);
     return item;
@@ -47,35 +47,34 @@ function isItemSumoStick(item: mc.ItemStack) {
 }
 
 function performPower(player: mc.Player) {
-    let dimension = player.dimension;
+    const dimension = player.dimension;
     // Entities within range
-    let entities = player.dimension.getEntities({
+    const entities = player.dimension.getEntities({
         location: player.location,
         maxDistance: POWER_EFFECTS_RAMGE
     }).filter(entity => entity != player && !POWER_TARGET_EXCLUDES.includes(entity.typeId));
-    for(let entity of entities) {
+    for (let entity of entities) {
         let success = false;
         try {
-            let vector = Vector3Utils.normalize({
+            let vector = new Vector3Builder({
                 x: entity.location.x - player.location.x,
                 y: entity.location.y - player.location.y + 0.4,
                 z: entity.location.z - player.location.z
-            });
-            vector = Vector3Utils.scale(vector, 2.5)
+            }).scale(2.5);
             entity.applyImpulse(vector);
             success = true;
         } catch {
-            try{
-                let {x, z} = Vector3Utils.normalize({
+            try {
+                const { x, z } = new Vector3Builder({
                     x: entity.location.x - player.location.x,
                     y: 0,
                     z: entity.location.z - player.location.z
-                });
+                }).normalize();
                 entity.applyKnockback(x, z, 4, 0.7);
                 success = true;
-            } catch {}
+            } catch { }
         }
-        if(success) {
+        if (success) {
             let times = 5;
             mc.system.run(function temp() {
                 let location;
@@ -85,25 +84,25 @@ function performPower(player: mc.Player) {
                 } catch { return; }
                 location.y += 0.2;
                 dimension.spawnParticle("minecraft:large_explosion", location);
-                if(--times != 0) mc.system.runTimeout(temp, 2);
+                if (--times != 0) mc.system.runTimeout(temp, 2);
             });
         }
     }
 }
 
 mc.world.beforeEvents.itemUse.subscribe((event) => {
-    if(!isItemSumoStick(event.itemStack)) return;
+    if (!isItemSumoStick(event.itemStack)) return;
     mc.system.run(() => {
-        let player = event.source as Player;
-        let cooldown = player[powerCooldownSymbol];
-        if(cooldown === undefined) return;
-        if(cooldown != 0) {
+        const player = event.source as Player;
+        const cooldown = player[powerCooldownSymbol];
+        if (cooldown === undefined) return;
+        if (cooldown != 0) {
             player.onScreenDisplay.setActionBar(`§1§lThe power is still under emerging... ${(cooldown / 20).toFixed(1)}s`);
             return;
         }
 
         performPower(player);
-        player.addEffect("slowness", POWER_SLOWNESS_EFFECT_DURATION, {amplifier: 1, showParticles: false});
+        player.addEffect("slowness", POWER_SLOWNESS_EFFECT_DURATION, { amplifier: 1, showParticles: false });
         mc.world.playSound("mob.enderdragon.flap", player.location);
 
         player.onScreenDisplay.setTitle(" ", {
@@ -118,53 +117,54 @@ mc.world.beforeEvents.itemUse.subscribe((event) => {
 });
 
 mc.system.runInterval(() => {
-    let dimensions: Set<mc.Dimension> = new Set();
-    for(let player of mc.world.getAllPlayers() as Iterable<Player>) {
+    const dimensions: Set<mc.Dimension> = new Set();
+    for (const player of mc.world.getAllPlayers() as Iterable<Player>) {
         dimensions.add(player.dimension);
 
-        if(player[powerCooldownSymbol] === undefined) {
+        if (player[powerCooldownSymbol] === undefined) {
             player[powerCooldownSymbol] = 0;
         }
-        if(player[powerCooldownSymbol] > 0) --player[powerCooldownSymbol];
+        if (player[powerCooldownSymbol] > 0) --player[powerCooldownSymbol];
 
-        if(mc.system.currentTick % 4 == 0) {
-            let inventory = player.getComponent("minecraft:inventory")?.container as mc.Container;
-            let selectedItem = inventory.getItem(player.selectedSlot);
-            if(selectedItem && isItemSumoStick(selectedItem)) {
-                if(player[powerCooldownSymbol] == 0)
+        if (mc.system.currentTick % 4 == 0) {
+            const inventory = player.getComponent("minecraft:inventory")?.container as mc.Container;
+            const selectedItem = inventory.getItem(player.selectedSlot);
+            if (selectedItem && isItemSumoStick(selectedItem)) {
+                if (player[powerCooldownSymbol] == 0)
                     player.onScreenDisplay.setActionBar("§b§lThe §mpower §bis ready");
                 else
                     player.onScreenDisplay.setActionBar(`§1§lThe power is still under emerging... ${(player[powerCooldownSymbol] / 20).toFixed(1)}s`);
             }
         }
     }
-    for(let dimension of dimensions) {
-        const convertItemEntities = dimension.getEntities({type: "minecraft:item"}).filter(i => i.getComponent("minecraft:item")?.itemStack.typeId == CONVERT_ITEM_ID);
-        for(let convertItemEntity of convertItemEntities) {
-            let convertItem = convertItemEntity.getComponent("minecraft:item")?.itemStack as mc.ItemStack;
+    for (const dimension of dimensions) {
+        const convertItemEntities = dimension.getEntities({ type: "minecraft:item" }).
+            filter(i => i.getComponent("minecraft:item")?.itemStack.typeId == CONVERT_ITEM_ID);
+        for (const convertItemEntity of convertItemEntities) {
+            const convertItem = convertItemEntity.getComponent("minecraft:item")?.itemStack as mc.ItemStack;
             let convertItemAmount = convertItem.amount;
-            let itemEntitiesToConvert = dimension.getEntities({
+            const itemEntitiesToConvert = dimension.getEntities({
                 type: "minecraft:item",
                 location: convertItemEntity.location,
                 maxDistance: CONVERT_DISTANCE
             }).filter(entity => {
-                let itemStack = entity.getComponent("minecraft:item")?.itemStack as mc.ItemStack;
+                const itemStack = entity.getComponent("minecraft:item")?.itemStack as mc.ItemStack;
                 return itemStack.typeId == THE_STICK_ITEM.typeId &&
-                       !isItemSumoStick(itemStack);
+                    !isItemSumoStick(itemStack);
             });
-            if(itemEntitiesToConvert.length == 0) continue;
-            for(let itemEntityToConvert of itemEntitiesToConvert) {
-                let itemToConvert = itemEntityToConvert.getComponent("minecraft:item")?.itemStack as mc.ItemStack;
+            if (itemEntitiesToConvert.length == 0) continue;
+            for (const itemEntityToConvert of itemEntitiesToConvert) {
+                const itemToConvert = itemEntityToConvert.getComponent("minecraft:item")?.itemStack as mc.ItemStack;
+                const convertedItemStack = THE_STICK_ITEM.clone();
                 let convertAmount = Math.min(convertItem.amount, itemToConvert.amount);
-                let convertedItemStack = THE_STICK_ITEM.clone();
                 convertedItemStack.amount = convertAmount;
 
                 dimension.spawnItem(convertedItemStack, itemEntityToConvert.location);
                 itemEntityToConvert.kill();
                 convertItemAmount -= convertAmount;
-                if(convertItemAmount == 0) break;
+                if (convertItemAmount == 0) break;
             }
-            if(convertItemAmount >= 1) {
+            if (convertItemAmount >= 1) {
                 convertItem.amount = convertItemAmount;
                 dimension.spawnItem(convertItem, convertItemEntity.location);
             }
