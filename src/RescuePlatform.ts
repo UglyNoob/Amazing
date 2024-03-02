@@ -8,7 +8,7 @@ const PLATFORM_ITEM = (function() {
     item.setLore(["", "§r§eSave you from the void"]);
     return item;
 })();
-(globalThis as any).getI = (player: mc.Player) => player.getComponent("minecraft:inventory")?.container?.addItem(PLATFORM_ITEM);
+(globalThis as any).getI = (player: mc.Player) => player.getComponent("minecraft:inventory")!.container!.addItem(PLATFORM_ITEM); // DEBUG
 
 const PLATFORM_COOLDOWN = 200; // in ticks
 const PLATFORM_MAX_AGE = 200; // in ticks
@@ -16,13 +16,12 @@ const platformCooldownSymbol = Symbol("cooldown");
 const RESCUE_PLATFORM_PERM = mc.BlockPermutation.resolve("minecraft:slime");
 const AIR_PERM = mc.BlockPermutation.resolve("minecraft:air");
 
-type Player = mc.Player & {
-    [platformCooldownSymbol]: number
-};
+declare module '@minecraft/server' {
+    interface Player {
+        [platformCooldownSymbol]: number
+    }
+}
 
-/**
- * @type Array<{location: mc.Vector3, dimension: mc.Dimension, timeStamp: number}> Records alive platform
- */
 const alivePlatforms: Array<{ location: mc.Vector3; dimension: mc.Dimension; timeStamp: number; }> = [];
 
 function isItemRescuePlatform(item: mc.ItemStack) {
@@ -70,7 +69,7 @@ function removePlatform(location: mc.Vector3, dimension: mc.Dimension) {
 
 mc.world.beforeEvents.itemUse.subscribe(event => {
     if (!isItemRescuePlatform(event.itemStack)) return;
-    const player = event.source as Player;
+    const player = event.source;
     const cooldown = player[platformCooldownSymbol];
     if (cooldown > 0) {
         mc.system.run(() => {
@@ -88,7 +87,7 @@ mc.world.beforeEvents.itemUse.subscribe(event => {
         addPlatform(platformLoc, player.dimension);
         player.teleport(toLocation);
         if (playerGameMode == mc.GameMode.survival || playerGameMode == mc.GameMode.adventure) {
-            const container = player.getComponent("minecraft:inventory")?.container as mc.Container;
+            const container = player.getComponent("minecraft:inventory")!.container!;
             if (event.itemStack.amount > 1) {
                 event.itemStack.amount -= 1;
                 container.setItem(player.selectedSlot, event.itemStack);
@@ -112,7 +111,7 @@ mc.world.beforeEvents.playerBreakBlock.subscribe(event => {
 });
 
 mc.system.runInterval(() => {
-    for (const player of mc.world.getAllPlayers() as Iterable<Player>) {
+    for (const player of mc.world.getAllPlayers()) {
         if (!player[platformCooldownSymbol]) player[platformCooldownSymbol] = 0;
         if (player[platformCooldownSymbol] > 0) --player[platformCooldownSymbol];
     }

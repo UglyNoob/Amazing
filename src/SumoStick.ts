@@ -24,9 +24,12 @@ const POWER_COOLDOWN = 50; // in ticks
 const POWER_EFFECTS_RAMGE = 5; // in blocks
 const POWER_SLOWNESS_EFFECT_DURATION = 15; // in ticks
 const powerCooldownSymbol = Symbol("powerCooldown");
-type Player = mc.Player & {
-    [powerCooldownSymbol]: number
-};
+declare module '@minecraft/server' {
+    interface Player {
+        [powerCooldownSymbol]: number
+    }
+}
+
 const POWER_TARGET_EXCLUDES = [
     "item",
     "leash_knot",
@@ -93,7 +96,7 @@ function performPower(player: mc.Player) {
 mc.world.beforeEvents.itemUse.subscribe((event) => {
     if (!isItemSumoStick(event.itemStack)) return;
     mc.system.run(() => {
-        const player = event.source as Player;
+        const player = event.source;
         const cooldown = player[powerCooldownSymbol];
         if (cooldown === undefined) return;
         if (cooldown != 0) {
@@ -118,7 +121,7 @@ mc.world.beforeEvents.itemUse.subscribe((event) => {
 
 mc.system.runInterval(() => {
     const dimensions: Set<mc.Dimension> = new Set();
-    for (const player of mc.world.getAllPlayers() as Iterable<Player>) {
+    for (const player of mc.world.getAllPlayers()) {
         dimensions.add(player.dimension);
 
         if (player[powerCooldownSymbol] === undefined) {
@@ -127,7 +130,7 @@ mc.system.runInterval(() => {
         if (player[powerCooldownSymbol] > 0) --player[powerCooldownSymbol];
 
         if (mc.system.currentTick % 4 == 0) {
-            const inventory = player.getComponent("minecraft:inventory")?.container as mc.Container;
+            const inventory = player.getComponent("minecraft:inventory")!.container!;
             const selectedItem = inventory.getItem(player.selectedSlot);
             if (selectedItem && isItemSumoStick(selectedItem)) {
                 if (player[powerCooldownSymbol] == 0)
@@ -139,22 +142,22 @@ mc.system.runInterval(() => {
     }
     for (const dimension of dimensions) {
         const convertItemEntities = dimension.getEntities({ type: "minecraft:item" }).
-            filter(i => i.getComponent("minecraft:item")?.itemStack.typeId == CONVERT_ITEM_ID);
+            filter(i => i.getComponent("minecraft:item")!.itemStack.typeId == CONVERT_ITEM_ID);
         for (const convertItemEntity of convertItemEntities) {
-            const convertItem = convertItemEntity.getComponent("minecraft:item")?.itemStack as mc.ItemStack;
+            const convertItem = convertItemEntity.getComponent("minecraft:item")!.itemStack;
             let convertItemAmount = convertItem.amount;
             const itemEntitiesToConvert = dimension.getEntities({
                 type: "minecraft:item",
                 location: convertItemEntity.location,
                 maxDistance: CONVERT_DISTANCE
             }).filter(entity => {
-                const itemStack = entity.getComponent("minecraft:item")?.itemStack as mc.ItemStack;
+                const itemStack = entity.getComponent("minecraft:item")!.itemStack;
                 return itemStack.typeId == THE_STICK_ITEM.typeId &&
                     !isItemSumoStick(itemStack);
             });
             if (itemEntitiesToConvert.length == 0) continue;
             for (const itemEntityToConvert of itemEntitiesToConvert) {
-                const itemToConvert = itemEntityToConvert.getComponent("minecraft:item")?.itemStack as mc.ItemStack;
+                const itemToConvert = itemEntityToConvert.getComponent("minecraft:item")!.itemStack;
                 const convertedItemStack = THE_STICK_ITEM.clone();
                 let convertAmount = Math.min(convertItem.amount, itemToConvert.amount);
                 convertedItemStack.amount = convertAmount;

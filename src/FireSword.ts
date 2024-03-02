@@ -1,4 +1,3 @@
-import { Vector3Builder } from '@minecraft/math';
 import * as mc from '@minecraft/server';
 import {
     MinecraftEntityTypes,
@@ -20,10 +19,12 @@ const FIRESWORD_NAMETAG = "§r§c§lFire Sword";
 const fireSwordCooldownSymbol = Symbol("cooldown");
 const fireSwordMaxCooldownSymbol = Symbol("cd");
 
-type Player = mc.Player & {
-    [fireSwordCooldownSymbol]: number,
-    [fireSwordMaxCooldownSymbol]: number
-};
+declare module '@minecraft/server' {
+    interface Player {
+        [fireSwordCooldownSymbol]: number;
+        [fireSwordMaxCooldownSymbol]: number;
+    }
+}
 
 const FIRESWORD_TARGET_EXCLUDE = [
     "item",
@@ -90,7 +91,7 @@ function getFireSwordPower(level: number) {
 }
 
 mc.world.beforeEvents.itemUse.subscribe(event => {
-    const player = event.source as Player;
+    const player = event.source;
     const level = getFireSwordLevel(event.itemStack);
     const power = getFireSwordPower(level);
     if (level == 0) return;
@@ -114,7 +115,7 @@ mc.world.beforeEvents.itemUse.subscribe(event => {
     });
 });
 
-function showPlayerFireSwordCooldownStatus(player: Player) {
+function showPlayerFireSwordCooldownStatus(player: mc.Player) {
     if (player[fireSwordCooldownSymbol] == 0) {
         player.onScreenDisplay.setActionBar(`§b§lThe §cFire Sword §bis ready`);
         return;
@@ -129,7 +130,7 @@ function showPlayerFireSwordCooldownStatus(player: Player) {
 
 mc.system.runInterval(() => { // Runs every tick
     const dimensions: Set<mc.Dimension> = new Set();
-    for (const player of mc.world.getAllPlayers() as Iterable<Player>) {
+    for (const player of mc.world.getAllPlayers()) {
         dimensions.add(player.dimension);
 
         if (player[fireSwordCooldownSymbol] === undefined) {
@@ -138,7 +139,7 @@ mc.system.runInterval(() => { // Runs every tick
         }
         if (player[fireSwordCooldownSymbol] > 0) --player[fireSwordCooldownSymbol];
 
-        const inventory = player.getComponent("minecraft:inventory")?.container as mc.Container;
+        const inventory = player.getComponent("minecraft:inventory")!.container!;
         const selectedItem = inventory.getItem(player.selectedSlot);
         if (selectedItem && isFireSword(selectedItem)) {
             if (mc.system.currentTick % 4 == 0) {
@@ -157,18 +158,18 @@ mc.system.runInterval(() => { // Runs every tick
 
     for (const dimension of dimensions) {
         const itemEntities = dimension.getEntities({ type: "minecraft:item" });
-        const netherStarEntities = itemEntities.filter(entity => entity.getComponent("minecraft:item")?.itemStack.typeId == CONVERT_ITEM_ID);
+        const netherStarEntities = itemEntities.filter(entity => entity.getComponent("minecraft:item")!.itemStack.typeId == CONVERT_ITEM_ID);
         for (const star of netherStarEntities) {
             const swordEntity = dimension.getEntities({ type: "minecraft:item", location: star.location, maxDistance: CONVERT_DISTANCE })
-                .filter(entity => entity.getComponent("minecraft:item")?.itemStack.hasTag("minecraft:is_sword"))[0];
+                .filter(entity => entity.getComponent("minecraft:item")!.itemStack.hasTag("minecraft:is_sword"))[0];
             if (!swordEntity) continue;
-            const swordItem = swordEntity.getComponent("minecraft:item")?.itemStack as mc.ItemStack;
+            const swordItem = swordEntity.getComponent("minecraft:item")!.itemStack;
 
             upgradeFireSword(swordItem);
 
             dimension.spawnItem(swordItem, swordEntity.location);
             swordEntity.kill();
-            const starItem = star.getComponent("minecraft:item")?.itemStack as mc.ItemStack;
+            const starItem = star.getComponent("minecraft:item")!.itemStack;
             if (starItem.amount >= 2) {
                 --starItem.amount;
                 dimension.spawnItem(starItem, star.location);
