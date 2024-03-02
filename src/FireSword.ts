@@ -60,7 +60,7 @@ const FIRESWORD_TARGET_EXCLUDE = [
     MinecraftEntityTypes.TntMinecart,
     MinecraftEntityTypes.TripodCamera,
     MinecraftEntityTypes.WindChargeProjectile,
-    MinecraftEntityTypes.XpOrb
+    MinecraftEntityTypes.XpOrb,
 ].map(type => "minecraft:" + type);
 
 function upgradeFireSword(item: mc.ItemStack) {
@@ -149,7 +149,7 @@ mc.system.runInterval(() => { // Runs every tick
                 const loc = Object.assign({}, player.location);
                 const tick = mc.system.currentTick;
                 loc.x += Math.sin(tick / 10) * 1.5;
-                loc.y += 0.3;
+                loc.y += tick % 60 / 30;
                 loc.z += Math.cos(tick / 10) * 1.5;
                 player.dimension.spawnParticle("minecraft:basic_flame_particle", loc);
             }
