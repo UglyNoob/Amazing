@@ -11,9 +11,9 @@ const PATH_PREFIX = "C:/Users/Administrator/AppData/Local/Packages/Microsoft.Min
 let server = net.createServer(client => {
     client.write(SERVER_GREETING);
     client.once("data", chunk => {
-        if(chunk.toString() != CLIENT_GREETING) {
+        if (chunk.toString() != CLIENT_GREETING) {
             console.log(`${Date()}: Connection failed`);
-            client.on("error", () => {});
+            client.on("error", () => { });
             return;
         }
         console.log(`${Date()}: Connected.\nPress enter to publish.`);
@@ -25,17 +25,17 @@ let server = net.createServer(client => {
         function publish(filepath) {
             let fullPath = PATH_PREFIX + filepath;
             let stat = fs.statSync(fullPath);
-            if(stat.isDirectory()) {
-                for(let filename of fs.readdirSync(fullPath)) {
+            if (stat.isDirectory()) {
+                for (let filename of fs.readdirSync(fullPath)) {
                     publish(filepath + '/' + filename);
                 }
                 return;
             }
             let file = fs.openSync(fullPath);
             client.write(`{"filepath":"${filepath}","length":${fs.fstatSync(file).size}}`);
-            while(true) {
+            while (true) {
                 let bytesRead = fs.readSync(file, readBuffer);
-                if(bytesRead == 0) break;
+                if (bytesRead == 0) break;
                 client.write(readBuffer.subarray(0, bytesRead));
             }
             fs.close(file);
