@@ -80,11 +80,10 @@ function performPower(player: mc.Player) {
         if (success) {
             let times = 5;
             mc.system.run(function temp() {
+                if(!entity.isValid()) return;
                 let location;
-                try {
-                    // entity object may be released by the game engine
-                    location = entity.location;
-                } catch { return; }
+                // entity object may be released by the game engine
+                location = entity.location;
                 location.y += 0.2;
                 dimension.spawnParticle("minecraft:large_explosion", location);
                 if (--times != 0) mc.system.runTimeout(temp, 2);

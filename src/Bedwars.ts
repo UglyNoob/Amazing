@@ -1,5 +1,7 @@
+import { Vector3Utils } from '@minecraft/math';
 import * as mc from '@minecraft/server';
 import * as ui from '@minecraft/server-ui';
+import { MinecraftEntityTypes } from '@minecraft/vanilla-data';
 
 enum GeneratorType {
     IronGold,
@@ -21,11 +23,16 @@ interface TeamInformation {
     shopLocation: mc.Vector3;
     teamGenerator: GeneratorInformation;
     bedLocation: [mc.Vector3, mc.Vector3];
+    playerSpawn: mc.Vector3;
 }
 interface MapInformation {
     teams: TeamInformation[];
     extraGenerators: GeneratorInformation[];
-    size: mc.Vector3
+    size: mc.Vector3;
+    /**
+     * Used to detect respawning player
+     */
+    fallbackRespawnPoint: mc.Vector3;
 }
 
 function* mapGeneratorsIterator(map: MapInformation) {
@@ -37,6 +44,7 @@ function* mapGeneratorsIterator(map: MapInformation) {
 
 const testMap: MapInformation = {
     size: {x: 21, y: 3, z: 5},
+    fallbackRespawnPoint: {x: 0, y: 200, z: 0},
     teams: [
         {
             type: TeamType.Red,
@@ -45,7 +53,8 @@ const testMap: MapInformation = {
                 type: GeneratorType.IronGold,
                 location: {x: 1, y: 1, z: 2}
             },
-            bedLocation: [{x: 4, y: 1, z: 2}, {x: 5, y: 1, z: 2}]
+            bedLocation: [{x: 4, y: 1, z: 2}, {x: 5, y: 1, z: 2}],
+            playerSpawn: {x: 3, y: 1, z: 2}
         },
         {
             type: TeamType.Blue,
@@ -54,7 +63,8 @@ const testMap: MapInformation = {
                 type: GeneratorType.IronGold,
                 location: {x: 19, y: 1, z: 2}
             },
-            bedLocation: [{x: 16, y: 0, z: 2}, {x: 15, y: 1, z: 2}]
+            bedLocation: [{x: 16, y: 0, z: 2}, {x: 15, y: 1, z: 2}],
+            playerSpawn: {x: 17, y: 1, z: 2}
         }
     ],
     extraGenerators: [
@@ -75,6 +85,7 @@ const testMap: MapInformation = {
 
 enum PlayerState {
     Alive,
+    Offline,
     Respawning,
     Spectating
 }
@@ -89,46 +100,95 @@ enum GameState {
     started
 }
 
-interface PlayerInformation {
-    nametag: string,
-    team: TeamType,
-    state: PlayerState
+interface PlayerGameInformation {
+    name: string;
+    team: TeamType;
+    state: PlayerState;
+    player: mc.Player;
 }
 class Game {
-    readonly map: MapInformation;
-    readonly players: PlayerInformation[];
-    readonly teamStates: Map<TeamType, TeamState>;
-    readonly originLocation: mc.Vector3;
-    readonly state: GameState;
+    private map: MapInformation;
+    private players: {
+        [name: string]: PlayerGameInformation
+    };
+    private teamStates: Map<TeamType, TeamState>;
+    private originLocation: mc.Vector3;
+    private state: GameState;
+
 
     constructor({map: _map, originLocation : _origin}: {map: MapInformation, originLocation: mc.Vector3}) {
         this.map = _map;
         this.originLocation = _origin;
         this.state = GameState.waiting;
-        this.players = [];
+        this.players = Object.create(null);
         this.teamStates = new Map();
         for(const team of this.map.teams) {
             this.teamStates.set(team.type, TeamState.BedAlive);
         }
     }
 
-    setPlayer(playerNameTag: string, team: TeamType) {
+    setPlayer(player: mc.Player, team: TeamType) {
         console.assert(this.state == GameState.waiting);
-        const index = this.players.findIndex(value => value.nametag == playerNameTag);
-        if(index >= 0) {
-            this.players[index].team = team;
+        if(this.players[player.name]) {
+            this.players[player.name].team = team;
             return;
         }
-        this.players.push({
-            nametag: playerNameTag,
+        this.players[player.name] = {
+            name: player.name,
             state: PlayerState.Alive,
+            player,
             team
-        });
+        };
+    }
+    
+    start() {
+        console.assert(this.state == GameState.waiting);
+        this.state = GameState.started;
+        for(const playerInfo of Object.values(this.players)) {
+            if(!playerInfo.player.isValid()) {
+                playerInfo.state = PlayerState.Offline;
+                continue;
+            }
+        }
     }
 
-    
-}
+    tickEvent() {
+        for(let playerInfo of Object.values(this.players)) {
 
-function startGame(map: MapInformation, coord: mc.Vector3) {
-    ;
-}
+        }
+    }
+
+    afterEntityDie(event: mc.EntityDieAfterEvent) {
+        if (event.deadEntity.typeId != MinecraftEntityTypes.Player) return;
+        let player = event.deadEntity as mc.Player;
+        if(!this.players[player.name]) return;
+
+        player.setSpawnPoint(Object.assign({dimension: player.dimension}, Vector3Utils.add(this.originLocation, player.location)));
+    }
+    beforePlayerInteractWithBlock(event: mc.PlayerInteractWithBlockBeforeEvent) {}
+    beforePlayerBreakBlock(event: mc.PlayerBreakBlockBeforeEvent) {}
+};
+
+let game: Game;
+
+mc.world.beforeEvents.chatSend.subscribe(event => {
+    if(event.message == "start") {
+        event.cancel = true;
+        game = new Game({map: testMap, originLocation: {x: -17, y: 5, z: 32}});
+    }
+})
+
+mc.world.afterEvents.entityDie.subscribe(event => {
+    if(game) {
+        game.afterEntityDie(event);
+    }
+});
+mc.world.beforeEvents.playerBreakBlock.subscribe(event => {
+    if(game) {
+        game.beforePlayerBreakBlock(event);
+    }
+});
+mc.world.beforeEvents.itemUse.subscribe(event => {
+    if(game) {
+    }
+});
