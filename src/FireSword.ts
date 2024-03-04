@@ -117,7 +117,7 @@ mc.world.beforeEvents.itemUse.subscribe(event => {
 
 function showPlayerFireSwordCooldownStatus(player: mc.Player) {
     if (player[fireSwordCooldownSymbol] == 0) {
-        player.onScreenDisplay.setActionBar(`§b§lThe §cFire Sword §bis ready`);
+        player.onScreenDisplay.setActionBar(`§c§lFire Sword §bis ready`);
         return;
     }
     const length = 30;
@@ -148,9 +148,15 @@ mc.system.runInterval(() => { // Runs every tick
             if (player[fireSwordCooldownSymbol] == 0) { // Show flame particle effect
                 const loc = Object.assign({}, player.location);
                 const tick = mc.system.currentTick;
-                loc.x += Math.sin(tick / 10) * 1.5;
+                loc.x += Math.sin(tick / 5);
                 loc.y += tick % 60 / 30;
-                loc.z += Math.cos(tick / 10) * 1.5;
+                loc.z += Math.cos(tick / 5);
+                player.dimension.spawnParticle("minecraft:basic_flame_particle", loc);
+
+                Object.assign(loc, player.location);
+                loc.x += Math.sin(tick / 5 + Math.PI);
+                loc.y += (tick + 30) % 60 / 30
+                loc.z += Math.cos(tick / 5 + Math.PI);
                 player.dimension.spawnParticle("minecraft:basic_flame_particle", loc);
             }
         }

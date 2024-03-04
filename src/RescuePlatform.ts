@@ -38,19 +38,23 @@ function isPartOfPlatform(platformLoc: mc.Vector3, blockLoc: mc.Vector3) {
         && (blockLoc.z == platformLoc.z || blockLoc.z == platformLoc.z + 4)) return false;
     return true;
 }
-
-function addPlatform(location: mc.Vector3, dimension: mc.Dimension) {
+/**
+ * @returns returns whether platform adding succeeds
+ */
+function tryAddingPlatform(location: mc.Vector3, dimension: mc.Dimension) {
     let begin = { x: location.x, y: location.y, z: location.z + 1 };
     let end = { x: location.x, y: location.y, z: location.z + 3 };
-    dimension.fillBlocks(begin, end, RESCUE_PLATFORM_PERM, { matchingBlock: AIR_PERM });
+    let blockPlaced = 0;
+    blockPlaced += dimension.fillBlocks(begin, end, RESCUE_PLATFORM_PERM, { matchingBlock: AIR_PERM });
 
     begin = { x: location.x + 1, y: location.y, z: location.z };
     end = { x: location.x + 3, y: location.y, z: location.z + 4 };
-    dimension.fillBlocks(begin, end, RESCUE_PLATFORM_PERM, { matchingBlock: AIR_PERM });
+    blockPlaced += dimension.fillBlocks(begin, end, RESCUE_PLATFORM_PERM, { matchingBlock: AIR_PERM });
 
     begin = { x: location.x + 4, y: location.y, z: location.z + 1 };
     end = { x: location.x + 4, y: location.y, z: location.z + 3 };
-    dimension.fillBlocks(begin, end, RESCUE_PLATFORM_PERM, { matchingBlock: AIR_PERM });
+    blockPlaced += dimension.fillBlocks(begin, end, RESCUE_PLATFORM_PERM, { matchingBlock: AIR_PERM });
+    return blockPlaced > 0;
 }
 
 function removePlatform(location: mc.Vector3, dimension: mc.Dimension) {
@@ -73,7 +77,7 @@ mc.world.beforeEvents.itemUse.subscribe(event => {
     const cooldown = player[platformCooldownSymbol];
     if (cooldown > 0) {
         mc.system.run(() => {
-            player.onScreenDisplay.setActionBar(`§cPlease wait §g${(cooldown / 20).toFixed(1)} §cseconds`);
+            player.onScreenDisplay.setActionBar(`§cPlease wait for §g${(cooldown / 20).toFixed(1)} §cseconds`);
         });
         return;
     }
@@ -84,7 +88,10 @@ mc.world.beforeEvents.itemUse.subscribe(event => {
     const toLocation = player.location;
     const playerGameMode = getGameMode(player);
     mc.system.run(() => {
-        addPlatform(platformLoc, player.dimension);
+        if(!tryAddingPlatform(platformLoc, player.dimension)) {
+            player.onScreenDisplay.setActionBar("§cCannot deploy platform here");
+            return;
+        }
         player.teleport(toLocation);
         if (playerGameMode == mc.GameMode.survival || playerGameMode == mc.GameMode.adventure) {
             const container = player.getComponent("minecraft:inventory")!.container!;
@@ -95,10 +102,10 @@ mc.world.beforeEvents.itemUse.subscribe(event => {
                 container.setItem(player.selectedSlot);
             }
         }
-    });
 
-    alivePlatforms.push({ location: platformLoc, dimension: player.dimension, timeStamp: mc.system.currentTick });
-    player[platformCooldownSymbol] = PLATFORM_COOLDOWN;
+        alivePlatforms.push({ location: platformLoc, dimension: player.dimension, timeStamp: mc.system.currentTick });
+        player[platformCooldownSymbol] = PLATFORM_COOLDOWN;
+    });
 });
 
 mc.world.beforeEvents.playerBreakBlock.subscribe(event => {
