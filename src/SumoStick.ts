@@ -6,6 +6,7 @@ import {
     MinecraftEntityTypes,
     MinecraftItemTypes
 } from '@minecraft/vanilla-data';
+import { getGameMode } from './utility.js';
 
 function log(s: any) {
     mc.world.sendMessage(String(s)); // FOR DEBUG USE
@@ -13,7 +14,7 @@ function log(s: any) {
 
 const THE_STICK_ITEM = (() => {
     const item = new mc.ItemStack(MinecraftItemTypes.Stick, 1);
-    item.nameTag = "§r§eSumo Stick";
+    item.nameTag = "§r§fSumo Stick";
     item.setLore(["", "§r§bThe stick of §g§oNETHERITE§r§b."]);
     return item;
 })();
@@ -80,7 +81,7 @@ function performPower(player: mc.Player) {
         if (success) {
             let times = 5;
             mc.system.run(function temp() {
-                if(!entity.isValid()) return;
+                if (!entity.isValid()) return;
                 let location;
                 // entity object may be released by the game engine
                 location = entity.location;
@@ -99,7 +100,7 @@ mc.world.beforeEvents.itemUse.subscribe((event) => {
         const cooldown = player[powerCooldownSymbol];
         if (cooldown === undefined) return;
         if (cooldown != 0) {
-            player.onScreenDisplay.setActionBar(`§1§lThe power is still under emerging... ${(cooldown / 20).toFixed(1)}s`);
+            player.onScreenDisplay.setActionBar(`§1§lEmerging... ${(cooldown / 20).toFixed(1)}s`);
             return;
         }
 
@@ -121,6 +122,7 @@ mc.world.beforeEvents.itemUse.subscribe((event) => {
 mc.system.runInterval(() => {
     const dimensions: Set<mc.Dimension> = new Set();
     for (const player of mc.world.getAllPlayers()) {
+        if (getGameMode(player) == mc.GameMode.spectator) continue;
         dimensions.add(player.dimension);
 
         if (player[powerCooldownSymbol] === undefined) {
@@ -133,9 +135,9 @@ mc.system.runInterval(() => {
             const selectedItem = inventory.getItem(player.selectedSlot);
             if (selectedItem && isItemSumoStick(selectedItem)) {
                 if (player[powerCooldownSymbol] == 0)
-                    player.onScreenDisplay.setActionBar("§b§lThe §mpower §bis ready");
+                    player.onScreenDisplay.setActionBar("§l§eSumo Stick §bis ready");
                 else
-                    player.onScreenDisplay.setActionBar(`§1§lThe power is still under emerging... ${(player[powerCooldownSymbol] / 20).toFixed(1)}s`);
+                    player.onScreenDisplay.setActionBar(`§1§lEmerging... ${(player[powerCooldownSymbol] / 20).toFixed(1)}s`);
             }
         }
     }

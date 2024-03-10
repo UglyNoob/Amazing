@@ -8,5 +8,6 @@ import './GameTest.js';
 import * as mc from '@minecraft/server';
 // DEBUG DEBUG DEBUG
 mc.system.beforeEvents.watchdogTerminate.subscribe(event => {
+    event.cancel = true;
     mc.world.sendMessage(`§4Yall gotta be careful! ${event.terminateReason}`);
 });

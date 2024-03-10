@@ -114,3 +114,11 @@ export function* containerIterator(container: mc.Container) {
         yield container.getItem(i);
     }
 }
+
+export function assert(predicate: boolean, message?: string) {
+    if (!predicate) throw new Error(message);
+}
+
+export function sleep(ticks: number): Promise<void> {
+    return new Promise(resolve => mc.system.runTimeout(resolve, ticks));
+}

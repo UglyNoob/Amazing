@@ -16,7 +16,38 @@ mc.world.beforeEvents.itemUse.subscribe(event => {
             if (response.canceled) return;
             try {
                 const me = event.source;
-                let result = new Function('mc', 'ui', 'util', 'mcMath', 'me', `return ${response.formValues![0]}`)(
+                let code = "const ___players = []\nfor(const p of mc.world.getAllPlayers()){___players.push(p)\n}";
+                let index = 0;
+                for(const player of mc.world.getAllPlayers()) {
+                    let name = player.name;
+                    { // does the name prefix with digit
+                        const head = player.name.codePointAt(0);
+                        if(head && head >= 48 && head <= 57) {
+                            name = "p" + name;
+                        }
+                    }
+                    name = name.replaceAll(' ', '_');
+                    name = name.replaceAll(',', '_');
+                    name = name.replaceAll(';', '_');
+                    name = name.replaceAll('?', '_');
+                    name = name.replaceAll('!', '_');
+                    name = name.replaceAll('+', '_');
+                    name = name.replaceAll('-', '_');
+                    name = name.replaceAll('*', '_');
+                    name = name.replaceAll('/', '_');
+                    name = name.replaceAll('{', '_');
+                    name = name.replaceAll('}', '_');
+                    name = name.replaceAll('[', '_');
+                    name = name.replaceAll(']', '_');
+                    name = name.replaceAll('.', '_');
+                    name = name.replaceAll('\\', '_');
+                    name = name.replaceAll('<', '_');
+                    name = name.replaceAll('>', '_');
+                    code += `${name} = ___players[${index}]\n`;
+                    ++index;
+                }
+                code += `return ${response.formValues![0]}`;
+                let result = new Function('mc', 'ui', 'util', 'mcMath', 'me', code)(
                     mc, ui, util, mcMath, me
                 );
                 util.showObjectToPlayer(event.source, result);

@@ -3,6 +3,7 @@ import {
     MinecraftEntityTypes,
     MinecraftItemTypes
 } from '@minecraft/vanilla-data';
+import { getGameMode } from './utility.js';
 function log(s: any) {
     mc.world.sendMessage(String(s)); // DEBUG USE
 }
@@ -131,6 +132,7 @@ function showPlayerFireSwordCooldownStatus(player: mc.Player) {
 mc.system.runInterval(() => { // Runs every tick
     const dimensions: Set<mc.Dimension> = new Set();
     for (const player of mc.world.getAllPlayers()) {
+        if (getGameMode(player) == mc.GameMode.spectator) continue;
         dimensions.add(player.dimension);
 
         if (player[fireSwordCooldownSymbol] === undefined) {

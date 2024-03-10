@@ -2,7 +2,7 @@ import * as mc from '@minecraft/server';
 
 import { getGameMode } from './utility.js';
 
-const PLATFORM_ITEM = (function() {
+const PLATFORM_ITEM = (function () {
     const item = new mc.ItemStack("minecraft:blaze_rod", 1);
     item.nameTag = "§r§2Rescue Platform";
     item.setLore(["", "§r§eSave you from the void"]);
@@ -11,7 +11,7 @@ const PLATFORM_ITEM = (function() {
 (globalThis as any).getI = (player: mc.Player) => player.getComponent("minecraft:inventory")!.container!.addItem(PLATFORM_ITEM); // DEBUG
 
 const PLATFORM_COOLDOWN = 200; // in ticks
-const PLATFORM_MAX_AGE = 200; // in ticks
+const PLATFORM_MAX_AGE = 300; // in ticks
 const platformCooldownSymbol = Symbol("cooldown");
 const RESCUE_PLATFORM_PERM = mc.BlockPermutation.resolve("minecraft:slime");
 const AIR_PERM = mc.BlockPermutation.resolve("minecraft:air");
@@ -88,7 +88,7 @@ mc.world.beforeEvents.itemUse.subscribe(event => {
     const toLocation = player.location;
     const playerGameMode = getGameMode(player);
     mc.system.run(() => {
-        if(!tryAddingPlatform(platformLoc, player.dimension)) {
+        if (!tryAddingPlatform(platformLoc, player.dimension)) {
             player.onScreenDisplay.setActionBar("§cCannot deploy platform here");
             return;
         }
