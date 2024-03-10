@@ -63,7 +63,7 @@ function performPower(player: mc.Player) {
                 x: entity.location.x - player.location.x,
                 y: entity.location.y - player.location.y + 0.4,
                 z: entity.location.z - player.location.z
-            }).scale(2.5);
+            }).normalize().scale(1.75);
             entity.applyImpulse(vector);
             success = true;
         } catch {

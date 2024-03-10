@@ -16,7 +16,7 @@ mc.world.beforeEvents.itemUse.subscribe(event => {
             if (response.canceled) return;
             try {
                 const me = event.source;
-                let result = new Function('mc', 'ui', 'util', 'mcMath', 'me', `return ${response.formValues[0]}`)(
+                let result = new Function('mc', 'ui', 'util', 'mcMath', 'me', `return ${response.formValues![0]}`)(
                     mc, ui, util, mcMath, me
                 );
                 util.showObjectToPlayer(event.source, result);

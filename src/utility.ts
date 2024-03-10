@@ -63,8 +63,8 @@ export function showObjectToPlayer(player: mc.Player, object: any) {
 
         let bodyText = `§pContent of §n${objectName}§p:`;
         let childObjects = [];
-        let childFunctions = [];
-        let childFunctionNames = [];
+        let childFunctions: Function[] = [];
+        let childFunctionNames: string[] = [];
         for (let key of Object.getOwnPropertyNames(object)) {
             let value = Reflect.get(object, key, derived ?? object);
             let valueType = realTypeof(value);
@@ -96,7 +96,7 @@ export function showObjectToPlayer(player: mc.Player, object: any) {
                 let childIndex = hasBackButton ? selection - 2 : selection - 1;
                 if (childIndex >= childObjects.length) { // Child function
                     let child = childFunctions[childIndex - childObjects.length];
-                    let result = await _showObjectToPlayer(player, child?.prototype, child?.prototype);
+                    let result = await _showObjectToPlayer(player, child.prototype, child.prototype);
                     if (result) return true;
                 } else { // Child object
                     let child = childObjects[childIndex];
