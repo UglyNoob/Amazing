@@ -1,7 +1,6 @@
-import { VECTOR3_NORTH, Vector3Utils as v3 } from '@minecraft/math';
+import { Vector3Utils as v3 } from '@minecraft/math';
 import * as mc from '@minecraft/server';
 import * as ui from '@minecraft/server-ui';
-import { MinecraftBlockTypes, MinecraftEntityTypes } from '@minecraft/vanilla-data';
 import { sleep } from './utility.js';
 import { setupGameTest } from './GameTest.js';
 
@@ -141,17 +140,6 @@ class Game {
         }
     }
 
-    private respawnPlayer(playerInfo: PlayerGameInformation) {
-        if (playerInfo.state == PlayerState.Offline) return;
-        const teamInfo = this.map.teams.find((ele) => ele.type === playerInfo.team)!;
-        const spawnPoint = v3.add(teamInfo.playerSpawn, this.originLocation);
-        playerInfo.player.teleport(spawnPoint, { facingLocation: v3.add(spawnPoint, teamInfo.playerSpawnViewDirection) });
-        playerInfo.player.runCommand("gamemode survival");
-        playerInfo.player.getComponent("minecraft:health")!.resetToMaxValue();
-        playerInfo.player.extinguishFire();
-        playerInfo.state = PlayerState.Alive;
-    }
-
     setPlayer(player: mc.Player, team: TeamType) {
         if (this.players[player.name]) {
             this.players[player.name].team = team;
@@ -179,13 +167,25 @@ class Game {
         }
     }
 
+    private respawnPlayer(playerInfo: PlayerGameInformation) {
+        const teamInfo = this.map.teams.find(ele => ele.type === playerInfo.team)!;
+        const spawnPoint = v3.add(teamInfo.playerSpawn, this.originLocation);
+        playerInfo.player.teleport(spawnPoint, { facingLocation: v3.add(spawnPoint, teamInfo.playerSpawnViewDirection) });
+        playerInfo.player.runCommand("gamemode survival");
+        playerInfo.player.getComponent("minecraft:health")!.resetToMaxValue();
+        playerInfo.player.extinguishFire();
+        playerInfo.state = PlayerState.Alive;
+    }
+
     tickEvent() {
         if (this.state != GameState.started) return;
         for (let playerInfo of Object.values(this.players)) {
             if (v3.distance(v3.add(this.originLocation, this.map.fallbackRespawnPoint), playerInfo.player.location) <= 1) {
-                playerInfo.state = PlayerState.Respawning;
                 playerInfo.player.runCommand("gamemode spectator");
                 playerInfo.player.teleport(playerInfo.deathLocation, { rotation: playerInfo.deathRotaion });
+                if(playerInfo.state == PlayerState.dead) {
+                    playerInfo.state = PlayerState.Respawning;
+                }
             }
 
             if (playerInfo.state == PlayerState.Respawning) {
@@ -208,14 +208,22 @@ class Game {
         if (!this.players[player.name]) return;
 
         const playerInfo = this.players[player.name];
-        playerInfo.state = PlayerState.dead;
         playerInfo.deathTime = mc.system.currentTick;
         playerInfo.deathLocation = player.location;
         playerInfo.deathRotaion = player.getRotation();
+        if(this.teamStates.get(playerInfo.team) == TeamState.BedDestoryed) {
+            playerInfo.state = PlayerState.Spectating;
+        } else {
+            playerInfo.state = PlayerState.dead;
+        }
 
         player.setSpawnPoint(Object.assign({ dimension: player.dimension }, v3.add(this.originLocation, this.map.fallbackRespawnPoint)));
+
     }
     beforePlayerInteractWithBlock(event: mc.PlayerInteractWithBlockBeforeEvent) {
+        if (this.state != GameState.started) return;
+    }
+    beforePlayerInteractWithEntity(event: mc.PlayerInteractWithEntityBeforeEvent) {
         if (this.state != GameState.started) return;
     }
     async beforePlayerBreakBlock(event: mc.PlayerBreakBlockBeforeEvent) {
@@ -267,6 +275,11 @@ mc.world.beforeEvents.playerBreakBlock.subscribe(event => {
 });
 mc.world.beforeEvents.itemUse.subscribe(event => {
     if (game) {
+    }
+});
+mc.world.beforeEvents.playerInteractWithEntity.subscribe(event => {
+    if(game) {
+        game.beforePlayerInteractWithEntity(event);
     }
 });
 mc.system.runInterval(() => {
