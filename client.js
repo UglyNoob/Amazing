@@ -1,3 +1,4 @@
+#! /usr/bin/env node
 // const net = require('node:net');
 // const fs = require('node:fs');
 import * as net from 'node:net';
@@ -5,6 +6,7 @@ import * as fs from 'node:fs';
 
 const CLIENT_GREETING = "Client for the application";
 const SERVER_GREETING = "Server for the application";
+const PORT = 8537;
 
 let host = process.argv[2];
 let PATH_PREFIX = process.argv.slice(3).join(" ");
@@ -18,10 +20,14 @@ main: {
         console.error("Please specify path.");
         break main;
     }
-    if (PATH_PREFIX[PATH_PREFIX.length - 1] != '/') PATH_PREFIX += '/';
-    console.log(`Working on ${PATH_PREFIX}\nConnecting to ${host}:8537`);
+    {
+        let last;
+        for (last of PATH_PREFIX);
+        if (last != '/') PATH_PREFIX += '/';
+    }
+    console.log(`Working on ${PATH_PREFIX}\nConnecting to ${host}:${PORT}`);
 
-    let server = net.createConnection(8537, host, () => {
+    let server = net.createConnection(PORT, host, () => {
         server.write(CLIENT_GREETING);
         server.once("data", chunk => {
             if (chunk.toString() != SERVER_GREETING) {

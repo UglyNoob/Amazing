@@ -1,11 +1,19 @@
 import { Vector3Utils as v3 } from '@minecraft/math';
 import * as mc from '@minecraft/server';
 import * as ui from '@minecraft/server-ui';
-import { sleep } from './utility.js';
+import { getPlayerByName, sleep } from './utility.js';
 import { setupGameTest } from './GameTest.js';
+import { MinecraftItemTypes } from '@minecraft/vanilla-data';
 
 const RESPAWN_TIME = 100; // in ticks
 const AIR_PERM = mc.BlockPermutation.resolve("minecraft:air");
+const IRONGOLD_GENERATOR_INTERVAL = 200;
+const DIAMOND_GENERATOR_INTERVAL = 300;
+const EMERLAD_GENERATOR_INTERVAL = 400;
+const IRON_ITEM_STACK = new mc.ItemStack(MinecraftItemTypes.IronIngot);
+const GOLD_ITEM_STACK = new mc.ItemStack(MinecraftItemTypes.GoldIngot);
+const DIAMOND_ITEM_STACK = new mc.ItemStack(MinecraftItemTypes.Diamond);
+const EMERALD_ITEM_STACK = new mc.ItemStack(MinecraftItemTypes.Emerald);
 
 enum GeneratorType {
     IronGold,
@@ -19,8 +27,9 @@ enum TeamType {
     Green = "green"
 }
 interface GeneratorInformation {
-    location: mc.Vector3;
     type: GeneratorType;
+    spawnLocation: mc.Vector3;
+    defaultInterval: number;
 }
 interface TeamInformation {
     type: TeamType;
@@ -56,7 +65,8 @@ const testMap: MapInformation = {
             shopLocation: { x: 6, y: 2, z: 4 },
             teamGenerator: {
                 type: GeneratorType.IronGold,
-                location: { x: 1, y: 1, z: 2 }
+                spawnLocation: { x: 1.5, y: 1.5, z: 2.5 },
+                defaultInterval: IRONGOLD_GENERATOR_INTERVAL
             },
             bedLocation: [{ x: 4, y: 1, z: 2 }, { x: 5, y: 1, z: 2 }],
             playerSpawn: { x: 3.5, y: 1, z: 2.5 },
@@ -67,7 +77,8 @@ const testMap: MapInformation = {
             shopLocation: { x: 14, y: 0, z: 0 },
             teamGenerator: {
                 type: GeneratorType.IronGold,
-                location: { x: 19, y: 1, z: 2 }
+                spawnLocation: { x: 19.5, y: 1.5, z: 2.5 },
+                defaultInterval: IRONGOLD_GENERATOR_INTERVAL
             },
             bedLocation: [{ x: 16, y: 1, z: 2 }, { x: 15, y: 1, z: 2 }],
             playerSpawn: { x: 17.5, y: 1, z: 2.5 },
@@ -77,18 +88,21 @@ const testMap: MapInformation = {
     extraGenerators: [
         {
             type: GeneratorType.Diamond,
-            location: { x: 10, y: 0, z: 0 }
+            spawnLocation: { x: 10.5, y: 1, z: 0.5 },
+            defaultInterval: DIAMOND_GENERATOR_INTERVAL
         },
         {
             type: GeneratorType.Diamond,
-            location: { x: 10, y: 0, z: 4 }
+            spawnLocation: { x: 10.5, y: 1, z: 4.5 },
+            defaultInterval: DIAMOND_GENERATOR_INTERVAL
         },
         {
             type: GeneratorType.Emerald,
-            location: { x: 10, y: 0, z: 2 }
+            spawnLocation: { x: 10.5, y: 1, z: 2.5 },
+            defaultInterval: EMERLAD_GENERATOR_INTERVAL
         }
     ]
-}
+};
 
 enum PlayerState {
     Alive,
@@ -108,6 +122,18 @@ enum GameState {
     started
 }
 
+type GeneratorGameInformation = {
+    spawnLocation: mc.Vector3;
+    type: GeneratorType;
+    interval: number;
+    remainingCooldown: number;
+} & ({
+    belongToTeam: true;
+    team: TeamType;
+} | {
+    belongToTeam: false;
+});
+
 interface PlayerGameInformation {
     name: string;
     team: TeamType;
@@ -126,6 +152,7 @@ class Game {
     private originLocation: mc.Vector3;
     private state: GameState;
     private dimension: mc.Dimension;
+    private generators: GeneratorGameInformation[];
 
 
     constructor({ map: _map, originLocation: _origin, dimension: _dimension }: { map: MapInformation, originLocation: mc.Vector3, dimension: mc.Dimension }) {
@@ -137,6 +164,27 @@ class Game {
         this.teamStates = new Map();
         for (const team of this.map.teams) {
             this.teamStates.set(team.type, TeamState.BedAlive);
+        }
+        this.generators = [];
+        for (const teamInfo of this.map.teams) {
+            const genInfo = teamInfo.teamGenerator;
+            this.generators.push({
+                spawnLocation: genInfo.spawnLocation,
+                type: genInfo.type,
+                interval: genInfo.defaultInterval,
+                remainingCooldown: 0,
+                belongToTeam: true,
+                team: teamInfo.type
+            });
+        }
+        for (const genInfo of this.map.extraGenerators) {
+            this.generators.push({
+                spawnLocation: genInfo.spawnLocation,
+                type: genInfo.type,
+                interval: genInfo.defaultInterval,
+                remainingCooldown: 0,
+                belongToTeam: false
+            });
         }
     }
 
@@ -165,6 +213,9 @@ class Game {
             }
             this.respawnPlayer(playerInfo);
         }
+        for (const gen of this.generators) {
+            gen.remainingCooldown = gen.interval;
+        }
     }
 
     private respawnPlayer(playerInfo: PlayerGameInformation) {
@@ -177,13 +228,37 @@ class Game {
         playerInfo.state = PlayerState.Alive;
     }
 
+    getMainShopMenu(playerInfo: PlayerGameInformation) {
+        ;
+    }
+    private async openShopMenuForPlayer(playerInfo: PlayerGameInformation) {
+        while (true) {
+            const form = new ui.ActionFormData();
+            form.title("Shop");
+            form.body("Buy something");
+
+            const response = await form.show(playerInfo.player);
+            if (playerInfo.state != PlayerState.Alive) return;
+            if (response.canceled) return;
+        }
+    }
+
     tickEvent() {
         if (this.state != GameState.started) return;
-        for (let playerInfo of Object.values(this.players)) {
-            if (v3.distance(v3.add(this.originLocation, this.map.fallbackRespawnPoint), playerInfo.player.location) <= 1) {
-                playerInfo.player.runCommand("gamemode spectator");
-                playerInfo.player.teleport(playerInfo.deathLocation, { rotation: playerInfo.deathRotaion });
-                if(playerInfo.state == PlayerState.dead) {
+        for (const playerInfo of Object.values(this.players)) {
+            if (playerInfo.state == PlayerState.Offline) continue;
+            const player = playerInfo.player;
+            if (!player.isValid()) {
+                playerInfo.state = PlayerState.Offline;
+                continue;
+            }
+
+            if (v3.distance(v3.add(this.originLocation, this.map.fallbackRespawnPoint), player.location) <= 1) {
+                player.runCommand("gamemode spectator");
+                player.teleport(playerInfo.deathLocation, { rotation: playerInfo.deathRotaion });
+                player.onScreenDisplay.setTitle("You died!");
+                player.onScreenDisplay.setActionBar("Respawning...");
+                if (playerInfo.state == PlayerState.dead) {
                     playerInfo.state = PlayerState.Respawning;
                 }
             }
@@ -195,9 +270,35 @@ class Game {
                     continue;
                 }
                 if (remainingTicks % 20 == 0) {
-                    playerInfo.player.onScreenDisplay.setActionBar(`Respawning... ${Math.ceil(remainingTicks / 20)} seconds`);
+                    player.onScreenDisplay.setActionBar(`Respawning... ${Math.ceil(remainingTicks / 20)} seconds`);
                 }
             }
+        }
+        for (const gen of this.generators) {
+            --gen.remainingCooldown;
+            if (gen.remainingCooldown != 0) continue;
+
+            gen.remainingCooldown = gen.interval;
+            const location = v3.add(gen.spawnLocation, this.originLocation);
+
+            let itemEntity: mc.Entity;
+            switch (gen.type) {
+                case GeneratorType.IronGold:
+                    itemEntity = this.dimension.spawnItem(IRON_ITEM_STACK, location);
+                    break;
+                case GeneratorType.Diamond:
+                    itemEntity = this.dimension.spawnItem(DIAMOND_ITEM_STACK, location);
+                    break;
+                case GeneratorType.Emerald:
+                    itemEntity = this.dimension.spawnItem(EMERALD_ITEM_STACK, location);
+                    break;
+            }
+            if (gen.type == GeneratorType.IronGold) continue;
+            const v = itemEntity.getVelocity();
+            v.x = -v.x;
+            v.y = 0;
+            v.z = -v.z;
+            itemEntity.applyImpulse(v);
         }
     }
 
@@ -211,7 +312,7 @@ class Game {
         playerInfo.deathTime = mc.system.currentTick;
         playerInfo.deathLocation = player.location;
         playerInfo.deathRotaion = player.getRotation();
-        if(this.teamStates.get(playerInfo.team) == TeamState.BedDestoryed) {
+        if (this.teamStates.get(playerInfo.team) == TeamState.BedDestoryed) {
             playerInfo.state = PlayerState.Spectating;
         } else {
             playerInfo.state = PlayerState.dead;
@@ -222,6 +323,15 @@ class Game {
     }
     beforePlayerInteractWithBlock(event: mc.PlayerInteractWithBlockBeforeEvent) {
         if (this.state != GameState.started) return;
+
+        if (event.block.dimension != this.dimension) return;
+        const playerInfo = this.players[event.player.name];
+        if (!playerInfo) return;
+        for (const { shopLocation } of this.map.teams) {
+            if (v3.equals(v3.add(this.originLocation, shopLocation), event.block.location)) {
+                mc.world.sendMessage(`I know it ${playerInfo.name}`);
+            }
+        }
     }
     beforePlayerInteractWithEntity(event: mc.PlayerInteractWithEntityBeforeEvent) {
         if (this.state != GameState.started) return;
@@ -277,8 +387,13 @@ mc.world.beforeEvents.itemUse.subscribe(event => {
     if (game) {
     }
 });
+mc.world.beforeEvents.playerInteractWithBlock.subscribe(event => {
+    if (game) {
+        game.beforePlayerInteractWithBlock(event);
+    }
+})
 mc.world.beforeEvents.playerInteractWithEntity.subscribe(event => {
-    if(game) {
+    if (game) {
         game.beforePlayerInteractWithEntity(event);
     }
 });

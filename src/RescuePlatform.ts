@@ -10,7 +10,7 @@ const PLATFORM_ITEM = (function () {
 })();
 (globalThis as any).getI = (player: mc.Player) => player.getComponent("minecraft:inventory")!.container!.addItem(PLATFORM_ITEM); // DEBUG
 
-const PLATFORM_COOLDOWN = 200; // in ticks
+const PLATFORM_COOLDOWN = 350; // in ticks
 const PLATFORM_MAX_AGE = 300; // in ticks
 const platformCooldownSymbol = Symbol("cooldown");
 const RESCUE_PLATFORM_PERM = mc.BlockPermutation.resolve("minecraft:slime");
