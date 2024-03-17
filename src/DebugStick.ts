@@ -18,11 +18,11 @@ mc.world.beforeEvents.itemUse.subscribe(event => {
                 const me = event.source;
                 let code = "const ___players = []\nfor(const p of mc.world.getAllPlayers()){___players.push(p)\n}";
                 let index = 0;
-                for(const player of mc.world.getAllPlayers()) {
+                for (const player of mc.world.getAllPlayers()) {
                     let name = player.name;
                     { // does the name prefix with digit
                         const head = player.name.codePointAt(0);
-                        if(head && head >= 48 && head <= 57) {
+                        if (head && head >= 48 && head <= 57) {
                             name = "p" + name;
                         }
                     }
@@ -43,7 +43,7 @@ mc.world.beforeEvents.itemUse.subscribe(event => {
                     name = name.replaceAll('\\', '_');
                     name = name.replaceAll('<', '_');
                     name = name.replaceAll('>', '_');
-                    code += `${name} = ___players[${index}]\n`;
+                    code += `let ${name} = ___players[${index}]\n`;
                     ++index;
                 }
                 code += `return ${response.formValues![0]}`;

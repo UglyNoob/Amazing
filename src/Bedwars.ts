@@ -1,19 +1,32 @@
 import { Vector3Utils as v3 } from '@minecraft/math';
 import * as mc from '@minecraft/server';
 import * as ui from '@minecraft/server-ui';
-import { getPlayerByName, sleep } from './utility.js';
+import { sleep } from './utility.js';
 import { setupGameTest } from './GameTest.js';
 import { MinecraftItemTypes } from '@minecraft/vanilla-data';
+
+import { sprintf, vsprintf } from 'sprintf-js';
+import { ActionResult, openShop } from './BedwarsShop.js';
 
 const RESPAWN_TIME = 100; // in ticks
 const AIR_PERM = mc.BlockPermutation.resolve("minecraft:air");
 const IRONGOLD_GENERATOR_INTERVAL = 200;
 const DIAMOND_GENERATOR_INTERVAL = 300;
 const EMERLAD_GENERATOR_INTERVAL = 400;
-const IRON_ITEM_STACK = new mc.ItemStack(MinecraftItemTypes.IronIngot);
-const GOLD_ITEM_STACK = new mc.ItemStack(MinecraftItemTypes.GoldIngot);
-const DIAMOND_ITEM_STACK = new mc.ItemStack(MinecraftItemTypes.Diamond);
-const EMERALD_ITEM_STACK = new mc.ItemStack(MinecraftItemTypes.Emerald);
+export const IRON_ITEM_STACK = new mc.ItemStack(MinecraftItemTypes.IronIngot);
+IRON_ITEM_STACK.nameTag = "Iron Token";
+export const GOLD_ITEM_STACK = new mc.ItemStack(MinecraftItemTypes.GoldIngot);
+GOLD_ITEM_STACK.nameTag = "Gold Token";
+export const DIAMOND_ITEM_STACK = new mc.ItemStack(MinecraftItemTypes.Diamond);
+DIAMOND_ITEM_STACK.nameTag = "Diamond Token";
+export const EMERALD_ITEM_STACK = new mc.ItemStack(MinecraftItemTypes.Emerald);
+EMERALD_ITEM_STACK.nameTag = "Emerald Token";
+
+const DEATH_TITLE = "§cYOU DIED!";
+const DEATH_SUBTITLE = "§eYou will respawn in §c%d §eseconds!";
+const RESPAWN_TITLE = "§aRESPAWNED!";
+const BED_DESTROYED_TITLE = "§cBED DESTROYED!";
+const TEAM_BED_DESTROYED_MESSAGE = "§l%s%s§c's bed has been destroyed!";
 
 enum GeneratorType {
     IronGold,
@@ -21,10 +34,10 @@ enum GeneratorType {
     Emerald
 }
 enum TeamType {
-    Red = "red",
-    Blue = "blue",
-    Yellow = "yellow",
-    Green = "green"
+    Red,
+    Blue,
+    Yellow,
+    Green
 }
 interface GeneratorInformation {
     type: GeneratorType;
@@ -49,11 +62,29 @@ interface MapInformation {
     fallbackRespawnPoint: mc.Vector3;
 }
 
-function* mapGeneratorsIterator(map: MapInformation) {
-    for (let team of map.teams) {
-        yield team.teamGenerator;
+function getNameOfTeam(t: TeamType) {
+    switch (t) {
+        case TeamType.Blue:
+            return "blue";
+        case TeamType.Green:
+            return "green";
+        case TeamType.Red:
+            return "red";
+        case TeamType.Yellow:
+            return "yellow";
     }
-    yield* map.extraGenerators;
+}
+function getColorPrefixOfTeam(t: TeamType) {
+    switch (t) {
+        case TeamType.Blue:
+            return "§b";
+        case TeamType.Green:
+            return "§2";
+        case TeamType.Red:
+            return "§m";
+        case TeamType.Yellow:
+            return "§g";
+    }
 }
 
 const testMap: MapInformation = {
@@ -74,7 +105,7 @@ const testMap: MapInformation = {
         },
         {
             type: TeamType.Blue,
-            shopLocation: { x: 14, y: 0, z: 0 },
+            shopLocation: { x: 14, y: 2, z: 0 },
             teamGenerator: {
                 type: GeneratorType.IronGold,
                 spawnLocation: { x: 19.5, y: 1.5, z: 2.5 },
@@ -104,7 +135,7 @@ const testMap: MapInformation = {
     ]
 };
 
-enum PlayerState {
+export enum PlayerState {
     Alive,
     Offline,
     dead, // When the player haven't clicked the "respawn" button
@@ -134,7 +165,7 @@ type GeneratorGameInformation = {
     belongToTeam: false;
 });
 
-interface PlayerGameInformation {
+export interface PlayerGameInformation {
     name: string;
     team: TeamType;
     state: PlayerState;
@@ -142,8 +173,13 @@ interface PlayerGameInformation {
     deathTime: number; // global tick
     deathLocation: mc.Vector3;
     deathRotaion: mc.Vector2;
+    /**
+     * Cleared when the player opens menu or press the back button,
+     * set when the player perform an action
+     */
+    lastActionResults: ActionResult[];
 }
-class Game {
+export class Game {
     private map: MapInformation;
     private players: {
         [name: string]: PlayerGameInformation
@@ -200,7 +236,8 @@ class Game {
             team,
             deathLocation: { x: 0, y: 0, z: 0 },
             deathTime: 0,
-            deathRotaion: { x: 0, y: 0 }
+            deathRotaion: { x: 0, y: 0 },
+            lastActionResults: []
         };
     }
 
@@ -243,6 +280,13 @@ class Game {
         }
     }
 
+    private broadcast(content: any, ...params: any[]) {
+        for (const playerInfo of Object.values(this.players)) {
+            if (playerInfo.state == PlayerState.Offline) return;
+            playerInfo.player.sendMessage(vsprintf(String(content), params));
+        }
+    }
+
     tickEvent() {
         if (this.state != GameState.started) return;
         for (const playerInfo of Object.values(this.players)) {
@@ -256,21 +300,33 @@ class Game {
             if (v3.distance(v3.add(this.originLocation, this.map.fallbackRespawnPoint), player.location) <= 1) {
                 player.runCommand("gamemode spectator");
                 player.teleport(playerInfo.deathLocation, { rotation: playerInfo.deathRotaion });
-                player.onScreenDisplay.setTitle("You died!");
-                player.onScreenDisplay.setActionBar("Respawning...");
+                player.onScreenDisplay.setTitle(DEATH_TITLE, {
+                    subtitle: sprintf(DEATH_SUBTITLE, RESPAWN_TIME / 20),
+                    fadeInDuration: 0,
+                    stayDuration: 30,
+                    fadeOutDuration: 20,
+                });
                 if (playerInfo.state == PlayerState.dead) {
                     playerInfo.state = PlayerState.Respawning;
                 }
             }
 
             if (playerInfo.state == PlayerState.Respawning) {
-                let remainingTicks = RESPAWN_TIME + playerInfo.deathTime - mc.system.currentTick;
+                const remainingTicks = RESPAWN_TIME + playerInfo.deathTime - mc.system.currentTick;
                 if (remainingTicks <= 0) {
                     this.respawnPlayer(playerInfo);
-                    continue;
-                }
-                if (remainingTicks % 20 == 0) {
-                    player.onScreenDisplay.setActionBar(`Respawning... ${Math.ceil(remainingTicks / 20)} seconds`);
+                    player.onScreenDisplay.setTitle(RESPAWN_TITLE, {
+                        fadeInDuration: 0,
+                        stayDuration: 10,
+                        fadeOutDuration: 20,
+                    });
+                } else if (remainingTicks % 20 == 0) {
+                    player.onScreenDisplay.setTitle(DEATH_TITLE, {
+                        subtitle: sprintf(DEATH_SUBTITLE, remainingTicks / 20),
+                        fadeInDuration: 0,
+                        stayDuration: 30,
+                        fadeOutDuration: 20,
+                    });
                 }
             }
         }
@@ -319,17 +375,19 @@ class Game {
         }
 
         player.setSpawnPoint(Object.assign({ dimension: player.dimension }, v3.add(this.originLocation, this.map.fallbackRespawnPoint)));
-
     }
-    beforePlayerInteractWithBlock(event: mc.PlayerInteractWithBlockBeforeEvent) {
+    async beforePlayerInteractWithBlock(event: mc.PlayerInteractWithBlockBeforeEvent) {
         if (this.state != GameState.started) return;
 
         if (event.block.dimension != this.dimension) return;
         const playerInfo = this.players[event.player.name];
         if (!playerInfo) return;
+
         for (const { shopLocation } of this.map.teams) {
             if (v3.equals(v3.add(this.originLocation, shopLocation), event.block.location)) {
-                mc.world.sendMessage(`I know it ${playerInfo.name}`);
+                await sleep(0);
+                openShop(playerInfo);
+                return;
             }
         }
     }
@@ -339,14 +397,38 @@ class Game {
     async beforePlayerBreakBlock(event: mc.PlayerBreakBlockBeforeEvent) {
         if (this.state != GameState.started) return;
         if (event.dimension != this.dimension) return;
-        let team = this.map.teams.find(team => team.bedLocation.findIndex(pos => v3.equals(v3.add(pos, this.originLocation), event.block.location)) != -1);
-        if (team && event.block.typeId == "minecraft:bed") {
-            event.cancel = true;
+        if (event.block.typeId != "minecraft:bed") return;
+
+        const destroyedTeam = this.map.teams.find(team =>
+            team.bedLocation.findIndex(pos =>
+                v3.equals(v3.add(pos, this.originLocation), event.block.location)) != -1);
+        const destroyerInfo = this.players[event.player.name];
+        if (!destroyedTeam) return;
+        event.cancel = true;
+        if (!destroyerInfo) return;
+        if (destroyedTeam.type != destroyerInfo.team) {
             await sleep(0);
             /* Clear the bed */
-            event.dimension.fillBlocks(v3.add(team.bedLocation[0], this.originLocation), v3.add(team.bedLocation[1], this.originLocation), AIR_PERM);
-            this.teamStates.set(team.type, TeamState.BedDestoryed);
+            event.dimension.fillBlocks(v3.add(destroyedTeam.bedLocation[0], this.originLocation),
+                v3.add(destroyedTeam.bedLocation[1], this.originLocation), AIR_PERM);
+            for (const playerInfo of Object.values(this.players)) {
+                if (playerInfo.state == PlayerState.Offline) continue;
+
+                if (playerInfo.team == destroyedTeam.type) {
+                    playerInfo.player.playSound("mob.wither.death");
+                    playerInfo.player.onScreenDisplay.setTitle(BED_DESTROYED_TITLE, {
+                        fadeInDuration: 5,
+                        stayDuration: 40,
+                        fadeOutDuration: 10
+                    });
+                } else {
+                    playerInfo.player.playSound("mob.enderdragon.growl", { volume: 0.1 });
+                }
+                playerInfo.player.sendMessage(sprintf(TEAM_BED_DESTROYED_MESSAGE,
+                    getColorPrefixOfTeam(destroyedTeam.type), getNameOfTeam(destroyedTeam.type)));
+            }
         }
+        this.teamStates.set(destroyedTeam.type, TeamState.BedDestoryed);
     }
 };
 
@@ -358,17 +440,17 @@ mc.world.beforeEvents.chatSend.subscribe(async event => {
         await sleep(0); // get out of read-only mode
         setupGameTest(event.sender.location.x, event.sender.location.z, event.sender.dimension);
         mc.system.run(function loop() {
-            if (!(globalThis as any).test) {
+            if (!globalThis.test) {
                 mc.system.run(loop);
                 return;
             }
-            (globalThis as any).test.spawnSimulatedPlayer(event.sender.location, "a");
+            globalThis.test.spawnSimulatedPlayer(event.sender.location as any, "a");
             const players = mc.world.getAllPlayers();
             game = new Game({ map: testMap, originLocation: { x: -17, y: 5, z: 32 }, dimension: players[0].dimension });
             game.setPlayer(players[0], TeamType.Red);
             game.setPlayer(players[1], TeamType.Blue);
             game.start();
-            (globalThis as any).game = game;
+            globalThis.game = game;
         });
     }
 })
