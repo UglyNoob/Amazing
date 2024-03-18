@@ -26,9 +26,9 @@ const DEATH_TITLE = "§cYOU DIED!";
 const DEATH_SUBTITLE = "§eYou will respawn in §c%d §eseconds!";
 const RESPAWN_TITLE = "§aRESPAWNED!";
 const BED_DESTROYED_TITLE = "§cBED DESTROYED!";
-const TEAM_BED_DESTROYED_MESSAGE = "§l%s%s§c's bed has been destroyed!\nDestroyer: %s%s";
-const TEAM_ELIMINATION_MESSAGE = "ELIMINATION: %s%s has been eliminated!"
-const FINAL_KILL_MESSAGE = "FINAL KILL: %(killerColor)s%(killer)s has killed %(victimColor)s%(victim)s";
+const TEAM_BED_DESTROYED_MESSAGE = "§l%s%s§c'S BED HAS BEEN DESTROYED!\nDESTROYER: %s%s";
+const TEAM_ELIMINATION_MESSAGE = "ELIMINATION: %s%s HAS BEEN ELIMINATED!"
+const FINAL_KILL_MESSAGE = "FINAL KILL: %(killerColor)s%(killer)s HAS KILLED %(victimColor)s%(victim)s";
 
 enum GeneratorType {
     IronGold,
@@ -86,6 +86,18 @@ function getColorPrefixOfTeam(t: TeamType) {
             return "§m";
         case TeamType.Yellow:
             return "§g";
+    }
+}
+export function getWoolItemNameOfTeam(t: TeamType) {
+    switch (t) {
+        case TeamType.Blue:
+            return MinecraftItemTypes.BlueWool;
+        case TeamType.Green:
+            return MinecraftItemTypes.GreenWool;
+        case TeamType.Red:
+            return MinecraftItemTypes.RedWool;
+        case TeamType.Yellow:
+            return MinecraftItemTypes.YellowWool;
     }
 }
 
@@ -263,12 +275,12 @@ export class Game {
                 continue;
             }
             this.respawnPlayer(playerInfo);
+            this.setupSpawnPoint(playerInfo.player);
         }
         for (const gen of this.generators) {
             gen.remainingCooldown = gen.interval;
         }
 
-        this.scoreObj.setScore
     }
 
     private respawnPlayer(playerInfo: PlayerGameInformation) {
@@ -281,17 +293,33 @@ export class Game {
         playerInfo.state = PlayerState.Alive;
     }
 
+    private setupSpawnPoint(player: mc.Player) {
+        player.setSpawnPoint(Object.assign({ dimension: player.dimension }, v3.add(this.originLocation, this.map.fallbackRespawnPoint)));
+    }
+
     private checkTeamPlayers() {
         const remainingPlayerCounts = new Map<TeamType, number>();
         for (const { type: teamType } of this.map.teams) {
-            if (this.teamStates.get(teamType) != TeamState.BedAlive) continue;
+            if (this.teamStates.get(teamType) == TeamState.Dead) continue;
             remainingPlayerCounts.set(teamType, 0);
         }
 
         for (const playerInfo of Object.values(this.players)) {
-            if (playerInfo.state == PlayerState.Alive ||
-                playerInfo.state == PlayerState.dead ||
-                playerInfo.state == PlayerState.Respawning) {
+            const teamState = this.teamStates.get(playerInfo.team);
+            let counting = false;
+            if (teamState == TeamState.BedAlive) {
+                if (playerInfo.state == PlayerState.Alive ||
+                    playerInfo.state == PlayerState.dead ||
+                    playerInfo.state == PlayerState.Respawning) {
+                    counting = true;
+                }
+            } else if(teamState == TeamState.BedDestoryed) {
+                if (playerInfo.state == PlayerState.Alive ||
+                    playerInfo.state == PlayerState.Respawning) {
+                    counting = true;
+                }
+            }
+            if(counting) {
                 remainingPlayerCounts.set(playerInfo.team, 1 + remainingPlayerCounts.get(playerInfo.team)!);
             }
         }
@@ -300,7 +328,7 @@ export class Game {
             if (aliveCount == 0) {
                 this.teamStates.set(teamType, TeamState.Dead);
                 this.broadcast(TEAM_ELIMINATION_MESSAGE,
-                    getColorPrefixOfTeam(teamType), getNameOfTeam(teamType));
+                    getColorPrefixOfTeam(teamType), getNameOfTeam(teamType).toUpperCase());
             }
         }
     }
@@ -389,7 +417,7 @@ export class Game {
     afterEntityDie(event: mc.EntityDieAfterEvent) {
         if (this.state != GameState.started) return;
         if (!(event.deadEntity instanceof mc.Player)) return;
-        let victim = event.deadEntity;
+        const victim = event.deadEntity;
         if (!this.players[victim.name]) return;
 
         const victimInfo = this.players[victim.name];
@@ -420,7 +448,9 @@ export class Game {
             }
         }
 
-        victim.setSpawnPoint(Object.assign({ dimension: victim.dimension }, v3.add(this.originLocation, this.map.fallbackRespawnPoint)));
+        this.setupSpawnPoint(victim);
+
+        this.checkTeamPlayers();
     }
     async beforePlayerInteractWithBlock(event: mc.PlayerInteractWithBlockBeforeEvent) {
         if (this.state != GameState.started) return;
@@ -473,7 +503,7 @@ export class Game {
                 playerInfo.player.playSound("mob.enderdragon.growl", { volume: 0.1 });
             }
             playerInfo.player.sendMessage(sprintf(TEAM_BED_DESTROYED_MESSAGE,
-                getColorPrefixOfTeam(destroyedTeam.type), getNameOfTeam(destroyedTeam.type),
+                getColorPrefixOfTeam(destroyedTeam.type), getNameOfTeam(destroyedTeam.type).toUpperCase(),
                 getColorPrefixOfTeam(destroyerInfo.team), destroyerInfo.name));
         }
         this.teamStates.set(destroyedTeam.type, TeamState.BedDestoryed);

@@ -6,9 +6,9 @@ import {
     EMERALD_ITEM_STACK,
     Game,
     PlayerGameInformation,
-    PlayerState
+    PlayerState,
+    getWoolItemNameOfTeam
 } from "./Bedwars.js";
-import { MinecraftItemTypes } from "@minecraft/vanilla-data";
 import { ActionFormData } from "@minecraft/server-ui";
 import { containerIterator, itemEqual } from './utility.js'
 import { Vector3Utils as v3 } from "@minecraft/math";
@@ -93,13 +93,13 @@ const SHOP_DATA: Menu = {
                 {
                     type: "action",
                     display: "Wools",
-                    actions: [
-                        {
+                    getActions(playerInfo) {
+                        return [{
                             type: ActionType.BuyNormalItem,
-                            cost: { ironAmount: 1, goldAmount: 2, emeraldAmount: 3, diamondAmount: 4 },
-                            items: [new mc.ItemStack(MinecraftItemTypes.Wool)]
-                        }
-                    ]
+                            cost: {ironAmount: 1, goldAmount: 0, emeraldAmount: 0, diamondAmount: 0},
+                            items: [new mc.ItemStack(getWoolItemNameOfTeam(playerInfo.team), 16)]
+                        }];
+                    }
                 }
             ]
         }
@@ -216,7 +216,7 @@ function performAction(playerInfo: PlayerGameInformation, actions: Action[]) {
                         diamondAmount: action.cost.diamondAmount - tokens.diamondAmount,
                         emeraldAmount: action.cost.emeraldAmount - tokens.emeraldAmount,
                     }
-                })
+                });
                 continue;
             }
             tokens.ironAmount = action.cost.ironAmount;
