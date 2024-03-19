@@ -1,6 +1,5 @@
 import { Vector3Utils as v3 } from '@minecraft/math';
 import * as mc from '@minecraft/server';
-import * as ui from '@minecraft/server-ui';
 import { sleep } from './utility.js';
 import { setupGameTest } from './GameTest.js';
 import { MinecraftItemTypes } from '@minecraft/vanilla-data';
@@ -10,9 +9,9 @@ import { ActionResult, openShop } from './BedwarsShop.js';
 
 const RESPAWN_TIME = 100; // in ticks
 const AIR_PERM = mc.BlockPermutation.resolve("minecraft:air");
-const IRONGOLD_GENERATOR_INTERVAL = 200;
-const DIAMOND_GENERATOR_INTERVAL = 300;
-const EMERLAD_GENERATOR_INTERVAL = 400;
+const IRONGOLD_GENERATOR_INTERVAL = 50;
+const DIAMOND_GENERATOR_INTERVAL = 600;
+const EMERLAD_GENERATOR_INTERVAL = 1200;
 export const IRON_ITEM_STACK = new mc.ItemStack(MinecraftItemTypes.IronIngot);
 IRON_ITEM_STACK.nameTag = "Iron Token";
 export const GOLD_ITEM_STACK = new mc.ItemStack(MinecraftItemTypes.GoldIngot);
@@ -29,6 +28,8 @@ const BED_DESTROYED_TITLE = "§cBED DESTROYED!";
 const TEAM_BED_DESTROYED_MESSAGE = "§l%s%s§c'S BED HAS BEEN DESTROYED!\nDESTROYER: %s%s";
 const TEAM_ELIMINATION_MESSAGE = "ELIMINATION: %s%s HAS BEEN ELIMINATED!"
 const FINAL_KILL_MESSAGE = "FINAL KILL: %(killerColor)s%(killer)s HAS KILLED %(victimColor)s%(victim)s";
+const KILL_NOTIFICATION = "KILL: %s%s";
+const FINAL_KILL_NOTIFICATION = "FINAL KILL: %s%s";
 
 enum GeneratorType {
     IronGold,
@@ -195,6 +196,11 @@ export interface PlayerGameInformation {
      * set when the player perform an action
      */
     lastActionResults: ActionResult[];
+    /**
+     * Indicates the attacker.
+     * this field is cleared on death
+     */
+    lastHurtBy: PlayerGameInformation | null;
 }
 export class Game {
     private map: MapInformation;
@@ -263,7 +269,8 @@ export class Game {
             deathLocation: { x: 0, y: 0, z: 0 },
             deathTime: 0,
             deathRotaion: { x: 0, y: 0 },
-            lastActionResults: []
+            lastActionResults: [],
+            lastHurtBy: null
         };
     }
 
@@ -429,7 +436,10 @@ export class Game {
         if (event.damageSource.cause == mc.EntityDamageCause.entityAttack &&
             event.damageSource.damagingEntity instanceof mc.Player) {
             killerInfo = this.players[event.damageSource.damagingEntity.name];
+        } else if(victimInfo.lastHurtBy) {
+            killerInfo = victimInfo.lastHurtBy;
         }
+        victimInfo.lastHurtBy = null;
         if (this.teamStates.get(victimInfo.team) == TeamState.BedDestoryed) { // FINAL KILL
             victimInfo.state = PlayerState.Spectating;
             if (killerInfo) {
@@ -440,17 +450,42 @@ export class Game {
                     victimColor: getColorPrefixOfTeam(victimInfo.team),
                     victim: victimInfo.name
                 }));
+                killerInfo.player.onScreenDisplay.setActionBar(sprintf(
+                    FINAL_KILL_NOTIFICATION,
+                    getColorPrefixOfTeam(victimInfo.team),
+                    victimInfo.name));
             }
         } else {
             victimInfo.state = PlayerState.dead;
             if (killerInfo) {
                 ++killerInfo.killCount;
+                killerInfo.player.onScreenDisplay.setActionBar(sprintf(
+                    KILL_NOTIFICATION,
+                    getColorPrefixOfTeam(victimInfo.team),
+                    victimInfo.name));
             }
         }
 
         this.setupSpawnPoint(victim);
 
         this.checkTeamPlayers();
+    }
+    afterEntityHitEntity(event: mc.EntityHitEntityAfterEvent) {
+        if(this.state != GameState.started) return;
+
+        if(!(event.hitEntity instanceof mc.Player)) return;
+        const victimInfo = this.players[event.hitEntity.name];
+        if(!victimInfo) return;
+        
+        if(event.damagingEntity instanceof mc.Player) {
+            const killerInfo = this.players[event.damagingEntity.name];
+            if(killerInfo) {
+                victimInfo.lastHurtBy = killerInfo;
+                return;
+            }
+        }
+
+        victimInfo.lastHurtBy = null;
     }
     async beforePlayerInteractWithBlock(event: mc.PlayerInteractWithBlockBeforeEvent) {
         if (this.state != GameState.started) return;
@@ -539,6 +574,11 @@ mc.world.beforeEvents.chatSend.subscribe(async event => {
 mc.world.afterEvents.entityDie.subscribe(event => {
     if (game) {
         game.afterEntityDie(event);
+    }
+});
+mc.world.afterEvents.entityHitEntity.subscribe(event => {
+    if(game) {
+        game.afterEntityHitEntity(event);
     }
 });
 mc.world.beforeEvents.playerBreakBlock.subscribe(event => {
