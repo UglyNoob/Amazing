@@ -23,6 +23,8 @@ EMERALD_ITEM_STACK.nameTag = "Emerald Token";
 
 const DEATH_TITLE = "§cYOU DIED!";
 const DEATH_SUBTITLE = "§eYou will respawn in §c%d §eseconds!";
+const SPECTATE_TITLE = "SPECTATING!"
+const SPECTATE_SUBTITLE = "Your bed has been destroyed";
 const RESPAWN_TITLE = "§aRESPAWNED!";
 const BED_DESTROYED_TITLE = "§cBED DESTROYED!";
 const TEAM_BED_DESTROYED_MESSAGE = "§l%s%s§c'S BED HAS BEEN DESTROYED!\nDESTROYER: %s%s";
@@ -30,6 +32,8 @@ const TEAM_ELIMINATION_MESSAGE = "ELIMINATION: %s%s HAS BEEN ELIMINATED!"
 const FINAL_KILL_MESSAGE = "FINAL KILL: %(killerColor)s%(killer)s HAS KILLED %(victimColor)s%(victim)s";
 const KILL_NOTIFICATION = "KILL: %s%s";
 const FINAL_KILL_NOTIFICATION = "FINAL KILL: %s%s";
+const DISCONNECTED_MESSAGE = "%s%s has disconnected.";
+const RECONNECTION_MESSAGE = "%s%s has connected.";
 
 enum GeneratorType {
     IronGold,
@@ -200,7 +204,7 @@ export interface PlayerGameInformation {
      * Indicates the attacker.
      * this field is cleared on death
      */
-    lastHurtBy: PlayerGameInformation | null;
+    lastHurtBy?: PlayerGameInformation;
 }
 export class Game {
     private map: MapInformation;
@@ -208,11 +212,12 @@ export class Game {
         [name: string]: PlayerGameInformation
     };
     private teamStates: Map<TeamType, TeamState>;
-    private originLocation: mc.Vector3;
+    private originPos: mc.Vector3;
     private state: GameState;
     private dimension: mc.Dimension;
     private generators: GeneratorGameInformation[];
     private scoreObj: mc.ScoreboardObjective;
+    private startTime: number;
 
     constructor({ map, originLocation, dimension, scoreboardObjective }: {
         map: MapInformation,
@@ -221,10 +226,11 @@ export class Game {
         scoreboardObjective: mc.ScoreboardObjective
     }) {
         this.map = map;
-        this.originLocation = originLocation;
+        this.originPos = originLocation;
         this.state = GameState.waiting;
         this.players = Object.create(null);
         this.dimension = dimension;
+        this.startTime = 0;
         this.scoreObj = scoreboardObjective;
         this.teamStates = new Map();
         for (const team of this.map.teams) {
@@ -269,13 +275,13 @@ export class Game {
             deathLocation: { x: 0, y: 0, z: 0 },
             deathTime: 0,
             deathRotaion: { x: 0, y: 0 },
-            lastActionResults: [],
-            lastHurtBy: null
+            lastActionResults: []
         };
     }
 
     start() {
         this.state = GameState.started;
+        this.startTime = mc.system.currentTick;
         for (const playerInfo of Object.values(this.players)) {
             if (!playerInfo.player.isValid()) {
                 playerInfo.state = PlayerState.Offline;
@@ -292,7 +298,7 @@ export class Game {
 
     private respawnPlayer(playerInfo: PlayerGameInformation) {
         const teamInfo = this.map.teams.find(ele => ele.type === playerInfo.team)!;
-        const spawnPoint = v3.add(teamInfo.playerSpawn, this.originLocation);
+        const spawnPoint = v3.add(teamInfo.playerSpawn, this.originPos);
         playerInfo.player.teleport(spawnPoint, { facingLocation: v3.add(spawnPoint, teamInfo.playerSpawnViewDirection) });
         playerInfo.player.runCommand("gamemode survival");
         playerInfo.player.getComponent("minecraft:health")!.resetToMaxValue();
@@ -301,7 +307,7 @@ export class Game {
     }
 
     private setupSpawnPoint(player: mc.Player) {
-        player.setSpawnPoint(Object.assign({ dimension: player.dimension }, v3.add(this.originLocation, this.map.fallbackRespawnPoint)));
+        player.setSpawnPoint(Object.assign({ dimension: player.dimension }, v3.add(this.originPos, this.map.fallbackRespawnPoint)));
     }
 
     private checkTeamPlayers() {
@@ -349,18 +355,53 @@ export class Game {
 
     tickEvent() {
         if (this.state != GameState.started) return;
-        const allPlayers: { [prop: string]: mc.Player } = Object.create(null);
-
 
         for (const playerInfo of Object.values(this.players)) {
-            if (playerInfo.state == PlayerState.Offline) continue;
+            if (playerInfo.state == PlayerState.Offline) {
+                const player = mc.world.getPlayers({name: playerInfo.name})[0];
+                if(player) { // the player comes online
+                    playerInfo.player = player;
+                    const teamState = this.teamStates.get(playerInfo.team);
+                    player.runCommand("gamemode spectator");
+                    player.teleport(playerInfo.deathLocation, { rotation: playerInfo.deathRotaion });
+                    playerInfo.deathTime = mc.system.currentTick;
+                    switch(teamState) {
+                        case TeamState.BedAlive:
+                            playerInfo.state = PlayerState.Respawning;
+                            player.onScreenDisplay.setTitle(DEATH_TITLE, {
+                                subtitle: sprintf(DEATH_SUBTITLE, RESPAWN_TIME / 20),
+                                fadeInDuration: 0,
+                                stayDuration: 30,
+                                fadeOutDuration: 20,
+                            });
+                            break;
+                        case TeamState.BedDestoryed:
+                        case TeamState.Dead:
+                            playerInfo.state = PlayerState.Spectating;
+                            player.onScreenDisplay.setTitle(SPECTATE_TITLE, {
+                                subtitle: SPECTATE_SUBTITLE,
+                                fadeInDuration: 0,
+                                stayDuration: 50,
+                                fadeOutDuration: 10
+                            });
+                            break;
+                    }
+                    this.broadcast(RECONNECTION_MESSAGE,
+                        getColorPrefixOfTeam(playerInfo.team),
+                        playerInfo.name);
+                } else continue;
+            }
             const player = playerInfo.player;
             if (!player.isValid()) {
-                playerInfo.state = PlayerState.Offline;
+                playerInfo.state = PlayerState.Offline; // the player comes offline
+                this.broadcast(DISCONNECTED_MESSAGE,
+                    getColorPrefixOfTeam(playerInfo.team),
+                    playerInfo.name);
+                this.playerDieOrOffline(playerInfo, playerInfo.lastHurtBy);
                 continue;
             }
 
-            if (v3.distance(v3.add(this.originLocation, this.map.fallbackRespawnPoint), player.location) <= 1) {
+            if (v3.distance(v3.add(this.originPos, this.map.fallbackRespawnPoint), player.location) <= 1) {
                 player.runCommand("gamemode spectator");
                 player.teleport(playerInfo.deathLocation, { rotation: playerInfo.deathRotaion });
                 player.onScreenDisplay.setTitle(DEATH_TITLE, {
@@ -398,7 +439,7 @@ export class Game {
             if (gen.remainingCooldown != 0) continue;
 
             gen.remainingCooldown = gen.interval;
-            const location = v3.add(gen.spawnLocation, this.originLocation);
+            const location = v3.add(gen.spawnLocation, this.originPos);
 
             let itemEntity: mc.Entity;
             switch (gen.type) {
@@ -421,27 +462,23 @@ export class Game {
         }
     }
 
-    afterEntityDie(event: mc.EntityDieAfterEvent) {
-        if (this.state != GameState.started) return;
-        if (!(event.deadEntity instanceof mc.Player)) return;
-        const victim = event.deadEntity;
-        if (!this.players[victim.name]) return;
-
-        const victimInfo = this.players[victim.name];
-        let killerInfo: PlayerGameInformation | null = null;
+    private playerDieOrOffline(victimInfo: PlayerGameInformation, killerInfo?: PlayerGameInformation) {
         victimInfo.deathTime = mc.system.currentTick;
-        victimInfo.deathLocation = victim.location;
-        victimInfo.deathRotaion = victim.getRotation();
         ++victimInfo.deathCount;
-        if (event.damageSource.cause == mc.EntityDamageCause.entityAttack &&
-            event.damageSource.damagingEntity instanceof mc.Player) {
-            killerInfo = this.players[event.damageSource.damagingEntity.name];
-        } else if(victimInfo.lastHurtBy) {
-            killerInfo = victimInfo.lastHurtBy;
+        victimInfo.lastHurtBy = undefined;
+        let victimOffline = false;
+        if(victimInfo.state == PlayerState.Offline) {
+            victimOffline = true;
+            const teamInfo = this.map.teams.find(ele => ele.type === victimInfo.team)!;
+            victimInfo.deathLocation = v3.add(this.originPos, teamInfo.playerSpawn);
+            victimInfo.deathRotaion = teamInfo.playerSpawnViewDirection;
+        } else {
+            victimInfo.deathLocation = victimInfo.player.location;
+            victimInfo.deathRotaion = victimInfo.player.getRotation();
         }
-        victimInfo.lastHurtBy = null;
+
         if (this.teamStates.get(victimInfo.team) == TeamState.BedDestoryed) { // FINAL KILL
-            victimInfo.state = PlayerState.Spectating;
+            if(!victimOffline) victimInfo.state = PlayerState.Spectating;
             if (killerInfo) {
                 ++killerInfo.finalKillCount;
                 this.broadcast(sprintf(FINAL_KILL_MESSAGE, {
@@ -455,8 +492,14 @@ export class Game {
                     getColorPrefixOfTeam(victimInfo.team),
                     victimInfo.name));
             }
+            if(!victimOffline) victimInfo.player.onScreenDisplay.setTitle(SPECTATE_TITLE, {
+                subtitle: SPECTATE_SUBTITLE,
+                fadeInDuration: 0,
+                stayDuration: 50,
+                fadeOutDuration: 10
+            });
         } else {
-            victimInfo.state = PlayerState.dead;
+            if(!victimOffline) victimInfo.state = PlayerState.dead;
             if (killerInfo) {
                 ++killerInfo.killCount;
                 killerInfo.player.onScreenDisplay.setActionBar(sprintf(
@@ -466,9 +509,26 @@ export class Game {
             }
         }
 
-        this.setupSpawnPoint(victim);
+        if(!victimOffline) this.setupSpawnPoint(victimInfo.player);
 
         this.checkTeamPlayers();
+    }
+
+    afterEntityDie(event: mc.EntityDieAfterEvent) {
+        if (this.state != GameState.started) return;
+        if (!(event.deadEntity instanceof mc.Player)) return;
+        const victim = event.deadEntity;
+        const victimInfo = this.players[victim.name];
+        if (!victimInfo) return;
+
+        let killerInfo: PlayerGameInformation | undefined;
+        if (event.damageSource.cause == mc.EntityDamageCause.entityAttack &&
+            event.damageSource.damagingEntity instanceof mc.Player) {
+            killerInfo = this.players[event.damageSource.damagingEntity.name];
+        } else if(victimInfo.lastHurtBy) {
+            killerInfo = victimInfo.lastHurtBy;
+        }
+        this.playerDieOrOffline(victimInfo, killerInfo);
     }
     afterEntityHitEntity(event: mc.EntityHitEntityAfterEvent) {
         if(this.state != GameState.started) return;
@@ -485,7 +545,7 @@ export class Game {
             }
         }
 
-        victimInfo.lastHurtBy = null;
+        victimInfo.lastHurtBy = undefined;
     }
     async beforePlayerInteractWithBlock(event: mc.PlayerInteractWithBlockBeforeEvent) {
         if (this.state != GameState.started) return;
@@ -495,7 +555,7 @@ export class Game {
         if (!playerInfo) return;
 
         for (const { shopLocation } of this.map.teams) {
-            if (v3.equals(v3.add(this.originLocation, shopLocation), event.block.location)) {
+            if (v3.equals(v3.add(this.originPos, shopLocation), event.block.location)) {
                 await sleep(0);
                 openShop(playerInfo);
                 return;
@@ -512,7 +572,7 @@ export class Game {
 
         const destroyedTeam = this.map.teams.find(team =>
             team.bedLocation.findIndex(pos =>
-                v3.equals(v3.add(pos, this.originLocation), event.block.location)) != -1);
+                v3.equals(v3.add(pos, this.originPos), event.block.location)) != -1);
         const destroyerInfo = this.players[event.player.name];
         if (!destroyedTeam) return;
         event.cancel = true;
@@ -521,8 +581,11 @@ export class Game {
         await sleep(0);
 
         /* Clear the bed */
-        event.dimension.fillBlocks(v3.add(destroyedTeam.bedLocation[0], this.originLocation),
-            v3.add(destroyedTeam.bedLocation[1], this.originLocation), AIR_PERM);
+        event.dimension.fillBlocks(v3.add(destroyedTeam.bedLocation[0], this.originPos),
+            v3.add(destroyedTeam.bedLocation[1], this.originPos), AIR_PERM);
+
+        if(this.teamStates.get(destroyedTeam.type) == TeamState.Dead) return;
+
         /* Inform all the players */
         for (const playerInfo of Object.values(this.players)) {
             if (playerInfo.state == PlayerState.Offline) continue;
