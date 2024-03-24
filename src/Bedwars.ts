@@ -100,14 +100,15 @@ export const TEAM_CONSTANTS: Record<TeamType, {
     leatherLeggings: mc.ItemStack;
     leatherBoots: mc.ItemStack;
 }> = Object.create(null);
+
 {
     function setupItem(type: MinecraftItemTypes, team: TeamType) {
         const i = new mc.ItemStack(type);
         i.lockMode = mc.ItemLockMode.slot;
-        i.getComponent("enchantable")!.addEnchantment({
+        /*i.getComponent("enchantable")!.addEnchantment({
             level: 3,
             type: MinecraftEnchantmentTypes.Unbreaking
-        });
+        });*/
         return i;
     }
 
@@ -354,6 +355,7 @@ export class BedWarsGame {
                 continue;
             }
             playerInfo.player.getComponent("inventory")!.container!.clearAll();
+            this.resetEquipment(playerInfo);
             this.respawnPlayer(playerInfo);
             this.setupSpawnPoint(playerInfo.player);
         }
@@ -371,13 +373,6 @@ export class BedWarsGame {
         playerInfo.player.getComponent("minecraft:health")!.resetToMaxValue();
         playerInfo.player.extinguishFire();
 
-        const equipment = playerInfo.player.getComponent("minecraft:equippable")!;
-        const t = TEAM_CONSTANTS[playerInfo.team];
-        equipment.setEquipment(mc.EquipmentSlot.Head, t.leatherHelmet);
-        equipment.setEquipment(mc.EquipmentSlot.Chest, t.leatherChestplate);
-        equipment.setEquipment(mc.EquipmentSlot.Legs, t.leatherLeggings);
-        equipment.setEquipment(mc.EquipmentSlot.Feet, t.leatherBoots);
-
         const container = playerInfo.player.getComponent("inventory")!.container!;
         let hasSword = false;
         for (const { item, index } of containerIterator(container)) {
@@ -392,6 +387,14 @@ export class BedWarsGame {
         playerInfo.state = PlayerState.Alive;
     }
 
+    private resetEquipment(playerInfo: PlayerGameInformation) {
+        const equipment = playerInfo.player.getComponent("minecraft:equippable")!;
+        const t = TEAM_CONSTANTS[playerInfo.team];
+        equipment.setEquipment(mc.EquipmentSlot.Head, t.leatherHelmet);
+        equipment.setEquipment(mc.EquipmentSlot.Chest, t.leatherChestplate);
+        equipment.setEquipment(mc.EquipmentSlot.Legs, t.leatherLeggings);
+        equipment.setEquipment(mc.EquipmentSlot.Feet, t.leatherBoots);
+    }
     private setupSpawnPoint(player: mc.Player) {
         player.setSpawnPoint(Object.assign({ dimension: player.dimension }, v3.add(this.originPos, this.map.fallbackRespawnPoint)));
     }
@@ -542,7 +545,15 @@ export class BedWarsGame {
                     } else {
                         playerInfo.state = PlayerState.Spectating;
                     }
+                    continue;
                 }
+                const equipment = player.getComponent("equippable")!;
+                equipment.getEquipment(mc.EquipmentSlot.Head)!.getComponent("durability")!.damage = 0;
+                equipment.getEquipment(mc.EquipmentSlot.Chest)!.getComponent("durability")!.damage = 0;
+                equipment.getEquipment(mc.EquipmentSlot.Legs)!.getComponent("durability")!.damage = 0;
+                equipment.getEquipment(mc.EquipmentSlot.Feet)!.getComponent("durability")!.damage = 0;
+                const mainhandDurability = equipment.getEquipment(mc.EquipmentSlot.Mainhand)?.getComponent("durability");
+                if (mainhandDurability) mainhandDurability.damage = 0;
             }
         }
         for (const gen of this.generators) {
