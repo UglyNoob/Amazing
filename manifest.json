@@ -4,25 +4,15 @@
         "name": "Amazing Pack",
         "description": "Just amazing",
         "uuid": "4565303a-8b4a-4450-b2a4-2d97c753a7f6",
-        "version": [
-            0,
-            1,
-            0
-        ],
-        "min_engine_version": [
-            1,
-            20,
-            60
-        ]
+        "version": [0, 1, 0],
+        "min_engine_version": [1, 20, 60]
     },
     "modules": [
         {
             "desription": "Script module",
             "uuid": "94130dee-b63d-4214-ae87-4512f9417553",
             "version": [
-                1,
-                0,
-                0
+                1, 0, 0
             ],
             "type": "script",
             "language": "javascript",
@@ -35,7 +25,7 @@
     "dependencies": [
         {
             "module_name": "@minecraft/server",
-            "version": "1.10.0-beta"
+            "version": "1.9.0-beta"
         },
         {
             "module_name": "@minecraft/server-ui",
