@@ -1,6 +1,8 @@
 import * as mc from '@minecraft/server';
 import * as ui from '@minecraft/server-ui';
 
+export type Area = [mc.Vector3, mc.Vector3]
+
 export function itemEqual(a: mc.ItemStack, b: mc.ItemStack, compareAmount = false) {
     let loreA = a.getLore(), loreB = b.getLore();
     return loreA.length == loreB.length &&

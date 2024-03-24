@@ -1,6 +1,6 @@
 import { Vector3Utils as v3 } from '@minecraft/math';
 import * as mc from '@minecraft/server';
-import { itemEqual, showObjectToPlayer, sleep, vectorAdd, vectorWithinArea } from './utility.js';
+import { itemEqual, Area, sleep, vectorAdd, vectorWithinArea } from './utility.js';
 import { setupGameTest } from './GameTest.js';
 import { MinecraftItemTypes } from '@minecraft/vanilla-data';
 
@@ -21,13 +21,12 @@ DIAMOND_ITEM_STACK.nameTag = "Diamond Token";
 export const EMERALD_ITEM_STACK = new mc.ItemStack(MinecraftItemTypes.Emerald);
 EMERALD_ITEM_STACK.nameTag = "Emerald Token";
 
-type Area = [mc.Vector3, mc.Vector3]
 const PROTECTED_AREA_IRONGOLD: Area = [{ x: 0, y: 0, z: 0 }, { x: 3, y: 3, z: 3 }];
-const PROTECTED_AREA_DIAMOND: Area = [{ x: 0, y: 0, z: 0 }, { x: 0, y: 3, z: 0 }];
-const PROTECTED_AREA_EMERALD: Area = [{ x: 0, y: 0, z: 0 }, { x: 0, y: 3, z: 0 }];
+const PROTECTED_AREA_DIAMOND: Area = [{ x: 0, y: 0, z: 0 }, { x: 1, y: 3, z: 1 }];
+const PROTECTED_AREA_EMERALD: Area = [{ x: 0, y: 0, z: 0 }, { x: 1, y: 3, z: 1 }];
 const PRODUCING_AREA_IRONGOLD: Area = [{ x: 0, y: 0, z: 0 }, { x: 3, y: 1, z: 3 }];
-const PRODUCING_AREA_DIAMOND: Area = [{ x: 0, y: 1, z: 0 }, { x: 0, y: 2, z: 0 }];
-const PRODUCING_AREA_EMERALD: Area = [{ x: 0, y: 1, z: 0 }, { x: 0, y: 2, z: 0 }];
+const PRODUCING_AREA_DIAMOND: Area = [{ x: 0, y: 1, z: 0 }, { x: 1, y: 2, z: 1 }];
+const PRODUCING_AREA_EMERALD: Area = [{ x: 0, y: 1, z: 0 }, { x: 1, y: 2, z: 1 }];
 
 const DEATH_TITLE = "§cYOU DIED!";
 const DEATH_SUBTITLE = "§eYou will respawn in §c%d §eseconds!";
@@ -37,14 +36,14 @@ const RESPAWN_TITLE = "§aRESPAWNED!";
 const BED_DESTROYED_TITLE = "§cBED DESTROYED!";
 const BED_DESTROYED_SUBTITLE = "You will no longer respawn!";
 const TEAM_BED_DESTROYED_MESSAGE = "BED DESTRUCTION > %s%s bed was destroyed by %s%s!";
-const TEAM_ELIMINATION_MESSAGE = "TEAN ELIMINATED > %s%s §chas been eliminated!"
+const TEAM_ELIMINATION_MESSAGE = "TEAM ELIMINATED > %s%s §chas been eliminated!"
 const FINAL_KILL_MESSAGE = "%(victimColor)s%(victim)s was killed by %(killerColor)s%(killer)s. FINAL KILL!";
 const BREAKING_BLOCK_INVALID_MESSAGE = "§cYou cannot break blocks that are not placed by players.";
 const KILL_NOTIFICATION = "KILL: %s%s";
 const FINAL_KILL_NOTIFICATION = "FINAL KILL: %s%s";
 const DISCONNECTED_MESSAGE = "%s%s has disconnected.";
-const RECONNECTION_MESSAGE = "%s%s has connected.";
-const PLACING_BLOCK_ILLAGEL_MESSAGE = "§cYou can't place blocks here!"
+const RECONNECTION_MESSAGE = "%s%s has reconnected.";
+const PLACING_BLOCK_ILLAGEL_MESSAGE = "§cYou can't place blocks here!";
 
 enum GeneratorType {
     IronGold,
@@ -74,6 +73,7 @@ interface TeamInformation {
 }
 interface MapInformation {
     teams: TeamInformation[];
+    voidY: number;
     extraGenerators: GeneratorInformation[];
     size: mc.Vector3;
     /**
@@ -122,6 +122,7 @@ export function getWoolItemNameOfTeam(t: TeamType) {
 const testMap: MapInformation = {
     size: { x: 21, y: 3, z: 5 },
     fallbackRespawnPoint: { x: 0, y: 200, z: 0 },
+    voidY: -64,
     teams: [
         {
             type: TeamType.Red,
@@ -131,7 +132,7 @@ const testMap: MapInformation = {
                 spawnLocation: { x: 1.5, y: 1.5, z: 2.5 },
                 location: { x: 0, y: 1, z: 1 },
                 defaultInterval: IRONGOLD_GENERATOR_INTERVAL,
-                defaultCapacity: 3
+                defaultCapacity: 48
             },
             bedLocation: [{ x: 4, y: 1, z: 2 }, { x: 5, y: 1, z: 2 }],
             playerSpawn: { x: 3.5, y: 1, z: 2.5 },
@@ -145,7 +146,7 @@ const testMap: MapInformation = {
                 spawnLocation: { x: 19.5, y: 1.5, z: 2.5 },
                 location: { x: 18, y: 1, z: 1 },
                 defaultInterval: IRONGOLD_GENERATOR_INTERVAL,
-                defaultCapacity: 3
+                defaultCapacity: 48
             },
             bedLocation: [{ x: 16, y: 1, z: 2 }, { x: 15, y: 1, z: 2 }],
             playerSpawn: { x: 17.5, y: 1, z: 2.5 },
@@ -158,21 +159,21 @@ const testMap: MapInformation = {
             spawnLocation: { x: 10.5, y: 1, z: 0.5 },
             location: { x: 10, y: 0, z: 0 },
             defaultInterval: DIAMOND_GENERATOR_INTERVAL,
-            defaultCapacity: 3
+            defaultCapacity: 32
         },
         {
             type: GeneratorType.Diamond,
             spawnLocation: { x: 10.5, y: 1, z: 4.5 },
             location: { x: 10, y: 0, z: 4 },
             defaultInterval: DIAMOND_GENERATOR_INTERVAL,
-            defaultCapacity: 3
+            defaultCapacity: 32
         },
         {
             type: GeneratorType.Emerald,
             spawnLocation: { x: 10.5, y: 1, z: 2.5 },
             location: { x: 10, y: 0, z: 2 },
             defaultInterval: EMERLAD_GENERATOR_INTERVAL,
-            defaultCapacity: 3
+            defaultCapacity: 32
         }
     ]
 };
@@ -208,7 +209,7 @@ type GeneratorGameInformation = {
     team: TeamType;
 } | {
     belongToTeam: false;
-});
+})
 
 export interface PlayerGameInformation {
     name: string;
@@ -227,7 +228,7 @@ export interface PlayerGameInformation {
      */
     lastActionResults: ActionResult[];
     /**
-     * Indicates the attacker.
+     * Stores the attacker.
      * this field is cleared on death
      */
     lastHurtBy?: PlayerGameInformation;
@@ -438,17 +439,21 @@ export class Game {
                 continue;
             }
 
-            if (v3.distance(v3.add(this.originPos, this.map.fallbackRespawnPoint), player.location) <= 1) {
+            if (playerInfo.state == PlayerState.dead &&
+                v3.distance(v3.add(this.originPos, this.map.fallbackRespawnPoint), player.location) <= 1) {
                 player.runCommand("gamemode spectator");
                 player.teleport(playerInfo.deathLocation, { rotation: playerInfo.deathRotaion });
+                const isTeamBedAlive = this.teamStates.get(playerInfo.team) == TeamState.BedAlive;
                 player.onScreenDisplay.setTitle(DEATH_TITLE, {
-                    subtitle: sprintf(DEATH_SUBTITLE, RESPAWN_TIME / 20),
+                    subtitle: isTeamBedAlive ? sprintf(DEATH_SUBTITLE, RESPAWN_TIME / 20) : undefined,
                     fadeInDuration: 0,
                     stayDuration: 30,
                     fadeOutDuration: 20
                 });
-                if (playerInfo.state == PlayerState.dead) {
+                if (isTeamBedAlive) {
                     playerInfo.state = PlayerState.Respawning;
+                } else {
+                    playerInfo.state = PlayerState.Spectating;
                 }
             }
 
@@ -468,6 +473,24 @@ export class Game {
                         stayDuration: 30,
                         fadeOutDuration: 20,
                     });
+                }
+            } else if (playerInfo.state == PlayerState.Alive) {
+                if (player.location.y <= this.originPos.y + this.map.voidY) { // The player falls to the void
+                    player.runCommand("gamemode spectator");
+                    this.playerDieOrOffline(playerInfo, playerInfo.lastHurtBy);
+
+                    const isTeamBedAlive = this.teamStates.get(playerInfo.team) == TeamState.BedAlive;
+                    player.onScreenDisplay.setTitle(DEATH_TITLE, {
+                        subtitle: isTeamBedAlive ? sprintf(DEATH_SUBTITLE, RESPAWN_TIME / 20) : undefined,
+                        fadeInDuration: 0,
+                        stayDuration: 30,
+                        fadeOutDuration: 20
+                    });
+                    if (isTeamBedAlive) {
+                        playerInfo.state = PlayerState.Respawning;
+                    } else {
+                        playerInfo.state = PlayerState.Spectating;
+                    }
                 }
             }
         }
@@ -558,10 +581,10 @@ export class Game {
         } else {
             victimInfo.deathLocation = victimInfo.player.location;
             victimInfo.deathRotaion = victimInfo.player.getRotation();
+            victimInfo.state = PlayerState.dead;
         }
 
         if (this.teamStates.get(victimInfo.team) == TeamState.BedDestoryed) { // FINAL KILL
-            if (!victimOffline) victimInfo.state = PlayerState.Spectating;
             if (killerInfo) {
                 ++killerInfo.finalKillCount;
                 this.broadcast(sprintf(FINAL_KILL_MESSAGE, {
@@ -582,7 +605,6 @@ export class Game {
                 fadeOutDuration: 10
             });
         } else {
-            if (!victimOffline) victimInfo.state = PlayerState.dead;
             if (killerInfo) {
                 ++killerInfo.killCount;
                 killerInfo.player.onScreenDisplay.setActionBar(sprintf(
