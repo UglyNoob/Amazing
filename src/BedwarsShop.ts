@@ -4,10 +4,10 @@ import {
     GOLD_ITEM_STACK,
     DIAMOND_ITEM_STACK,
     EMERALD_ITEM_STACK,
-    Game,
+    BedWarsGame,
     PlayerGameInformation,
     PlayerState,
-    getWoolItemNameOfTeam
+    TEAM_CONSTANTS
 } from "./Bedwars.js";
 import { ActionFormData } from "@minecraft/server-ui";
 import { containerIterator, itemEqual } from './utility.js'
@@ -55,7 +55,7 @@ type isUnion<T, K = T> = T extends any ? (Exclude<K, T> extends T ? false : true
 type FieldOrFunction<PropName extends string, ValueType> = isUnion<PropName> extends true ? never : {
     [prop in PropName]: ValueType;
 } | {
-        [prop in PropName as `get${Capitalize<prop>}`]: (playerInfo: PlayerGameInformation, tokens: TokenValue, game: Game) => ValueType;
+        [prop in PropName as `get${Capitalize<prop>}`]: (playerInfo: PlayerGameInformation, tokens: TokenValue, game: BedWarsGame) => ValueType;
     }
 
 type Menu = FieldOrFunction<"display", string> & (
@@ -96,8 +96,8 @@ const SHOP_DATA: Menu = {
                     getActions(playerInfo) {
                         return [{
                             type: ActionType.BuyNormalItem,
-                            cost: {ironAmount: 1, goldAmount: 0, emeraldAmount: 0, diamondAmount: 0},
-                            items: [new mc.ItemStack(getWoolItemNameOfTeam(playerInfo.team), 16)]
+                            cost: { ironAmount: 1, goldAmount: 0, emeraldAmount: 0, diamondAmount: 0 },
+                            items: [new mc.ItemStack(TEAM_CONSTANTS[playerInfo.team].woolName, 16)]
                         }];
                     }
                 }
@@ -113,7 +113,7 @@ function calculateTokens(container: mc.Container) {
         diamondAmount: 0,
         emeraldAmount: 0
     };
-    for (const item of containerIterator(container)) {
+    for (const { item } of containerIterator(container)) {
         if (!item) continue;
         if (itemEqual(item, IRON_ITEM_STACK)) tokens.ironAmount += item.amount;
         if (itemEqual(item, GOLD_ITEM_STACK)) tokens.goldAmount += item.amount;
@@ -137,49 +137,47 @@ function isTokenSatisfying(a: TokenValue, b: TokenValue) {
  */
 function consumeToken(container: mc.Container, _tokens: TokenValue) {
     const tokens = Object.assign({}, _tokens);
-    let slot = -1;
     // Consume tokens
-    for (const item of containerIterator(container)) {
-        ++slot;
+    for (const { item, index } of containerIterator(container)) {
         if (!item) continue;
         if (itemEqual(item, IRON_ITEM_STACK)) {
             if (tokens.ironAmount >= item.amount) {
                 tokens.ironAmount -= item.amount;
-                container.setItem(slot); // clear the slot
+                container.setItem(index); // clear the slot
             } else {
                 item.amount -= tokens.ironAmount;
                 tokens.ironAmount = 0;
-                container.setItem(slot, item);
+                container.setItem(index, item);
             }
         }
         if (itemEqual(item, GOLD_ITEM_STACK)) {
             if (tokens.goldAmount >= item.amount) {
                 tokens.goldAmount -= item.amount;
-                container.setItem(slot); // clear the slot
+                container.setItem(index); // clear the slot
             } else {
                 item.amount -= tokens.goldAmount;
                 tokens.goldAmount = 0;
-                container.setItem(slot, item);
+                container.setItem(index, item);
             }
         }
         if (itemEqual(item, DIAMOND_ITEM_STACK)) {
             if (tokens.diamondAmount >= item.amount) {
                 tokens.diamondAmount -= item.amount;
-                container.setItem(slot); // clear the slot
+                container.setItem(index); // clear the slot
             } else {
                 item.amount -= tokens.diamondAmount;
                 tokens.diamondAmount = 0;
-                container.setItem(slot, item);
+                container.setItem(index, item);
             }
         }
         if (itemEqual(item, EMERALD_ITEM_STACK)) {
             if (tokens.emeraldAmount >= item.amount) {
                 tokens.emeraldAmount -= item.amount;
-                container.setItem(slot); // clear the slot
+                container.setItem(index); // clear the slot
             } else {
                 item.amount -= tokens.emeraldAmount;
                 tokens.emeraldAmount = 0;
-                container.setItem(slot, item);
+                container.setItem(index, item);
             }
         }
         if (tokens.ironAmount == 0 && tokens.goldAmount == 0 &&
@@ -202,7 +200,7 @@ async function showMenuForPlayer(playerInfo: PlayerGameInformation, menu: Menu, 
         let body: string;
         let subMenus: Menu[];
         let subMenuDisplays: string[] = [];
-        
+
         const currentTokens = calculateTokens(playerInfo.player.getComponent("minecraft:inventory")!.container!);
 
         // Extract information
@@ -303,7 +301,7 @@ function performAction(playerInfo: PlayerGameInformation, actions: Action[]) {
                 type: ActionType.BuyNormalItem,
                 success: true
             });
-        } else if(action.type == ActionType.UpgradeSword) {
+        } else if (action.type == ActionType.UpgradeSword) {
             ;
         }
     }

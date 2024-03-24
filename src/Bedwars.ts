@@ -1,8 +1,8 @@
 import { Vector3Utils as v3 } from '@minecraft/math';
 import * as mc from '@minecraft/server';
-import { itemEqual, Area, sleep, vectorAdd, vectorWithinArea } from './utility.js';
+import { itemEqual, Area, sleep, vectorAdd, vectorWithinArea, containerIterator, capitalize, getPlayerByName } from './utility.js';
 import { setupGameTest } from './GameTest.js';
-import { MinecraftItemTypes } from '@minecraft/vanilla-data';
+import { MinecraftEnchantmentTypes, MinecraftItemTypes } from '@minecraft/vanilla-data';
 
 import { sprintf, vsprintf } from 'sprintf-js';
 import { ActionResult, openShop } from './BedwarsShop.js';
@@ -35,15 +35,25 @@ const SPECTATE_SUBTITLE = "Your bed has been destroyed";
 const RESPAWN_TITLE = "§aRESPAWNED!";
 const BED_DESTROYED_TITLE = "§cBED DESTROYED!";
 const BED_DESTROYED_SUBTITLE = "You will no longer respawn!";
-const TEAM_BED_DESTROYED_MESSAGE = "BED DESTRUCTION > %s%s bed was destroyed by %s%s!";
-const TEAM_ELIMINATION_MESSAGE = "TEAM ELIMINATED > %s%s §chas been eliminated!"
-const FINAL_KILL_MESSAGE = "%(victimColor)s%(victim)s was killed by %(killerColor)s%(killer)s. FINAL KILL!";
+const TEAM_BED_DESTROYED_MESSAGE = "§lBED DESTRUCTION > §r%s%s Bed §7was destroyed by %s%s§7!";
+const TEAM_ELIMINATION_MESSAGE = "§lTEAM ELIMINATED > §r%s%s §chas been eliminated!"
+const FINAL_KILL_MESSAGE = "%(victimColor)s%(victim)s §7was killed by %(killerColor)s%(killer)s§7. §b§lFINAL KILL!";
 const BREAKING_BLOCK_INVALID_MESSAGE = "§cYou cannot break blocks that are not placed by players.";
 const KILL_NOTIFICATION = "KILL: %s%s";
 const FINAL_KILL_NOTIFICATION = "FINAL KILL: %s%s";
 const DISCONNECTED_MESSAGE = "%s%s has disconnected.";
 const RECONNECTION_MESSAGE = "%s%s has reconnected.";
 const PLACING_BLOCK_ILLAGEL_MESSAGE = "§cYou can't place blocks here!";
+
+const WOODEN_SWORD = (() => {
+    const i = new mc.ItemStack(MinecraftItemTypes.WoodenSword);
+    i.lockMode = mc.ItemLockMode.inventory;
+    i.getComponent("enchantable")!.addEnchantment({
+        level: 3,
+        type: MinecraftEnchantmentTypes.Unbreaking
+    });
+    return i;
+})();
 
 enum GeneratorType {
     IronGold,
@@ -81,41 +91,61 @@ interface MapInformation {
      */
     fallbackRespawnPoint: mc.Vector3;
 }
+export const TEAM_CONSTANTS: Record<TeamType, {
+    name: string;
+    colorPrefix: string;
+    woolName: string;
+    leatherHelmet: mc.ItemStack;
+    leatherChestplate: mc.ItemStack;
+    leatherLeggings: mc.ItemStack;
+    leatherBoots: mc.ItemStack;
+}> = Object.create(null);
+{
+    function setupItem(type: MinecraftItemTypes, team: TeamType) {
+        const i = new mc.ItemStack(type);
+        i.lockMode = mc.ItemLockMode.slot;
+        i.getComponent("enchantable")!.addEnchantment({
+            level: 3,
+            type: MinecraftEnchantmentTypes.Unbreaking
+        });
+        return i;
+    }
 
-function getNameOfTeam(t: TeamType) {
-    switch (t) {
-        case TeamType.Blue:
-            return "blue";
-        case TeamType.Green:
-            return "green";
-        case TeamType.Red:
-            return "red";
-        case TeamType.Yellow:
-            return "yellow";
+    TEAM_CONSTANTS[TeamType.Blue] = {
+        name: "blue",
+        colorPrefix: "§9",
+        woolName: MinecraftItemTypes.BlueWool,
+        leatherHelmet: setupItem(MinecraftItemTypes.LeatherHelmet, TeamType.Blue),
+        leatherChestplate: setupItem(MinecraftItemTypes.LeatherChestplate, TeamType.Blue),
+        leatherLeggings: setupItem(MinecraftItemTypes.LeatherLeggings, TeamType.Blue),
+        leatherBoots: setupItem(MinecraftItemTypes.LeatherBoots, TeamType.Blue)
     }
-}
-function getColorPrefixOfTeam(t: TeamType) {
-    switch (t) {
-        case TeamType.Blue:
-            return "§b";
-        case TeamType.Green:
-            return "§2";
-        case TeamType.Red:
-            return "§m";
-        case TeamType.Yellow:
-            return "§g";
+    TEAM_CONSTANTS[TeamType.Green] = {
+        name: "green",
+        colorPrefix: "§a",
+        woolName: MinecraftItemTypes.GreenWool,
+        leatherHelmet: setupItem(MinecraftItemTypes.LeatherHelmet, TeamType.Green),
+        leatherChestplate: setupItem(MinecraftItemTypes.LeatherChestplate, TeamType.Green),
+        leatherLeggings: setupItem(MinecraftItemTypes.LeatherLeggings, TeamType.Green),
+        leatherBoots: setupItem(MinecraftItemTypes.LeatherBoots, TeamType.Green)
     }
-}
-export function getWoolItemNameOfTeam(t: TeamType) {
-    switch (t) {
-        case TeamType.Blue:
-            return MinecraftItemTypes.BlueWool;
-        case TeamType.Green:
-            return MinecraftItemTypes.GreenWool;
-        case TeamType.Red:
-            return MinecraftItemTypes.RedWool;
-        case TeamType.Yellow:
-            return MinecraftItemTypes.YellowWool;
+    TEAM_CONSTANTS[TeamType.Red] = {
+        name: "red",
+        colorPrefix: "§c",
+        woolName: MinecraftItemTypes.RedWool,
+        leatherHelmet: setupItem(MinecraftItemTypes.LeatherHelmet, TeamType.Red),
+        leatherChestplate: setupItem(MinecraftItemTypes.LeatherChestplate, TeamType.Red),
+        leatherLeggings: setupItem(MinecraftItemTypes.LeatherLeggings, TeamType.Red),
+        leatherBoots: setupItem(MinecraftItemTypes.LeatherBoots, TeamType.Red)
+    }
+    TEAM_CONSTANTS[TeamType.Yellow] = {
+        name: "yellow",
+        colorPrefix: "§g",
+        woolName: MinecraftItemTypes.YellowWool,
+        leatherHelmet: setupItem(MinecraftItemTypes.LeatherHelmet, TeamType.Yellow),
+        leatherChestplate: setupItem(MinecraftItemTypes.LeatherChestplate, TeamType.Yellow),
+        leatherLeggings: setupItem(MinecraftItemTypes.LeatherLeggings, TeamType.Yellow),
+        leatherBoots: setupItem(MinecraftItemTypes.LeatherBoots, TeamType.Yellow)
     }
 }
 
@@ -234,7 +264,7 @@ export interface PlayerGameInformation {
     lastHurtBy?: PlayerGameInformation;
     placement: BlockPlacementTracker;
 }
-export class Game {
+export class BedWarsGame {
     private map: MapInformation;
     private players: Map<string, PlayerGameInformation>;
     private teamStates: Map<TeamType, TeamState>;
@@ -323,6 +353,7 @@ export class Game {
                 playerInfo.state = PlayerState.Offline;
                 continue;
             }
+            playerInfo.player.getComponent("inventory")!.container!.clearAll();
             this.respawnPlayer(playerInfo);
             this.setupSpawnPoint(playerInfo.player);
         }
@@ -339,6 +370,25 @@ export class Game {
         playerInfo.player.runCommand("gamemode survival");
         playerInfo.player.getComponent("minecraft:health")!.resetToMaxValue();
         playerInfo.player.extinguishFire();
+
+        const equipment = playerInfo.player.getComponent("minecraft:equippable")!;
+        const t = TEAM_CONSTANTS[playerInfo.team];
+        equipment.setEquipment(mc.EquipmentSlot.Head, t.leatherHelmet);
+        equipment.setEquipment(mc.EquipmentSlot.Chest, t.leatherChestplate);
+        equipment.setEquipment(mc.EquipmentSlot.Legs, t.leatherLeggings);
+        equipment.setEquipment(mc.EquipmentSlot.Feet, t.leatherBoots);
+
+        const container = playerInfo.player.getComponent("inventory")!.container!;
+        let hasSword = false;
+        for (const { item, index } of containerIterator(container)) {
+            if (!item) continue;
+            if (item.hasTag("is_sword")) {
+                hasSword = true;
+            }
+            container.setItem(index);
+        }
+        container.addItem(WOODEN_SWORD);
+
         playerInfo.state = PlayerState.Alive;
     }
 
@@ -377,8 +427,9 @@ export class Game {
         for (const [teamType, aliveCount] of remainingPlayerCounts) {
             if (aliveCount == 0) {
                 this.teamStates.set(teamType, TeamState.Dead);
+                const { name, colorPrefix } = TEAM_CONSTANTS[teamType];
                 this.broadcast(TEAM_ELIMINATION_MESSAGE,
-                    getColorPrefixOfTeam(teamType), getNameOfTeam(teamType).toUpperCase());
+                    colorPrefix, capitalize(name));
             }
         }
     }
@@ -395,7 +446,7 @@ export class Game {
 
         for (const playerInfo of this.players.values()) {
             if (playerInfo.state == PlayerState.Offline) {
-                const player = mc.world.getPlayers({ name: playerInfo.name })[0];
+                const player = getPlayerByName(playerInfo.name);
                 if (!player) continue;
                 // the player comes online
                 playerInfo.player = player;
@@ -426,14 +477,14 @@ export class Game {
                         break;
                 }
                 this.broadcast(RECONNECTION_MESSAGE,
-                    getColorPrefixOfTeam(playerInfo.team),
+                    TEAM_CONSTANTS[playerInfo.team].colorPrefix,
                     playerInfo.name);
             }
             const player = playerInfo.player;
             if (!player.isValid()) {
                 playerInfo.state = PlayerState.Offline; // the player comes offline
                 this.broadcast(DISCONNECTED_MESSAGE,
-                    getColorPrefixOfTeam(playerInfo.team),
+                    TEAM_CONSTANTS[playerInfo.team].colorPrefix,
                     playerInfo.name);
                 this.playerDieOrOffline(playerInfo, playerInfo.lastHurtBy);
                 continue;
@@ -502,48 +553,50 @@ export class Game {
             const spawnLocation = v3.add(gen.spawnLocation, this.originPos);
 
             // Detect if it reaches capacity
-            let producing_area: Area;
-            let original_producing_area: Area;
-            switch (gen.type) {
-                case GeneratorType.IronGold:
-                    original_producing_area = PRODUCING_AREA_IRONGOLD;
-                    break;
-                case GeneratorType.Diamond:
-                    original_producing_area = PRODUCING_AREA_DIAMOND;
-                    break;
-                case GeneratorType.Emerald:
-                    original_producing_area = PRODUCING_AREA_EMERALD;
-                    break;
-            }
-            producing_area = original_producing_area.map(
-                vec => vectorAdd(vec, gen.location, this.originPos)) as Area;
-            let existingTokens = 0;
-            for (const entity of this.dimension.getEntities({ type: "minecraft:item" })) {
-                if (!vectorWithinArea(entity.location, producing_area)) continue;
-                const itemStack = entity.getComponent("minecraft:item")!.itemStack;
+            if (gen.capacity != 0) {
+                let producing_area: Area;
+                let original_producing_area: Area;
                 switch (gen.type) {
                     case GeneratorType.IronGold:
-                        if (itemEqual(itemStack, IRON_ITEM_STACK) || itemEqual(itemStack, GOLD_ITEM_STACK)) {
-                            existingTokens += itemStack.amount;
-                        }
-                        continue;
+                        original_producing_area = PRODUCING_AREA_IRONGOLD;
+                        break;
                     case GeneratorType.Diamond:
-                        if (itemEqual(itemStack, DIAMOND_ITEM_STACK)) {
-                            existingTokens += itemStack.amount;
-                        }
-                        continue;
+                        original_producing_area = PRODUCING_AREA_DIAMOND;
+                        break;
                     case GeneratorType.Emerald:
-                        if (itemEqual(itemStack, EMERALD_ITEM_STACK)) {
-                            existingTokens += itemStack.amount;
-                        }
-                        continue;
+                        original_producing_area = PRODUCING_AREA_EMERALD;
+                        break;
                 }
+                producing_area = original_producing_area.map(
+                    vec => vectorAdd(vec, gen.location, this.originPos)) as Area;
+                let existingTokens = 0;
+                for (const entity of this.dimension.getEntities({ type: "minecraft:item" })) {
+                    if (!vectorWithinArea(entity.location, producing_area)) continue;
+                    const itemStack = entity.getComponent("minecraft:item")!.itemStack;
+                    switch (gen.type) {
+                        case GeneratorType.IronGold:
+                            if (itemEqual(itemStack, IRON_ITEM_STACK) || itemEqual(itemStack, GOLD_ITEM_STACK)) {
+                                existingTokens += itemStack.amount;
+                            }
+                            continue;
+                        case GeneratorType.Diamond:
+                            if (itemEqual(itemStack, DIAMOND_ITEM_STACK)) {
+                                existingTokens += itemStack.amount;
+                            }
+                            continue;
+                        case GeneratorType.Emerald:
+                            if (itemEqual(itemStack, EMERALD_ITEM_STACK)) {
+                                existingTokens += itemStack.amount;
+                            }
+                            continue;
+                    }
+                }
+                if (existingTokens >= gen.capacity) continue;
             }
-            if (existingTokens >= gen.capacity) continue;
-
 
             ++gen.tokensGeneratedCount;
 
+            // Generate token item
             let itemEntity: mc.Entity;
             switch (gen.type) {
                 case GeneratorType.IronGold:
@@ -584,18 +637,26 @@ export class Game {
             victimInfo.state = PlayerState.dead;
         }
 
-        if (this.teamStates.get(victimInfo.team) == TeamState.BedDestoryed) { // FINAL KILL
+        if (this.teamStates.get(victimInfo.team) == TeamState.BedAlive) {
+            if (killerInfo) {
+                ++killerInfo.killCount;
+                killerInfo.player.onScreenDisplay.setActionBar(sprintf(
+                    KILL_NOTIFICATION,
+                    TEAM_CONSTANTS[victimInfo.team].colorPrefix,
+                    victimInfo.name));
+            }
+        } else { // FINAL KILL
             if (killerInfo) {
                 ++killerInfo.finalKillCount;
                 this.broadcast(sprintf(FINAL_KILL_MESSAGE, {
-                    killerColor: getColorPrefixOfTeam(killerInfo.team),
+                    killerColor: TEAM_CONSTANTS[killerInfo.team].colorPrefix,
                     killer: killerInfo.name,
-                    victimColor: getColorPrefixOfTeam(victimInfo.team),
+                    victimColor: TEAM_CONSTANTS[victimInfo.team].colorPrefix,
                     victim: victimInfo.name
                 }));
                 killerInfo.player.onScreenDisplay.setActionBar(sprintf(
                     FINAL_KILL_NOTIFICATION,
-                    getColorPrefixOfTeam(victimInfo.team),
+                    TEAM_CONSTANTS[victimInfo.team].colorPrefix,
                     victimInfo.name));
             }
             if (!victimOffline) victimInfo.player.onScreenDisplay.setTitle(SPECTATE_TITLE, {
@@ -604,14 +665,6 @@ export class Game {
                 stayDuration: 50,
                 fadeOutDuration: 10
             });
-        } else {
-            if (killerInfo) {
-                ++killerInfo.killCount;
-                killerInfo.player.onScreenDisplay.setActionBar(sprintf(
-                    KILL_NOTIFICATION,
-                    getColorPrefixOfTeam(victimInfo.team),
-                    victimInfo.name));
-            }
         }
 
         if (!victimOffline) this.setupSpawnPoint(victimInfo.player);
@@ -708,9 +761,10 @@ export class Game {
                 } else {
                     playerInfo.player.playSound("mob.enderdragon.growl", { volume: 0.1 });
                 }
+                const t = TEAM_CONSTANTS[destroyedTeam.type];
                 playerInfo.player.sendMessage(sprintf(TEAM_BED_DESTROYED_MESSAGE,
-                    getColorPrefixOfTeam(destroyedTeam.type), getNameOfTeam(destroyedTeam.type).toUpperCase(),
-                    getColorPrefixOfTeam(destroyerInfo.team), destroyerInfo.name));
+                    t.colorPrefix, capitalize(t.name),
+                    TEAM_CONSTANTS[destroyerInfo.team].colorPrefix, destroyerInfo.name));
             }
             this.teamStates.set(destroyedTeam.type, TeamState.BedDestoryed);
             return;
@@ -862,7 +916,7 @@ class BlockPlacementTracker {
     }
 }
 
-let game: Game;
+let game: BedWarsGame;
 
 mc.world.beforeEvents.chatSend.subscribe(async event => {
     if (event.message == "start") {
@@ -871,7 +925,7 @@ mc.world.beforeEvents.chatSend.subscribe(async event => {
 
         const setup = () => {
             const players = mc.world.getAllPlayers();
-            game = new Game({
+            game = new BedWarsGame({
                 map: testMap, originLocation: { x: -17, y: 5, z: 32 }, dimension: players[0].dimension, scoreboardObjective:
                     mc.world.scoreboard.getObjective("GAME") ?? mc.world.scoreboard.addObjective("GAME")
             });

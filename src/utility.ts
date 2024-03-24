@@ -15,7 +15,7 @@ export function itemEqual(a: mc.ItemStack, b: mc.ItemStack, compareAmount = fals
  * @param {string} name
  */
 export function getPlayerByName(name: string): mc.Player | undefined {
-    return mc.world.getPlayers({ name: name })[0];
+    return mc.world.getPlayers({ name })[0];
 }
 
 export function calculateDistance(vector1: mc.Vector3, vector2: mc.Vector3) {
@@ -34,6 +34,10 @@ export function getGameMode(player: mc.Player): mc.GameMode {
         if (player.matches({ gameMode: gameMode })) return gameMode;
     }
     throw new Error("Player's gamemode doesn't match");
+}
+
+export function capitalize(str: string) {
+    return str.charAt(0).toUpperCase() + str.slice(1);
 }
 
 /**
@@ -135,7 +139,10 @@ export function vectorAdd(...vecs: mc.Vector3[]): mc.Vector3 {
 
 export function* containerIterator(container: mc.Container) {
     for (let i = 0; i < container.size; ++i) {
-        yield container.getItem(i);
+        yield {
+            index: i,
+            item: container.getItem(i)
+        };
     }
 }
 
