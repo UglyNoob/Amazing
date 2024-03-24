@@ -38,6 +38,16 @@ function isPartOfPlatform(platformLoc: mc.Vector3, blockLoc: mc.Vector3) {
         && (blockLoc.z == platformLoc.z || blockLoc.z == platformLoc.z + 4)) return false;
     return true;
 }
+export function isLocationPartOfAnyPlatforms(location: mc.Vector3, dimension: mc.Dimension) {
+    for (const platform of alivePlatforms) {
+        if (dimension != platform.dimension) continue;
+        if (!isPartOfPlatform(platform.location, location)) continue;
+        if (dimension.getBlock(location)?.permutation == RESCUE_PLATFORM_PERM) // Wohoo this works
+            return true;
+    }
+    return false;
+}
+
 /**
  * @returns returns whether platform adding succeeds
  */

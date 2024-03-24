@@ -109,6 +109,28 @@ export function showObjectToPlayer(player: mc.Player, object: any) {
     _showObjectToPlayer(player, object, null);
 }
 
+export function vectorWithinArea(vec: mc.Vector3, area: [mc.Vector3, mc.Vector3]) {
+    const minX = Math.min(area[0].x, area[1].x);
+    const minY = Math.min(area[0].y, area[1].y);
+    const minZ = Math.min(area[0].z, area[1].z);
+    const maxX = Math.max(area[0].x, area[1].x);
+    const maxY = Math.max(area[0].y, area[1].y);
+    const maxZ = Math.max(area[0].z, area[1].z);
+    if (vec.x >= minX && vec.x < maxX &&
+        vec.y >= minY && vec.y < maxY &&
+        vec.z >= minZ && vec.z < maxZ) return true;
+    return false;
+}
+export function vectorAdd(...vecs: mc.Vector3[]): mc.Vector3 {
+    const result = { x: 0, y: 0, z: 0 };
+    for (const vec of vecs) {
+        result.x += vec.x;
+        result.y += vec.y;
+        result.z += vec.z;
+    }
+    return result;
+}
+
 export function* containerIterator(container: mc.Container) {
     for (let i = 0; i < container.size; ++i) {
         yield container.getItem(i);
