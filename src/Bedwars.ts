@@ -2,7 +2,7 @@ import { Vector3Utils as v3 } from '@minecraft/math';
 import * as mc from '@minecraft/server';
 import { itemEqual, Area, sleep, vectorAdd, vectorWithinArea, containerIterator, capitalize, getPlayerByName } from './utility.js';
 import { setupGameTest } from './GameTest.js';
-import { MinecraftEnchantmentTypes, MinecraftItemTypes } from '@minecraft/vanilla-data';
+import { MinecraftEnchantmentTypes, MinecraftEntityTypes, MinecraftItemTypes } from '@minecraft/vanilla-data';
 
 import { sprintf, vsprintf } from 'sprintf-js';
 import { ActionResult, openShop } from './BedwarsShop.js';
@@ -210,16 +210,16 @@ const testMap: MapInformation = {
 };
 
 export enum PlayerState {
-    Alive,
-    Offline,
-    dead, // When the player haven't clicked the "respawn" button
-    Respawning,
-    Spectating
+    Alive/* = "alive"*/,
+    Offline/* = "offline"*/,
+    dead/* = "dead"*/, // When the player haven't clicked the "respawn" button
+    Respawning/* = "respawning"*/,
+    Spectating/* = "spectating"*/
 }
 enum TeamState {
-    BedAlive,
-    BedDestoryed,
-    Dead
+    BedAlive/* = "bedAlive"*/,
+    BedDestoryed/* = "bedDestroyed"*/,
+    Dead/* = "dead"*/
 }
 
 enum GameState {
@@ -545,27 +545,30 @@ export class BedWarsGame {
                     } else {
                         playerInfo.state = PlayerState.Spectating;
                     }
+                    player.dimension.spawnEntity(MinecraftEntityTypes.LightningBolt, player.location);
                     continue;
                 }
                 const equipment = player.getComponent("equippable")!;
-                equipment.getEquipment(mc.EquipmentSlot.Head)!.getComponent("durability")!.damage = 0;
-                equipment.getEquipment(mc.EquipmentSlot.Chest)!.getComponent("durability")!.damage = 0;
-                equipment.getEquipment(mc.EquipmentSlot.Legs)!.getComponent("durability")!.damage = 0;
-                equipment.getEquipment(mc.EquipmentSlot.Feet)!.getComponent("durability")!.damage = 0;
-                const mainhandDurability = equipment.getEquipment(mc.EquipmentSlot.Mainhand)?.getComponent("durability");
-                if (mainhandDurability) mainhandDurability.damage = 0;
+                [mc.EquipmentSlot.Head, mc.EquipmentSlot.Chest, mc.EquipmentSlot.Legs, mc.EquipmentSlot.Feet, mc.EquipmentSlot.Mainhand].forEach(slot => {
+                    const com = equipment.getEquipment(slot)?.getComponent("durability");
+                    if(com) {
+                        try {
+                            com.damage = 0;
+                        } catch {}
+                    }
+                });
             }
         }
         for (const gen of this.generators) {
             --gen.remainingCooldown;
-            if (gen.remainingCooldown != 0) continue;
+            if (gen.remainingCooldown > 0) continue;
 
             gen.remainingCooldown = gen.interval;
             const spawnLocation = v3.add(gen.spawnLocation, this.originPos);
 
             // Detect if it reaches capacity
             if (gen.capacity != 0) {
-                let producing_area: Area;
+                let producingArea: Area;
                 let original_producing_area: Area;
                 switch (gen.type) {
                     case GeneratorType.IronGold:
@@ -578,11 +581,11 @@ export class BedWarsGame {
                         original_producing_area = PRODUCING_AREA_EMERALD;
                         break;
                 }
-                producing_area = original_producing_area.map(
+                producingArea = original_producing_area.map(
                     vec => vectorAdd(vec, gen.location, this.originPos)) as Area;
                 let existingTokens = 0;
                 for (const entity of this.dimension.getEntities({ type: "minecraft:item" })) {
-                    if (!vectorWithinArea(entity.location, producing_area)) continue;
+                    if (!vectorWithinArea(entity.location, producingArea)) continue;
                     const itemStack = entity.getComponent("minecraft:item")!.itemStack;
                     switch (gen.type) {
                         case GeneratorType.IronGold:
@@ -683,6 +686,19 @@ export class BedWarsGame {
         this.checkTeamPlayers();
     }
 
+    beforeExplosion(event: mc.ExplosionBeforeEvent) {
+        if(this.state != GameState.started) return;
+
+        const impactedBlocks = event.getImpactedBlocks();
+        const playerPlacedBlocks = Array.from(impactedBlocks);
+        for(let index = impactedBlocks.length - 1; index >= 0; --index) {
+            const block = impactedBlocks[index];
+            if(!this.removeBlockFromRecord(block)) {
+                playerPlacedBlocks.splice(index, 1);
+            }
+        }
+        event.setImpactedBlocks(playerPlacedBlocks);
+    }
     afterEntityDie(event: mc.EntityDieAfterEvent) {
         if (this.state != GameState.started) return;
         if (!(event.deadEntity instanceof mc.Player)) return;
@@ -734,6 +750,36 @@ export class BedWarsGame {
     beforePlayerInteractWithEntity(event: mc.PlayerInteractWithEntityBeforeEvent) {
         if (this.state != GameState.started) return;
     }
+    private removeBlockFromRecord(block: mc.Block) {
+        for (const { placement } of this.players.values()) {
+            if (!placement.remove(block.location)) continue;
+            // the location appears in the tracker.
+            const location = Object.assign({}, block.location);
+
+            let bit = block.permutation.getState("upper_block_bit");
+            if (bit != null) {
+                if (bit) { --location.y; } else { ++location.y; }
+                placement.remove(location);
+            }
+
+            bit = block.permutation.getState("head_piece_bit");
+            checkBed: if (bit != null) {
+                const modifier = bit ? -1 : 1;
+                const direction = block.permutation.getState("direction");
+                if (direction == null) break checkBed;
+                switch (direction) {
+                    case 0: location.z += modifier; break; // SOUTH
+                    case 1: location.x -= modifier; break; // WEST
+                    case 2: location.z -= modifier; break; // NORTH
+                    case 3: location.x += modifier; break; // EAST
+                }
+                placement.remove(location);
+            }
+
+            return true;
+        }
+        return false;
+    }
     async beforePlayerBreakBlock(event: mc.PlayerBreakBlockBeforeEvent) {
         if (this.state != GameState.started) return;
         if (event.dimension != this.dimension) return;
@@ -783,37 +829,11 @@ export class BedWarsGame {
 
         if (!destroyerInfo) return;
         if (isLocationPartOfAnyPlatforms(event.block.location, this.dimension)) return;
-        for (const { placement } of this.players.values()) {
-            if (!placement.remove(event.block.location)) continue;
-            // the location appears in the tracker.
-            const location = Object.assign({}, event.block.location);
-
-            let bit = event.block.permutation.getState("upper_block_bit");
-            if (bit != null) {
-                if (bit) { --location.y; } else { ++location.y; }
-                placement.remove(location);
-            }
-
-            bit = event.block.permutation.getState("head_piece_bit");
-            checkBed: if (bit != null) {
-                const modifier = bit ? -1 : 1;
-                const direction = event.block.permutation.getState("direction");
-                if (direction == null) break checkBed;
-                switch (direction) {
-                    case 0: location.z += modifier; break; // SOUTH
-                    case 1: location.x -= modifier; break; // WEST
-                    case 2: location.z -= modifier; break; // NORTH
-                    case 3: location.x += modifier; break; // EAST
-                }
-                placement.remove(location);
-            }
-
-            return;
-
+        if (!this.removeBlockFromRecord(event.block)) {
+            // The location doesn't appear in the tracker.
+            event.cancel = true;
+            destroyerInfo.player.sendMessage(BREAKING_BLOCK_INVALID_MESSAGE);
         }
-        // The location doesn't appear in the tracker.
-        event.cancel = true;
-        destroyerInfo.player.sendMessage(BREAKING_BLOCK_INVALID_MESSAGE);
     }
 
     async beforePlayerPlaceBlock(event: mc.PlayerPlaceBlockBeforeEvent) {
@@ -982,6 +1002,11 @@ mc.world.beforeEvents.playerBreakBlock.subscribe(event => {
 mc.world.beforeEvents.playerPlaceBlock.subscribe(event => {
     if (game) {
         game.beforePlayerPlaceBlock(event);
+    }
+});
+mc.world.beforeEvents.explosion.subscribe(event => {
+    if(game) {
+        game.beforeExplosion(event);
     }
 });
 mc.world.beforeEvents.itemUse.subscribe(event => {

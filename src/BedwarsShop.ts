@@ -96,7 +96,7 @@ const SHOP_DATA: Menu = {
                     getActions(playerInfo) {
                         return [{
                             type: ActionType.BuyNormalItem,
-                            cost: { ironAmount: 1, goldAmount: 0, emeraldAmount: 0, diamondAmount: 0 },
+                            cost: { ironAmount: 4, goldAmount: 0, emeraldAmount: 0, diamondAmount: 0 },
                             items: [new mc.ItemStack(TEAM_CONSTANTS[playerInfo.team].woolName, 16)]
                         }];
                     }
