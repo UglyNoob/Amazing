@@ -2,7 +2,7 @@ import { Vector3Utils as v3 } from '@minecraft/math';
 import * as mc from '@minecraft/server';
 import { itemEqual, Area, sleep, vectorAdd, vectorWithinArea, containerIterator, capitalize, getPlayerByName } from './utility.js';
 import { setupGameTest } from './GameTest.js';
-import { MinecraftEnchantmentTypes, MinecraftEntityTypes, MinecraftItemTypes } from '@minecraft/vanilla-data';
+import { MinecraftBlockTypes, MinecraftEffectTypes, MinecraftEnchantmentTypes, MinecraftEntityTypes, MinecraftItemTypes } from '@minecraft/vanilla-data';
 
 import { sprintf, vsprintf } from 'sprintf-js';
 import { ActionResult, openShop } from './BedwarsShop.js';
@@ -152,8 +152,8 @@ export const TEAM_CONSTANTS: Record<TeamType, {
 
 const testMap: MapInformation = {
     size: { x: 21, y: 3, z: 5 },
-    fallbackRespawnPoint: { x: 0, y: 200, z: 0 },
-    voidY: -64,
+    fallbackRespawnPoint: { x: 0, y: 50, z: 0 },
+    voidY: -48,
     teams: [
         {
             type: TeamType.Red,
@@ -371,6 +371,9 @@ export class BedWarsGame {
         playerInfo.player.teleport(spawnPoint, { facingLocation: v3.add(spawnPoint, teamInfo.playerSpawnViewDirection) });
         playerInfo.player.runCommand("gamemode survival");
         playerInfo.player.getComponent("minecraft:health")!.resetToMaxValue();
+        playerInfo.player.addEffect(MinecraftEffectTypes.Saturation, 1, {
+            amplifier: 127
+        });
         playerInfo.player.extinguishFire();
 
         const container = playerInfo.player.getComponent("inventory")!.container!;
@@ -615,7 +618,7 @@ export class BedWarsGame {
             switch (gen.type) {
                 case GeneratorType.IronGold:
                     if (gen.tokensGeneratedCount % 4 == 0) {
-                        itemEntity = this.dimension.spawnItem(GOLD_ITEM_STACK, spawnLocation);
+                        this.dimension.spawnItem(GOLD_ITEM_STACK, spawnLocation);
                     }
                     itemEntity = this.dimension.spawnItem(IRON_ITEM_STACK, spawnLocation);
                     break;
@@ -842,6 +845,20 @@ export class BedWarsGame {
         const playerInfo = this.players.get(event.player.name);
         if (!playerInfo) return;
 
+        if(event.permutationBeingPlaced.type.id == MinecraftBlockTypes.Tnt) {
+            event.cancel = true;
+            await sleep(0);
+            playerInfo.player.dimension.spawnEntity(MinecraftEntityTypes.Tnt, event.block.bottomCenter());
+            // consume tnt
+            const slot = playerInfo.player.getComponent("equippable")!.getEquipmentSlot(mc.EquipmentSlot.Mainhand);
+            if(slot.amount >= 2) {
+                --slot.amount;
+            } else {
+                slot.setItem();
+            }
+            return;
+        }
+        // disallow the player to place blocks near generators
         for (const gen of this.generators) {
             let protected_area: Area;
             let original_protected_area: Area;
@@ -864,7 +881,6 @@ export class BedWarsGame {
                 return;
             }
         }
-
         // Allow the player to place block
         playerInfo.placement.push(event.block.location);
 
@@ -892,7 +908,7 @@ export class BedWarsGame {
 };
 
 class BlockPlacementTracker {
-    static DEFAULT_BUCKET_SIZE = 25;
+    static readonly DEFAULT_BUCKET_SIZE = 25;
     private data: mc.Vector3[][];
     private readonly bucketSize: number;
 

@@ -12,6 +12,7 @@ import {
 import { ActionFormData } from "@minecraft/server-ui";
 import { containerIterator, itemEqual } from './utility.js'
 import { Vector3Utils as v3 } from "@minecraft/math";
+import {MinecraftItemTypes} from "@minecraft/vanilla-data";
 
 
 enum ActionType {
@@ -92,7 +93,7 @@ const SHOP_DATA: Menu = {
             subMenus: [
                 {
                     type: "action",
-                    display: "Wools\n1 iron",
+                    display: "Wools\n4 iron",
                     getActions(playerInfo) {
                         return [{
                             type: ActionType.BuyNormalItem,
@@ -100,6 +101,17 @@ const SHOP_DATA: Menu = {
                             items: [new mc.ItemStack(TEAM_CONSTANTS[playerInfo.team].woolName, 16)]
                         }];
                     }
+                },
+                {
+                    type: "action",
+                    display: "Tnt\n4 gold",
+                    actions: [
+                        {
+                            type: ActionType.BuyNormalItem,
+                            cost: { ironAmount: 0, goldAmount: 4, emeraldAmount: 0, diamondAmount: 0 },
+                            items: [new mc.ItemStack(MinecraftItemTypes.Tnt)]
+                        }
+                    ]
                 }
             ]
         }
