@@ -45,16 +45,6 @@ const DISCONNECTED_MESSAGE = "%s%s has disconnected.";
 const RECONNECTION_MESSAGE = "%s%s has reconnected.";
 const PLACING_BLOCK_ILLAGEL_MESSAGE = "§cYou can't place blocks here!";
 
-const WOODEN_SWORD = (() => {
-    const i = new mc.ItemStack(MinecraftItemTypes.WoodenSword);
-    i.lockMode = mc.ItemLockMode.inventory;
-    i.getComponent("enchantable")!.addEnchantment({
-        level: 3,
-        type: MinecraftEnchantmentTypes.Unbreaking
-    });
-    return i;
-})();
-
 enum GeneratorType {
     IronGold,
     Diamond,
@@ -264,6 +254,7 @@ export interface PlayerGameInformation {
      */
     lastHurtBy?: PlayerGameInformation;
     placement: BlockPlacementTracker;
+    swordLevel: SwordLevel;
 }
 export class BedWarsGame {
     private map: MapInformation;
@@ -342,7 +333,8 @@ export class BedWarsGame {
             deathTime: 0,
             deathRotaion: { x: 0, y: 0 },
             lastActionResults: [],
-            placement: new BlockPlacementTracker()
+            placement: new BlockPlacementTracker(),
+            swordLevel: SwordLevel.PrimaryLevel
         });
     }
 
@@ -355,7 +347,6 @@ export class BedWarsGame {
                 continue;
             }
             playerInfo.player.getComponent("inventory")!.container!.clearAll();
-            this.resetEquipment(playerInfo);
             this.respawnPlayer(playerInfo);
             this.setupSpawnPoint(playerInfo.player);
         }
@@ -375,28 +366,29 @@ export class BedWarsGame {
             amplifier: 127
         });
         playerInfo.player.extinguishFire();
-
-        const container = playerInfo.player.getComponent("inventory")!.container!;
-        let hasSword = false;
-        for (const { item, index } of containerIterator(container)) {
-            if (!item) continue;
-            if (item.hasTag("is_sword")) {
-                hasSword = true;
-            }
-            container.setItem(index);
-        }
-        container.addItem(WOODEN_SWORD);
+        this.resetInventory(playerInfo);
 
         playerInfo.state = PlayerState.Alive;
     }
 
-    private resetEquipment(playerInfo: PlayerGameInformation) {
+    private resetInventory(playerInfo: PlayerGameInformation) {
         const equipment = playerInfo.player.getComponent("minecraft:equippable")!;
         const t = TEAM_CONSTANTS[playerInfo.team];
         equipment.setEquipment(mc.EquipmentSlot.Head, t.leatherHelmet);
         equipment.setEquipment(mc.EquipmentSlot.Chest, t.leatherChestplate);
         equipment.setEquipment(mc.EquipmentSlot.Legs, t.leatherLeggings);
         equipment.setEquipment(mc.EquipmentSlot.Feet, t.leatherBoots);
+        const container = playerInfo.player.getComponent("inventory")!.container!;
+        let hasSword = false;
+        for (const { item, index } of containerIterator(container)) {
+            if (!item) continue;
+            if (item.hasTag("is_sword") && !hasSword) {
+                playerInfo.swordLevel = playerInfo.swordLevel.previousLevel();
+                container.setItem(index, playerInfo.swordLevel.item);
+                continue;
+            }
+            container.setItem(index);
+        }
     }
     private setupSpawnPoint(player: mc.Player) {
         player.setSpawnPoint(Object.assign({ dimension: player.dimension }, v3.add(this.originPos, this.map.fallbackRespawnPoint)));
@@ -960,6 +952,52 @@ class BlockPlacementTracker {
             ++index;
         }
         return false;
+    }
+}
+
+class SwordLevel {
+    private static readonly Levels = (()=>{
+        const setupItem = (type: MinecraftItemTypes) => {
+            const i = new mc.ItemStack(type);
+            i.lockMode = mc.ItemLockMode.inventory;
+            return i;
+        };
+        return [
+            new SwordLevel(0, setupItem(MinecraftItemTypes.WoodenSword)),
+            new SwordLevel(1, setupItem(MinecraftItemTypes.StoneSword)),
+            new SwordLevel(2, setupItem(MinecraftItemTypes.IronSword)),
+            new SwordLevel(3, setupItem(MinecraftItemTypes.DiamondSword))
+        ] as const;
+    })();
+
+    static readonly PrimaryLevel = SwordLevel.Levels[0];
+
+    private _level: number;
+    private _item: mc.ItemStack;
+    private constructor(level: number, item: mc.ItemStack) {
+        this._level = level;
+        this._item = item;
+    }
+
+    get level() { return this._level; }
+    get item() { return this._item; }
+
+    previousLevel() {
+        if(this.isPrimaryLevel()) return this;
+        return SwordLevel.Levels[this._level + 1];
+    }
+
+    nextLevel() {
+        if(this.isLastLevel()) return this;
+        return SwordLevel.Levels[this._level + 1];
+    }
+
+    isPrimaryLevel() {
+        return this._level == 0;
+    }
+
+    isLastLevel() {
+        return this._level == SwordLevel.Levels.length;
     }
 }
 
