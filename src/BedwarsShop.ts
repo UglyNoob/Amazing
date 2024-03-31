@@ -12,16 +12,20 @@ import {
 import { ActionFormData } from "@minecraft/server-ui";
 import { containerIterator, itemEqual } from './utility.js'
 import { Vector3Utils as v3 } from "@minecraft/math";
-import {MinecraftItemTypes} from "@minecraft/vanilla-data";
+import { MinecraftItemTypes, PinkGlazedTerracottaStates } from "@minecraft/vanilla-data";
+import {PLATFORM_ITEM} from "./RescuePlatform.js";
 
 
 enum ActionType {
     BuyNormalItem,
     UpgradeSword,
-    BuyArmor
+    BuyArmor,
+    UpgradePickaxe,
+    UpgradeAxe,
+    BuyShear
 }
 
-interface TokenValue {
+export interface TokenValue {
     ironAmount: number;
     goldAmount: number;
     diamondAmount: number;
@@ -44,8 +48,8 @@ type BuyNormalItemResult = {
 
 interface UpgradeSwordAction {
     type: ActionType.UpgradeSword;
-    costWooden: TokenValue;
 }
+
 
 type Action = BuyNormalItemAction |
     UpgradeSwordAction;
@@ -56,62 +60,138 @@ type isUnion<T, K = T> = T extends any ? (Exclude<K, T> extends T ? false : true
 type FieldOrFunction<PropName extends string, ValueType> = isUnion<PropName> extends true ? never : {
     [prop in PropName]: ValueType;
 } | {
-        [prop in PropName as `get${Capitalize<prop>}`]: (playerInfo: PlayerGameInformation, tokens: TokenValue, game: BedWarsGame) => ValueType;
+        [prop in PropName as `get${Capitalize<prop>}`]:
+        (playerInfo: PlayerGameInformation, tokens: TokenValue, game: BedWarsGame) => ValueType;
     }
 
-type Menu = FieldOrFunction<"display", string> & (
-    ({ type: "entry"; }
-        & FieldOrFunction<"body", string>
-        & FieldOrFunction<"title", string>
-        & FieldOrFunction<"subMenus", Menu[]>)
-    |
-    ({ type: "action"; }
-        & FieldOrFunction<"actions", Action[]>)
-);
+type Menu = FieldOrFunction<"display", string> & FieldOrFunction<"icon", string> &
+    (
+        ({ type: "entry"; }
+            & FieldOrFunction<"body", string>
+            & FieldOrFunction<"title", string>
+            & FieldOrFunction<"subMenus", Menu[]>)
+        |
+        ({ type: "action"; }
+            & FieldOrFunction<"actions", Action[]>)
+    );
+
+function generateBuyOneItemMenu(
+    name: string,
+    getAction: (playerInfo: PlayerGameInformation) => BuyNormalItemAction,
+    getIcon: (playerInfo: PlayerGameInformation) => string
+): Menu {
+    return {
+        type: "action",
+        getIcon,
+        getDisplay(playerInfo, tokens) {
+            const action = getAction(playerInfo);
+            const cost = action.cost;
+            const item = action.items[0];
+            let color: string;
+            if (isTokenSatisfying(tokens, cost)) {
+                color = "§a§l";
+            } else {
+                color = "§4";
+            }
+            let display = `${color}${name} * ${item.amount}\n`;
+            if (cost.ironAmount) {
+                display += `${cost.ironAmount} irons `;
+            }
+            if (cost.goldAmount) {
+                display += `${cost.goldAmount} golds `;
+            }
+            if (cost.diamondAmount) {
+                display += `${cost.diamondAmount} diamonds `;
+            }
+            if (cost.emeraldAmount) {
+                display += `${cost.emeraldAmount} emeralds `;
+            }
+            return display;
+        },
+        getActions(playerInfo) { return [getAction(playerInfo)]; }
+    };
+}
+
+function generateSecondMenuGetBody(defaultText: string) {
+    return (playerInfo: PlayerGameInformation) => {
+        if (playerInfo.lastActionResults.length != 0) {
+            for (const result of playerInfo.lastActionResults) {
+                if (!result.success) {
+                    return "Insufficient tokens.";
+                }
+            }
+            return "Success!";
+        }
+        return defaultText;
+    }
+}
 
 const SHOP_DATA: Menu = {
     type: "entry",
-    body: "This is the shop",
-    display: "",
-    title: "Shop",
+    body: "",
+    icon: "",
+    display: "Bedwars shop",
+    title: "Bedwars Shop",
     subMenus: [
         {
             type: "entry",
             display: "Blocks",
+            icon: "",
             title: "Blocks Shop",
-            getBody(playerInfo) {
-                if (playerInfo.lastActionResults.length != 0) {
-                    for (const result of playerInfo.lastActionResults) {
-                        if (!result.success) {
-                            return "Insufficient tokens.";
-                        }
+            getBody: generateSecondMenuGetBody("Buy blocks"),
+            subMenus: [
+                generateBuyOneItemMenu("Wool", playerInfo => {
+                    return {
+                        type: ActionType.BuyNormalItem,
+                        cost: { ironAmount: 4, goldAmount: 0, emeraldAmount: 0, diamondAmount: 0 },
+                        items: [new mc.ItemStack(TEAM_CONSTANTS[playerInfo.team].woolName, 16)]
                     }
-                    return "Success!";
-                }
-                return "Buy some blocks";
-            },
+                }, playerInfo => TEAM_CONSTANTS[playerInfo.team].woolIconPath),
+                generateBuyOneItemMenu("Tnt", () => ({
+                    type: ActionType.BuyNormalItem,
+                    cost: { ironAmount: 0, goldAmount: 4, emeraldAmount: 0, diamondAmount: 0 },
+                    items: [new mc.ItemStack(MinecraftItemTypes.Tnt)]
+                }), () => "textures/blocks/tnt_side.png"),
+                generateBuyOneItemMenu("Plank", () => ({
+                    type: ActionType.BuyNormalItem,
+                    cost: { ironAmount: 16, goldAmount: 0, emeraldAmount: 0, diamondAmount: 0 },
+                    items: [new mc.ItemStack(MinecraftItemTypes.Planks, 8)]
+                }), () => "textures/blocks/planks_oak.png"),
+                generateBuyOneItemMenu("End Stone", () => ({
+                    type: ActionType.BuyNormalItem,
+                    cost: { ironAmount: 16, goldAmount: 0, emeraldAmount: 0, diamondAmount: 0 },
+                    items: [new mc.ItemStack(MinecraftItemTypes.EndStone, 4)]
+                }), () => "textures/blocks/end_stone.png"),
+                generateBuyOneItemMenu("Bow", () => ({
+                    type: ActionType.BuyNormalItem,
+                    cost: { ironAmount: 0, goldAmount: 10, emeraldAmount: 0, diamondAmount: 0 },
+                    items: [new mc.ItemStack(MinecraftItemTypes.Bow, 1)]
+                }), () => "textures/items/bow_pulling_0.png"),
+                generateBuyOneItemMenu("Arrow", () => ({
+                    type: ActionType.BuyNormalItem,
+                    cost: { ironAmount: 0, goldAmount: 8, emeraldAmount: 0, diamondAmount: 0 },
+                    items: [new mc.ItemStack(MinecraftItemTypes.Arrow, 16)]
+                }), () => "textures/items/arrow.png"),
+                generateBuyOneItemMenu("Rescue Platform", () => ({
+                    type: ActionType.BuyNormalItem,
+                    cost: { ironAmount: 0, goldAmount: 0, emeraldAmount: 2, diamondAmount: 0 },
+                    items: [PLATFORM_ITEM]
+                }), () => "textures/items/blaze_rod.png")
+            ]
+        }, {
+            type: "entry",
+            display: "Weapons",
+            icon: "",
+            title: "Weapon Shop",
+            getBody: generateSecondMenuGetBody("Buy weapons"),
             subMenus: [
                 {
                     type: "action",
-                    display: "Wools\n4 iron",
-                    getActions(playerInfo) {
-                        return [{
-                            type: ActionType.BuyNormalItem,
-                            cost: { ironAmount: 4, goldAmount: 0, emeraldAmount: 0, diamondAmount: 0 },
-                            items: [new mc.ItemStack(TEAM_CONSTANTS[playerInfo.team].woolName, 16)]
-                        }];
-                    }
-                },
-                {
-                    type: "action",
-                    display: "Tnt\n4 gold",
-                    actions: [
-                        {
-                            type: ActionType.BuyNormalItem,
-                            cost: { ironAmount: 0, goldAmount: 4, emeraldAmount: 0, diamondAmount: 0 },
-                            items: [new mc.ItemStack(MinecraftItemTypes.Tnt)]
-                        }
-                    ]
+                    display: "U",
+                    icon: "",
+                    actions: [{
+                        type: ActionType.UpgradeSword
+                    }]
                 }
             ]
         }
@@ -205,7 +285,7 @@ function consumeToken(container: mc.Container, _tokens: TokenValue) {
  * @param hasParentMenu whether to show a Back button
  * @returns Whether the player cancels the menu
  */
-async function showMenuForPlayer(playerInfo: PlayerGameInformation, menu: Menu, hasParentMenu: boolean): Promise<boolean> {
+async function showMenuForPlayer(playerInfo: PlayerGameInformation, menu: Menu, game: BedWarsGame, hasParentMenu: boolean): Promise<boolean> {
     if (menu.type != "entry") throw new Error();
     while (true) {
         let title: string;
@@ -238,13 +318,19 @@ async function showMenuForPlayer(playerInfo: PlayerGameInformation, menu: Menu, 
         form.body(body);
         for (const subMenu of subMenus) {
             let display: string;
+            let icon: string;
             if ("display" in subMenu) {
                 display = subMenu.display;
             } else {
                 display = subMenu.getDisplay(playerInfo, currentTokens, game);
             }
+            if ("icon" in subMenu) {
+                icon = subMenu.icon;
+            } else {
+                icon = subMenu.getIcon(playerInfo, currentTokens, game);
+            }
             subMenuDisplays.push(display);
-            form.button(display);
+            form.button(display, icon || undefined);
         }
         if (hasParentMenu) form.button("Back");
 
@@ -270,7 +356,7 @@ async function showMenuForPlayer(playerInfo: PlayerGameInformation, menu: Menu, 
             const results = performAction(playerInfo, actions);
             playerInfo.lastActionResults = results;
         } else { // entry
-            const canceled = await showMenuForPlayer(playerInfo, selectedMenu, true);
+            const canceled = await showMenuForPlayer(playerInfo, selectedMenu, game, true);
             if (canceled) return true;
         }
     }
@@ -320,7 +406,7 @@ function performAction(playerInfo: PlayerGameInformation, actions: Action[]) {
     return results;
 }
 
-export function openShop(playerInfo: PlayerGameInformation) {
+export function openShop(playerInfo: PlayerGameInformation, game: BedWarsGame) {
     playerInfo.lastActionResults = [];
-    showMenuForPlayer(playerInfo, SHOP_DATA, false);
+    showMenuForPlayer(playerInfo, SHOP_DATA, game, false);
 }

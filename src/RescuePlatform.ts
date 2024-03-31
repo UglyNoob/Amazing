@@ -2,7 +2,7 @@ import * as mc from '@minecraft/server';
 
 import { getGameMode } from './utility.js';
 
-const PLATFORM_ITEM = (function () {
+export const PLATFORM_ITEM = (function () {
     const item = new mc.ItemStack("minecraft:blaze_rod", 1);
     item.nameTag = "§r§2Rescue Platform";
     item.setLore(["", "§r§eSave you from the void"]);
