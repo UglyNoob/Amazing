@@ -14,35 +14,34 @@ mc.world.beforeEvents.itemUse.subscribe(event => {
         data.textField("Enter expression", "expression...");
         mc.system.run(() => data.show(event.source).then(response => {
             if (response.canceled) return;
-            try {
-                const me = event.source;
-                let code = "const ___players = []\nfor(const p of mc.world.getAllPlayers()){___players.push(p)\n}";
-                let index = 0;
-                for (const player of mc.world.getAllPlayers()) {
-                    let name = player.name;
-                    let changedName = "";
-                    { // does the name prefix with digit
-                        const head = player.name.codePointAt(0);
-                        if (head && head >= 48 && head <= 57) {
-                            changedName = "p";
-                        }
+            let code = "const ___players = []\nfor(const p of mc.world.getAllPlayers()){___players.push(p)\n}";
+            let index = 0;
+            for (const player of mc.world.getAllPlayers()) {
+                let name = player.name;
+                let changedName = "";
+                { // does the name prefix with digit
+                    const head = player.name.codePointAt(0);
+                    if (head && head >= 48 && head <= 57) {
+                        changedName = "p";
                     }
-                    for(const char of name) {
-                        const point = char.codePointAt(0) as any;
-                        if((point >= 97 && point <= 122) ||
-                           (point >= 65 && point <= 90) ||
-                           (point >= 48) && (point <= 57)) {
-                            changedName += char;
-                        } else {
-                            changedName += '_';
-                        }
-                    }
-                    code += `let ${name} = ___players[${index}]\n`;
-                    ++index;
                 }
-                code += `return ${response.formValues![0]}`;
+                for(const char of name) {
+                    const point = char.codePointAt(0) as any;
+                    if((point >= 97 && point <= 122) ||
+                       (point >= 65 && point <= 90) ||
+                       (point >= 48) && (point <= 57)) {
+                        changedName += char;
+                    } else {
+                        changedName += '_';
+                    }
+                }
+                code += `let ${changedName} = ___players[${index}]\n`;
+                ++index;
+            }
+            code += `return ${response.formValues![0]}`;
+            try {
                 let result = new Function('mc', 'ui', 'util', 'mcMath', 'me', code)(
-                    mc, ui, util, mcMath, me
+                    mc, ui, util, mcMath, event.source
                 );
                 util.showObjectToPlayer(event.source, result);
             } catch (e) {

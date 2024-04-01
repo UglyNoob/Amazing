@@ -7,13 +7,15 @@ import {
     BedWarsGame,
     PlayerGameInformation,
     PlayerState,
-    TEAM_CONSTANTS
+    TEAM_CONSTANTS,
+    PURCHASE_MESSAGE
 } from "./Bedwars.js";
 import { ActionFormData } from "@minecraft/server-ui";
-import { containerIterator, itemEqual } from './utility.js'
+import { containerIterator, itemEqual, statckableFirstContainerAdd } from './utility.js'
 import { Vector3Utils as v3 } from "@minecraft/math";
 import { MinecraftItemTypes, PinkGlazedTerracottaStates } from "@minecraft/vanilla-data";
 import {PLATFORM_ITEM} from "./RescuePlatform.js";
+import {sprintf} from "sprintf-js";
 
 
 enum ActionType {
@@ -35,6 +37,7 @@ export interface TokenValue {
 interface BuyNormalItemAction {
     type: ActionType.BuyNormalItem;
     cost: TokenValue;
+    name: string;
     items: mc.ItemStack[];
 }
 type BuyNormalItemResult = {
@@ -143,37 +146,44 @@ const SHOP_DATA: Menu = {
                 generateBuyOneItemMenu("Wool", playerInfo => {
                     return {
                         type: ActionType.BuyNormalItem,
+                        name: "Wool",
                         cost: { ironAmount: 4, goldAmount: 0, emeraldAmount: 0, diamondAmount: 0 },
                         items: [new mc.ItemStack(TEAM_CONSTANTS[playerInfo.team].woolName, 16)]
                     }
                 }, playerInfo => TEAM_CONSTANTS[playerInfo.team].woolIconPath),
                 generateBuyOneItemMenu("Tnt", () => ({
                     type: ActionType.BuyNormalItem,
+                    name: "Tnt",
                     cost: { ironAmount: 0, goldAmount: 4, emeraldAmount: 0, diamondAmount: 0 },
                     items: [new mc.ItemStack(MinecraftItemTypes.Tnt)]
                 }), () => "textures/blocks/tnt_side.png"),
                 generateBuyOneItemMenu("Plank", () => ({
                     type: ActionType.BuyNormalItem,
+                    name: "Plank",
                     cost: { ironAmount: 16, goldAmount: 0, emeraldAmount: 0, diamondAmount: 0 },
                     items: [new mc.ItemStack(MinecraftItemTypes.Planks, 8)]
                 }), () => "textures/blocks/planks_oak.png"),
                 generateBuyOneItemMenu("End Stone", () => ({
                     type: ActionType.BuyNormalItem,
+                    name: "End Stone",
                     cost: { ironAmount: 16, goldAmount: 0, emeraldAmount: 0, diamondAmount: 0 },
                     items: [new mc.ItemStack(MinecraftItemTypes.EndStone, 4)]
                 }), () => "textures/blocks/end_stone.png"),
                 generateBuyOneItemMenu("Bow", () => ({
                     type: ActionType.BuyNormalItem,
+                    name: "Bow",
                     cost: { ironAmount: 0, goldAmount: 10, emeraldAmount: 0, diamondAmount: 0 },
                     items: [new mc.ItemStack(MinecraftItemTypes.Bow, 1)]
                 }), () => "textures/items/bow_pulling_0.png"),
                 generateBuyOneItemMenu("Arrow", () => ({
                     type: ActionType.BuyNormalItem,
+                    name: "Arrow",
                     cost: { ironAmount: 0, goldAmount: 8, emeraldAmount: 0, diamondAmount: 0 },
                     items: [new mc.ItemStack(MinecraftItemTypes.Arrow, 16)]
                 }), () => "textures/items/arrow.png"),
                 generateBuyOneItemMenu("Rescue Platform", () => ({
                     type: ActionType.BuyNormalItem,
+                    name: "Rescue Platform",
                     cost: { ironAmount: 0, goldAmount: 0, emeraldAmount: 2, diamondAmount: 0 },
                     items: [PLATFORM_ITEM]
                 }), () => "textures/items/blaze_rod.png")
@@ -388,13 +398,14 @@ function performAction(playerInfo: PlayerGameInformation, actions: Action[]) {
             consumeToken(inv, action.cost);
 
             for (const item of action.items) {
-                if (inv.addItem(item)) { // if failed to add item
+                if (/*inv.addItem(item)*/statckableFirstContainerAdd(inv, item)) { // if failed to add item
                     // spawn the item as entity
                     const entity = playerInfo.player.dimension.spawnItem(item, player.location);
                     entity.applyImpulse(v3.scale(entity.getVelocity(), -1));
                 }
             };
-            player.playSound("note.banjo");
+            player.playSound("mob.endermen.portal");
+            player.sendMessage(sprintf(PURCHASE_MESSAGE, action.name))
             results.push({
                 type: ActionType.BuyNormalItem,
                 success: true

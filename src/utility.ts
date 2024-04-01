@@ -146,6 +146,25 @@ export function* containerIterator(container: mc.Container) {
     }
 }
 
+export function statckableFirstContainerAdd(container: mc.Container, item: mc.ItemStack) {
+    if(!item.isStackable) {
+        return container.addItem(item);
+    }
+    let amount = item.amount;
+    for(const {index, item: contItem} of containerIterator(container)) {
+        if(!contItem) continue;
+        if(item.isStackableWith(contItem)) {
+            const slot = container.getSlot(index);
+            const increment = Math.min(amount, slot.maxAmount - slot.amount);
+            slot.amount += increment;
+            amount -= increment;
+            if(amount == 0) return;
+        }
+    }
+    item.amount = amount;
+    return container.addItem(item);
+}
+
 export function assert(predicate: boolean, message?: string) {
     if (!predicate) throw new Error(message);
 }

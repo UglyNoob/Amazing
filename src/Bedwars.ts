@@ -7,6 +7,7 @@ import { MinecraftBlockTypes, MinecraftEffectTypes, MinecraftEntityTypes, Minecr
 import { sprintf, vsprintf } from 'sprintf-js';
 import { ActionResult, openShop, TokenValue } from './BedwarsShop.js';
 import { isLocationPartOfAnyPlatforms } from './RescuePlatform.js';
+import {SimulatedPlayer} from '@minecraft/server-gametest';
 
 const RESPAWN_TIME = 100; // in ticks
 const IRONGOLD_GENERATOR_INTERVAL = 60;
@@ -41,10 +42,11 @@ const FINAL_KILL_MESSAGE = "%(victimColor)s%(victim)s §7was killed by %(killerC
 const BREAKING_BLOCK_INVALID_MESSAGE = "§cYou cannot break blocks that are not placed by players.";
 const KILL_NOTIFICATION = "KILL: %s%s";
 const FINAL_KILL_NOTIFICATION = "FINAL KILL: %s%s";
-const DISCONNECTED_MESSAGE = "%s%s has disconnected.";
-const RECONNECTION_MESSAGE = "%s%s has reconnected.";
+const DISCONNECTED_MESSAGE = "%s%s §7has disconnected.";
+const RECONNECTION_MESSAGE = "%s%s §7has reconnected.";
 const PLACING_BLOCK_ILLAGEL_MESSAGE = "§cYou can't place blocks here!";
 const GAME_ENDED_MESSAGE = "§lGAME ENDED > §r%s%s §7is the winner!"
+export const PURCHASE_MESSAGE = "§aYou purchased §6%s";
 
 enum GeneratorType {
     IronGold,
@@ -477,6 +479,49 @@ export class BedWarsGame {
             this.dimension.getBlock(v3.add(teamChestLocation, this.originPos))?.getComponent("inventory")?.container?.clearAll();
         }
 
+        mc.world.scoreboard.setObjectiveAtDisplaySlot(mc.DisplaySlotId.Sidebar, {
+            objective: this.scoreObj
+        });
+        this.updateScoreboard();
+    }
+
+    private updateScoreboard() {
+        this.scoreObj.getParticipants().forEach(p => this.scoreObj.removeParticipant(p));
+        this.scoreObj.setScore("§eminecraft.net", 1);
+        this.scoreObj.setScore("", 2);
+        let index = 2;
+        for(const [teamType, state] of this.teamStates) {
+            ++index;
+            const t = TEAM_CONSTANTS[teamType];
+            let result = `${t.colorPrefix}${t.name.charAt(0).toUpperCase()} §r${capitalize(t.name)}: `;
+            switch(state) {
+                case TeamState.BedAlive:
+                    // result += "§a✔";
+                    result += "§aV"; // Mojangles will be broke by unicode characters
+                    break;
+                case TeamState.Dead:
+                    // result += "§c✘";
+                    result += "§cX"; // Mojangles will be broke by unicode characters
+                    break;
+                case TeamState.BedDestoryed:
+                    let aliveCount = 0;
+                    for(const playerInfo of this.players.values()) {
+                        if(playerInfo.team != teamType) continue;
+                        if(this.isPlayerInGame(playerInfo)) ++aliveCount;
+                    }
+                    result += `§a${aliveCount}`;
+            }
+            this.scoreObj.setScore(result, index);
+        }
+        ++index;
+        this.scoreObj.setScore(" ", index);
+        ++index;
+        const date = new Date((mc.system.currentTick - this.startTime) * 50);
+        let seconds = date.getSeconds().toString();
+        if(seconds.length == 1) seconds = "0" + seconds;
+        let minutes = date.getMinutes().toString();
+        if(minutes.length == 1) minutes = "0" + minutes;
+        this.scoreObj.setScore(`  §a${minutes}:${seconds}`, index);
     }
 
     private respawnPlayer(playerInfo: PlayerGameInformation) {
@@ -491,6 +536,7 @@ export class BedWarsGame {
         });
         playerInfo.player.extinguishFire();
         this.resetInventory(playerInfo);
+        playerInfo.lastHurtBy = undefined;
 
         playerInfo.state = PlayerState.Alive;
     }
@@ -524,6 +570,22 @@ export class BedWarsGame {
         player.setSpawnPoint(Object.assign({ dimension: player.dimension }, v3.add(this.originPos, this.map.fallbackRespawnPoint)));
     }
 
+    private isPlayerInGame(playerInfo: PlayerGameInformation) {
+        const teamState = this.teamStates.get(playerInfo.team);
+        if (teamState == TeamState.BedAlive) {
+            if (playerInfo.state == PlayerState.Alive ||
+                playerInfo.state == PlayerState.dead ||
+                playerInfo.state == PlayerState.Respawning) {
+                return true;
+            }
+        } else if (teamState == TeamState.BedDestoryed) {
+            if (playerInfo.state == PlayerState.Alive ||
+                playerInfo.state == PlayerState.Respawning) {
+                return true;
+            }
+        }
+        return false;
+    }
     private checkTeamPlayers() {
         const remainingPlayerCounts = new Map<TeamType, number>();
         for (const { type: teamType } of this.map.teams) {
@@ -532,21 +594,7 @@ export class BedWarsGame {
         }
 
         for (const playerInfo of this.players.values()) {
-            const teamState = this.teamStates.get(playerInfo.team);
-            let counting = false;
-            if (teamState == TeamState.BedAlive) {
-                if (playerInfo.state == PlayerState.Alive ||
-                    playerInfo.state == PlayerState.dead ||
-                    playerInfo.state == PlayerState.Respawning) {
-                    counting = true;
-                }
-            } else if (teamState == TeamState.BedDestoryed) {
-                if (playerInfo.state == PlayerState.Alive ||
-                    playerInfo.state == PlayerState.Respawning) {
-                    counting = true;
-                }
-            }
-            if (counting) {
+            if (this.isPlayerInGame(playerInfo)) {
                 remainingPlayerCounts.set(playerInfo.team, 1 + remainingPlayerCounts.get(playerInfo.team)!);
             }
         }
@@ -587,7 +635,7 @@ export class BedWarsGame {
                     fadeInDuration: 0,
                     stayDuration: 100,
                     fadeOutDuration: 20
-                    });
+                });
             }
             for(const playerInfo of this.players.values()) {
                 for(const loc of playerInfo.placement) {
@@ -795,6 +843,9 @@ export class BedWarsGame {
             v.z = -v.z;
             itemEntity.applyImpulse(v);
         }
+        if((mc.system.currentTick - this.startTime) % 20 == 0) {
+            this.updateScoreboard();
+        }
     }
 
     private playerDieOrOffline(victimInfo: PlayerGameInformation, killerInfo?: PlayerGameInformation) {
@@ -885,14 +936,42 @@ export class BedWarsGame {
         if (!victimInfo) return;
 
         if (event.damagingEntity instanceof mc.Player) {
-            const killerInfo = this.players.get(event.damagingEntity.name);
-            if (killerInfo) {
-                victimInfo.lastHurtBy = killerInfo;
-                return;
+            const hurterInfo = this.players.get(event.damagingEntity.name);
+            if (hurterInfo) {
+                if(hurterInfo.team == victimInfo.team) {
+                    // TOWAIT TODO
+                    hurterInfo.player.sendMessage("Well, don't do this.");
+                    return;
+                }
+                victimInfo.lastHurtBy = hurterInfo;
+            } else {
+                victimInfo.lastHurtBy = undefined;
             }
+            return;
         }
-
-        victimInfo.lastHurtBy = undefined;
+    }
+    afterProjectileHitEntity(event: mc.ProjectileHitEntityAfterEvent) {
+        if(event.dimension != this.dimension) return;
+        const victim = event.getEntityHit().entity;
+        if(!victim) return;
+        if(!(victim instanceof mc.Player)) return;
+        const victimInfo = this.players.get(victim.name);
+        if(!victimInfo) return;
+        if(event.source) {
+            if(event.source instanceof mc.Player) {
+                const hurterInfo = this.players.get(event.source.name);
+                if(hurterInfo) {
+                    if(hurterInfo.team == victimInfo.team) {
+                        // TOWAIT TODO
+                        hurterInfo.player.sendMessage("Well, don't do this.");
+                    } else {
+                        victimInfo.lastHurtBy = hurterInfo;
+                        return;
+                    }
+                }
+            }
+            victimInfo.lastHurtBy = undefined;
+        }
     }
     async beforePlayerInteractWithBlock(event: mc.PlayerInteractWithBlockBeforeEvent) {
         if (this.state != GameState.started) return;
@@ -1155,33 +1234,49 @@ mc.world.beforeEvents.chatSend.subscribe(async event => {
         event.cancel = true;
         await sleep(0); // get out of read-only mode
 
-        const setup = () => {
-            const players = mc.world.getAllPlayers();
-            game = new BedWarsGame({
-                map: testMap2, originLocation: { x: -104, y: 54, z: -65 }, dimension: players[0].dimension, scoreboardObjective:
-                    mc.world.scoreboard.getObjective("GAME") ?? mc.world.scoreboard.addObjective("GAME")
-            });
-            if (Math.random() >= 0.5) {
-                game.setPlayer(players[0], TeamType.Red);
-                game.setPlayer(players[1], TeamType.Blue);
-            } else {
-                game.setPlayer(players[0], TeamType.Blue);
-                game.setPlayer(players[1], TeamType.Red);
-            }
-            game.start();
-            globalThis.game = game;
-        }
-        if (mc.world.getAllPlayers().length >= 2) {
-            setup();
-            return;
-        }
+        const switchTeam = (t:TeamType)=>t==TeamType.Blue?TeamType.Red:TeamType.Blue;
+
         if (!globalThis.test) setupGameTest(event.sender.location.x, event.sender.location.z, event.sender.dimension);
         while (!globalThis.test) {
             await sleep(0);
         }
-        globalThis.test.spawnSimulatedPlayer(event.sender.location as any, "a");
 
-        setup();
+        const players = mc.world.getAllPlayers();
+        game = new BedWarsGame({
+            map: testMap2,
+            originLocation: { x: -104, y: 54, z: -65 },
+            dimension: players[0].dimension,
+            scoreboardObjective: mc.world.scoreboard.getObjective("GAME") ?? mc.world.scoreboard.addObjective("GAME", "§e§lBED WARS")
+        });
+        const realPlayers = players.filter(p=>!(p instanceof SimulatedPlayer));
+        const fakePlayers = players.filter(p=>p instanceof SimulatedPlayer);
+        let team = TeamType.Blue;
+        let redCount = 0;
+        let blueCount = 0;
+        if(Math.random() >= 0.5) team = switchTeam(team);
+        for(const p of realPlayers) {
+            game.setPlayer(p, team);
+            if(team == TeamType.Blue) ++blueCount;
+            else ++redCount;
+            team = switchTeam(team);
+        }
+        for(const p of fakePlayers) {
+            game.setPlayer(p, team);
+            if(team == TeamType.Blue) ++blueCount;
+            else ++redCount;
+            team = switchTeam(team);
+        }
+        const maxPlayer = Math.max(2, Math.max(redCount, blueCount));
+        for(let i = maxPlayer - redCount - 1; i >= 0; --i) {
+            const p = globalThis.test.spawnSimulatedPlayer(event.sender.location as any, "a");
+            game.setPlayer(p as any, TeamType.Red);
+        }
+        for(let i = maxPlayer - blueCount - 1; i >= 0; --i) {
+            const p = globalThis.test.spawnSimulatedPlayer(event.sender.location as any, "a");
+            game.setPlayer(p as any, TeamType.Blue);
+        }
+        game.start();
+        globalThis.game = game;
     }
 })
 
@@ -1222,6 +1317,11 @@ mc.world.beforeEvents.playerInteractWithBlock.subscribe(event => {
 mc.world.beforeEvents.playerInteractWithEntity.subscribe(event => {
     if (game) {
         game.beforePlayerInteractWithEntity(event);
+    }
+});
+mc.world.afterEvents.projectileHitEntity.subscribe(event => {
+    if(game) {
+        game.afterProjectileHitEntity(event);
     }
 });
 mc.system.runInterval(() => {
