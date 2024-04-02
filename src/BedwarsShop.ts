@@ -124,7 +124,7 @@ function generateBuyArmorMenu(toLevel: ArmorLevel): Menu {
         getDisplay(playerInfo, currentTokens) {
             const currentLevel = playerInfo.armorLevel;
             if(currentLevel.level >= toLevel.level) {
-                return "§7You can't buy this item."
+                return "§h" + toLevel.name;
             }
             const cost = toLevel.cost;
             let color: string;
@@ -236,7 +236,7 @@ const getShopData: () => Menu = () => ({
                     getDisplay(playerInfo, currentTokens) {
                         const level = playerInfo.swordLevel;
                         if(!hasNextSwordLevel(level)) {
-                            return "§7Your sword is\nof the max level."
+                            return "§hYour sword is\nof the max level."
                         }
                         const cost = level.toNextLevelCost;
                         let color: string;
@@ -281,7 +281,7 @@ const getShopData: () => Menu = () => ({
                     type: "action",
                     getDisplay(playerInfo, tokens) {
                         if(playerInfo.hasShear) {
-                            return "§7You already have this item.";
+                            return "§hYou already have this item.";
                         }
                         const cost = SHEARS_COST;
                         let color: string;

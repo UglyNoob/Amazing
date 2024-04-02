@@ -221,28 +221,28 @@ export const ARMOR_LEVELS: ArmorLevel[] = (() => {
     return [
         {
             level: 0,
-            name: "Leather Armor",
+            name: "Leather Armors",
             icon: "textures/items/leather_boots.tga",
             leggings: setupItem(MinecraftItemTypes.LeatherLeggings),
             boots: setupItem(MinecraftItemTypes.LeatherBoots),
             cost: { ironAmount: 0, goldAmount: 0, diamondAmount: 0, emeraldAmount: 0 }
         }, {
             level: 1,
-            name: "Chainmail Armor",
+            name: "Chainmail Armors",
             icon: "textures/items/chainmail_boots.png",
             leggings: setupItem(MinecraftItemTypes.ChainmailLeggings),
             boots: setupItem(MinecraftItemTypes.ChainmailBoots),
             cost: { ironAmount: 30, goldAmount: 0, diamondAmount: 0, emeraldAmount: 0 }
         }, {
             level: 2,
-            name: "Iron Armor",
+            name: "Iron Armors",
             icon: "textures/items/iron_boots.png",
             leggings: setupItem(MinecraftItemTypes.IronLeggings),
             boots: setupItem(MinecraftItemTypes.IronBoots),
             cost: { ironAmount: 0, goldAmount: 12, diamondAmount: 0, emeraldAmount: 0 }
         }, {
             level: 3,
-            name: "Diamond Armor",
+            name: "Diamond Armors",
             icon: "textures/items/diamond_boots.png",
             leggings: setupItem(MinecraftItemTypes.DiamondLeggings),
             boots: setupItem(MinecraftItemTypes.DiamondBoots),
@@ -592,11 +592,11 @@ export class BedWarsGame {
         playerInfo.player.runCommand("gamemode survival");
         playerInfo.player.getComponent("minecraft:health")!.resetToMaxValue();
         playerInfo.player.addEffect(MinecraftEffectTypes.Saturation, 100000, {
-            amplifier: 127,
+            amplifier: 100,
             showParticles: false
         });
         playerInfo.player.addEffect(MinecraftEffectTypes.Resistance, 3 * 20, {
-            amplifier: 127,
+            amplifier: 5,
             showParticles: true
         });
         playerInfo.player.extinguishFire();
