@@ -145,8 +145,16 @@ export function* containerIterator(container: mc.Container) {
         };
     }
 }
+export function* containerSlotIterator(container: mc.Container) {
+    for (let i = 0; i < container.size; ++i) {
+        yield {
+            index: i,
+            slot: container.getSlot(i)
+        };
+    }
+}
 
-export function statckableFirstContainerAdd(container: mc.Container, item: mc.ItemStack) {
+export function stackFirstContainerAdd(container: mc.Container, item: mc.ItemStack) {
     if(!item.isStackable) {
         return container.addItem(item);
     }

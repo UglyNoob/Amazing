@@ -8,20 +8,24 @@ import {
     PlayerGameInformation,
     PlayerState,
     TEAM_CONSTANTS,
-    PURCHASE_MESSAGE
+    PURCHASE_MESSAGE,
+    hasNextSwordLevel,
+    SWORD_LEVELS,
+    ARMOR_LEVELS,
+    ArmorLevel
 } from "./Bedwars.js";
 import { ActionFormData } from "@minecraft/server-ui";
-import { containerIterator, itemEqual, statckableFirstContainerAdd } from './utility.js'
+import { containerIterator, containerSlotIterator, itemEqual, stackFirstContainerAdd } from './utility.js'
 import { Vector3Utils as v3 } from "@minecraft/math";
-import { MinecraftItemTypes, PinkGlazedTerracottaStates } from "@minecraft/vanilla-data";
+import { MinecraftEnchantmentTypes, MinecraftItemTypes } from "@minecraft/vanilla-data";
 import {PLATFORM_ITEM} from "./RescuePlatform.js";
 import {sprintf} from "sprintf-js";
 
 
 enum ActionType {
     BuyNormalItem,
-    UpgradeSword,
     BuyArmor,
+    UpgradeSword,
     UpgradePickaxe,
     UpgradeAxe,
     BuyShear
@@ -37,26 +41,25 @@ export interface TokenValue {
 interface BuyNormalItemAction {
     type: ActionType.BuyNormalItem;
     cost: TokenValue;
-    name: string;
-    items: mc.ItemStack[];
+    itemName: string;
+    item: mc.ItemStack;
 }
-type BuyNormalItemResult = {
-    type: ActionType.BuyNormalItem;
-} & ({
-    success: true;
-} | {
-    success: false;
-    lack: TokenValue;
-});
-
+interface BuyArmorAction {
+    type: ActionType.BuyArmor;
+    toLevel: ArmorLevel;
+}
 interface UpgradeSwordAction {
     type: ActionType.UpgradeSword;
 }
-
+interface BuyShearAction {
+    type: ActionType.BuyShear;
+    cost: TokenValue;
+}
 
 type Action = BuyNormalItemAction |
-    UpgradeSwordAction;
-export type ActionResult = BuyNormalItemResult;
+    UpgradeSwordAction |
+    BuyShearAction |
+    BuyArmorAction;
 
 type isUnion<T, K = T> = T extends any ? (Exclude<K, T> extends T ? false : true) : false;
 
@@ -64,7 +67,7 @@ type FieldOrFunction<PropName extends string, ValueType> = isUnion<PropName> ext
     [prop in PropName]: ValueType;
 } | {
         [prop in PropName as `get${Capitalize<prop>}`]:
-        (playerInfo: PlayerGameInformation, tokens: TokenValue, game: BedWarsGame) => ValueType;
+        (playerInfo: PlayerGameInformation, currentTokens: TokenValue, game: BedWarsGame) => ValueType;
     }
 
 type Menu = FieldOrFunction<"display", string> & FieldOrFunction<"icon", string> &
@@ -89,27 +92,14 @@ function generateBuyOneItemMenu(
         getDisplay(playerInfo, tokens) {
             const action = getAction(playerInfo);
             const cost = action.cost;
-            const item = action.items[0];
+            const item = action.item;
             let color: string;
             if (isTokenSatisfying(tokens, cost)) {
                 color = "§a§l";
             } else {
                 color = "§4";
             }
-            let display = `${color}${name} * ${item.amount}\n`;
-            if (cost.ironAmount) {
-                display += `${cost.ironAmount} irons `;
-            }
-            if (cost.goldAmount) {
-                display += `${cost.goldAmount} golds `;
-            }
-            if (cost.diamondAmount) {
-                display += `${cost.diamondAmount} diamonds `;
-            }
-            if (cost.emeraldAmount) {
-                display += `${cost.emeraldAmount} emeralds `;
-            }
-            return display;
+            return `${color}${name} * ${item.amount}\n${tokenToString(cost)}`;
         },
         getActions(playerInfo) { return [getAction(playerInfo)]; }
     };
@@ -119,8 +109,8 @@ function generateSecondMenuGetBody(defaultText: string) {
     return (playerInfo: PlayerGameInformation) => {
         if (playerInfo.lastActionResults.length != 0) {
             for (const result of playerInfo.lastActionResults) {
-                if (!result.success) {
-                    return "Insufficient tokens.";
+                if (!result) {
+                    return "Failed to perform action.";
                 }
             }
             return "Success!";
@@ -128,8 +118,72 @@ function generateSecondMenuGetBody(defaultText: string) {
         return defaultText;
     }
 }
+function generateBuyArmorMenu(toLevel: ArmorLevel): Menu {
+    return {
+        type: "action",
+        getDisplay(playerInfo, currentTokens) {
+            const currentLevel = playerInfo.armorLevel;
+            if(currentLevel.level >= toLevel.level) {
+                return "§7You can't buy this item."
+            }
+            const cost = toLevel.cost;
+            let color: string;
+            if(isTokenSatisfying(currentTokens, cost)) {
+                color = "§a§l";
+            } else {
+                color = "§4";
+            }
+            return `${color}${toLevel.name}\n${tokenToString(cost)}`;
+        },
+        icon: toLevel.icon,
+        actions: [{
+            type: ActionType.BuyArmor,
+            toLevel
+        }]
+    }
+}
 
-const SHOP_DATA: Menu = {
+const SHEARS_COST: TokenValue = {
+    ironAmount: 20,
+    goldAmount: 0,
+    diamondAmount: 0,
+    emeraldAmount: 0
+};
+
+const TNT_ITEM = new mc.ItemStack(MinecraftItemTypes.Tnt);
+const PLANKS_ITEM = new mc.ItemStack(MinecraftItemTypes.Planks, 8);
+const ENDSTONE_ITEM = new mc.ItemStack(MinecraftItemTypes.EndStone, 12);
+const BOW_ITEM = new mc.ItemStack(MinecraftItemTypes.Bow, 1);
+const ARROW_ITEM = new mc.ItemStack(MinecraftItemTypes.Arrow, 6);
+const GOLDEN_APPLE_ITEM = new mc.ItemStack(MinecraftItemTypes.GoldenApple, 1);
+const ENDER_PEARL_ITEM = new mc.ItemStack(MinecraftItemTypes.EnderPearl, 1);
+const HARDENED_CLAY_ITEM = new mc.ItemStack(MinecraftItemTypes.HardenedClay, 16);
+const BOW_POWERI_ITEM = (() => {
+    const i = new mc.ItemStack(MinecraftItemTypes.Bow);
+    i.getComponent("enchantable")!.addEnchantment({
+        level: 1,
+        type: MinecraftEnchantmentTypes.Power
+    });
+    return i;
+})();
+const BOW_POWERI_PUNCHI_ITEM = (() => {
+    const i = new mc.ItemStack(MinecraftItemTypes.Bow);
+    const e = i.getComponent("enchantable")!;
+    e.addEnchantment({
+        level: 1,
+        type: MinecraftEnchantmentTypes.Punch
+    });
+    e.addEnchantment({
+        level: 1,
+        type: MinecraftEnchantmentTypes.Power
+    });
+    return i;
+})();
+
+let SHOP_DATA: Menu | null = null;
+// SHOP_DATA relies on global variable ARMOR_LEVELS
+// so it has to be initialized afterwards
+const getShopData: () => Menu = () => ({
     type: "entry",
     body: "",
     icon: "",
@@ -139,74 +193,179 @@ const SHOP_DATA: Menu = {
         {
             type: "entry",
             display: "Blocks",
-            icon: "",
+            icon: "textures/blocks/wool_colored_white.png",
             title: "Blocks Shop",
             getBody: generateSecondMenuGetBody("Buy blocks"),
             subMenus: [
                 generateBuyOneItemMenu("Wool", playerInfo => {
                     return {
                         type: ActionType.BuyNormalItem,
-                        name: "Wool",
+                        itemName: "Wool",
                         cost: { ironAmount: 4, goldAmount: 0, emeraldAmount: 0, diamondAmount: 0 },
-                        items: [new mc.ItemStack(TEAM_CONSTANTS[playerInfo.team].woolName, 16)]
+                        item: new mc.ItemStack(TEAM_CONSTANTS[playerInfo.team].woolName, 16)
                     }
                 }, playerInfo => TEAM_CONSTANTS[playerInfo.team].woolIconPath),
-                generateBuyOneItemMenu("Tnt", () => ({
+                generateBuyOneItemMenu("Hardened Clay", () => ({
                     type: ActionType.BuyNormalItem,
-                    name: "Tnt",
-                    cost: { ironAmount: 0, goldAmount: 4, emeraldAmount: 0, diamondAmount: 0 },
-                    items: [new mc.ItemStack(MinecraftItemTypes.Tnt)]
-                }), () => "textures/blocks/tnt_side.png"),
+                    itemName: "Hardened Clay",
+                    cost: {ironAmount: 12, goldAmount: 0, emeraldAmount: 0, diamondAmount: 0},
+                    item: HARDENED_CLAY_ITEM
+                }), () => "textures/blocks/hardened_clay.png"),
                 generateBuyOneItemMenu("Plank", () => ({
                     type: ActionType.BuyNormalItem,
-                    name: "Plank",
-                    cost: { ironAmount: 16, goldAmount: 0, emeraldAmount: 0, diamondAmount: 0 },
-                    items: [new mc.ItemStack(MinecraftItemTypes.Planks, 8)]
+                    itemName: "Plank",
+                    cost: { ironAmount: 0, goldAmount: 4, emeraldAmount: 0, diamondAmount: 0 },
+                    item: PLANKS_ITEM
                 }), () => "textures/blocks/planks_oak.png"),
                 generateBuyOneItemMenu("End Stone", () => ({
                     type: ActionType.BuyNormalItem,
-                    name: "End Stone",
-                    cost: { ironAmount: 16, goldAmount: 0, emeraldAmount: 0, diamondAmount: 0 },
-                    items: [new mc.ItemStack(MinecraftItemTypes.EndStone, 4)]
+                    itemName: "End Stone",
+                    cost: { ironAmount: 24, goldAmount: 0, emeraldAmount: 0, diamondAmount: 0 },
+                    item: ENDSTONE_ITEM
                 }), () => "textures/blocks/end_stone.png"),
-                generateBuyOneItemMenu("Bow", () => ({
-                    type: ActionType.BuyNormalItem,
-                    name: "Bow",
-                    cost: { ironAmount: 0, goldAmount: 10, emeraldAmount: 0, diamondAmount: 0 },
-                    items: [new mc.ItemStack(MinecraftItemTypes.Bow, 1)]
-                }), () => "textures/items/bow_pulling_0.png"),
-                generateBuyOneItemMenu("Arrow", () => ({
-                    type: ActionType.BuyNormalItem,
-                    name: "Arrow",
-                    cost: { ironAmount: 0, goldAmount: 8, emeraldAmount: 0, diamondAmount: 0 },
-                    items: [new mc.ItemStack(MinecraftItemTypes.Arrow, 16)]
-                }), () => "textures/items/arrow.png"),
-                generateBuyOneItemMenu("Rescue Platform", () => ({
-                    type: ActionType.BuyNormalItem,
-                    name: "Rescue Platform",
-                    cost: { ironAmount: 0, goldAmount: 0, emeraldAmount: 2, diamondAmount: 0 },
-                    items: [PLATFORM_ITEM]
-                }), () => "textures/items/blaze_rod.png")
             ]
         }, {
             type: "entry",
             display: "Weapons",
-            icon: "",
+            icon: "textures/items/iron_sword.png",
             title: "Weapon Shop",
             getBody: generateSecondMenuGetBody("Buy weapons"),
             subMenus: [
                 {
                     type: "action",
-                    display: "U",
-                    icon: "",
+                    getDisplay(playerInfo, currentTokens) {
+                        const level = playerInfo.swordLevel;
+                        if(!hasNextSwordLevel(level)) {
+                            return "§7Your sword is\nof the max level."
+                        }
+                        const cost = level.toNextLevelCost;
+                        let color: string;
+                        if(isTokenSatisfying(currentTokens, cost)) {
+                            color = "§a§l";
+                        } else {
+                            color = "§4";
+                        }
+                        return `${color}${level.name}\n${tokenToString(cost)}`;
+                    },
+                    getIcon(playerInfo) {
+                        let level = playerInfo.swordLevel;
+                        if(hasNextSwordLevel(level)) {
+                            level = SWORD_LEVELS[level.level + 1];
+                        }
+                        return level.icon;
+                    },
                     actions: [{
                         type: ActionType.UpgradeSword
                     }]
                 }
             ]
+        }, {
+            type: "entry",
+            display: "Armors",
+            icon: "textures/items/iron_boots.png",
+            title: "Armor Shop",
+            getBody: generateSecondMenuGetBody("Buy armors"),
+            subMenus: [
+                generateBuyArmorMenu(ARMOR_LEVELS[1]),
+                generateBuyArmorMenu(ARMOR_LEVELS[2]),
+                generateBuyArmorMenu(ARMOR_LEVELS[3])
+            ]
+        }, {
+            type: "entry",
+            display: "Tools",
+            icon: "textures/items/stone_pickaxe.png",
+            title: "Tool Shop",
+            getBody: generateSecondMenuGetBody("Buy tools"),
+            subMenus: [
+                {
+                    type: "action",
+                    getDisplay(playerInfo, tokens) {
+                        if(playerInfo.hasShear) {
+                            return "§7You already have this item.";
+                        }
+                        const cost = SHEARS_COST;
+                        let color: string;
+                        if (isTokenSatisfying(tokens, cost)) {
+                            color = "§a§l";
+                        } else {
+                            color = "§4";
+                        }
+                        return `${color}Shears\n${tokenToString(cost)}`;
+                    },
+                    icon: "textures/items/shears.png",
+                    actions: [{
+                        type: ActionType.BuyShear,
+                        cost: SHEARS_COST
+                    }]
+                }
+            ]
+        }, {
+            type: "entry",
+            display: "Bows",
+            icon: "textures/items/bow_pulling_2.png",
+            title: "Bow Shop",
+            getBody: generateSecondMenuGetBody("Buy bows"),
+            subMenus: [
+                generateBuyOneItemMenu("Arrow", () => ({
+                    type: ActionType.BuyNormalItem,
+                    itemName: "Arrow",
+                    cost: { ironAmount: 0, goldAmount: 2, emeraldAmount: 0, diamondAmount: 0 },
+                    item: ARROW_ITEM
+                }), () => "textures/items/arrow.png"),
+                generateBuyOneItemMenu("Bow", () => ({
+                    type: ActionType.BuyNormalItem,
+                    itemName: "Bow",
+                    cost: { ironAmount: 0, goldAmount: 12, emeraldAmount: 0, diamondAmount: 0 },
+                    item: BOW_ITEM
+                }), () => "textures/items/bow_standby.png"),
+                generateBuyOneItemMenu("Bow Power I", () => ({
+                    type: ActionType.BuyNormalItem,
+                    itemName: "Bow Power I",
+                    cost: { ironAmount: 0, goldAmount: 20, emeraldAmount: 0, diamondAmount: 0 },
+                    item: BOW_POWERI_ITEM
+                }), () => "textures/items/bow_pulling_0.png"),
+                generateBuyOneItemMenu("Bow Power I,Punch I", () => ({
+                    type: ActionType.BuyNormalItem,
+                    itemName: "Bow Power I,Punch I",
+                    cost: { ironAmount: 0, goldAmount: 0, emeraldAmount: 6, diamondAmount: 0 },
+                    item: BOW_POWERI_PUNCHI_ITEM
+                }), () => "textures/items/bow_pulling_1.png"),
+            ]
+        }, {
+            type: "entry",
+            display: "Utilities",
+            icon: "textures/blocks/tnt_side.png",
+            title: "Utility Shop",
+            getBody: generateSecondMenuGetBody("Fancy utilities!"),
+            subMenus: [
+                generateBuyOneItemMenu("Tnt", () => ({
+                    type: ActionType.BuyNormalItem,
+                    itemName: "Tnt",
+                    cost: { ironAmount: 0, goldAmount: 8, emeraldAmount: 0, diamondAmount: 0 },
+                    item: TNT_ITEM
+                }), () => "textures/blocks/tnt_side.png"),
+                generateBuyOneItemMenu("Golden Apple", () => ({
+                    type: ActionType.BuyNormalItem,
+                    itemName: "Golden Apple",
+                    cost: { ironAmount: 0, goldAmount: 3, emeraldAmount: 0, diamondAmount: 0 },
+                    item: GOLDEN_APPLE_ITEM
+                }), () => "textures/items/apple_golden.png"),
+                generateBuyOneItemMenu("Ender Pearl", () => ({
+                    type: ActionType.BuyNormalItem,
+                    itemName: "Ender Pearl",
+                    cost: { ironAmount: 0, goldAmount: 0, emeraldAmount: 4, diamondAmount: 0 },
+                    item: ENDER_PEARL_ITEM
+                }), () => "textures/items/ender_pearl.png"),
+                generateBuyOneItemMenu("Rescue Platform", () => ({
+                    type: ActionType.BuyNormalItem,
+                    itemName: "Rescue Platform",
+                    cost: { ironAmount: 0, goldAmount: 0, emeraldAmount: 2, diamondAmount: 0 },
+                    item: PLATFORM_ITEM
+                }), () => "textures/items/blaze_rod.png")
+            ]
         }
     ]
-};
+});
 
 function calculateTokens(container: mc.Container) {
     const tokens: TokenValue = {
@@ -232,6 +391,25 @@ function isTokenSatisfying(a: TokenValue, b: TokenValue) {
         b.diamondAmount > a.diamondAmount ||
         b.emeraldAmount > a.emeraldAmount) return false;
     return true;
+}
+
+function tokenToString(t: TokenValue) {
+    let result = "";
+    if (t.ironAmount) {
+        result += `${t.ironAmount} Irons `;
+    }
+    if (t.goldAmount) {
+        result += `${t.goldAmount} Golds `;
+    }
+    if (t.diamondAmount) {
+        result += `${t.diamondAmount} Diamonds `;
+    }
+    if (t.emeraldAmount) {
+        result += `${t.emeraldAmount} Emeralds `;
+    }
+    if(result.length > 0)
+        result = result.slice(0, result.length - 1);
+    return result;
 }
 
 /**
@@ -373,51 +551,107 @@ async function showMenuForPlayer(playerInfo: PlayerGameInformation, menu: Menu, 
 }
 
 function performAction(playerInfo: PlayerGameInformation, actions: Action[]) {
-    const results: ActionResult[] = [];
+    const results: boolean[] = [];
     const player = playerInfo.player;
-    const inv = player.getComponent("minecraft:inventory")!.container!
+    const container = player.getComponent("minecraft:inventory")!.container!
 
     for (const action of actions) {
-        const tokens = calculateTokens(inv);
-        if (action.type == ActionType.BuyNormalItem) {
+        const tokens = calculateTokens(container);
+        let result: boolean = false;
+        execute: if (action.type == ActionType.BuyNormalItem) {
             if (!isTokenSatisfying(tokens, action.cost)) {
                 // Failed to buy, insufficient tokens
-                player.playSound("note.bass");
-                results.push({
-                    type: ActionType.BuyNormalItem,
-                    success: false,
-                    lack: {
-                        ironAmount: action.cost.ironAmount - tokens.ironAmount,
-                        goldAmount: action.cost.goldAmount - tokens.goldAmount,
-                        diamondAmount: action.cost.diamondAmount - tokens.diamondAmount,
-                        emeraldAmount: action.cost.emeraldAmount - tokens.emeraldAmount,
-                    }
-                });
-                continue;
+                result = false;
+                break execute;
             }
-            consumeToken(inv, action.cost);
+            consumeToken(container, action.cost);
 
-            for (const item of action.items) {
-                if (/*inv.addItem(item)*/statckableFirstContainerAdd(inv, item)) { // if failed to add item
-                    // spawn the item as entity
-                    const entity = playerInfo.player.dimension.spawnItem(item, player.location);
-                    entity.applyImpulse(v3.scale(entity.getVelocity(), -1));
-                }
-            };
-            player.playSound("mob.endermen.portal");
-            player.sendMessage(sprintf(PURCHASE_MESSAGE, action.name))
-            results.push({
-                type: ActionType.BuyNormalItem,
-                success: true
-            });
+            const leftover = stackFirstContainerAdd(container, action.item);
+            if (leftover) { // if failed to add item
+                // spawn the item as entity
+                const entity = playerInfo.player.dimension.spawnItem(leftover, player.location);
+                entity.applyImpulse(v3.scale(entity.getVelocity(), -1));
+            }
+            player.sendMessage(sprintf(PURCHASE_MESSAGE, action.itemName))
+            result = true;
         } else if (action.type == ActionType.UpgradeSword) {
-            ;
+            if(!hasNextSwordLevel(playerInfo.swordLevel)) {
+                result = false;
+                break execute;
+            }
+            const cost = playerInfo.swordLevel.toNextLevelCost;
+            if(!isTokenSatisfying(tokens, cost)) {
+                // Failed to buy, insufficient tokens
+                result = false;
+                break execute;
+            }
+            consumeToken(container, cost);
+            const nextLevel = SWORD_LEVELS[playerInfo.swordLevel.level + 1];
+            let foundSword = false;
+            for (const {slot} of containerSlotIterator(container)) {
+                const item = slot.getItem();
+                if(!item) continue;
+                if(itemEqual(item, playerInfo.swordLevel.item)) {
+                    slot.setItem(nextLevel.item);
+                    foundSword = true;
+                    break;
+                }
+            }
+            if(!foundSword) {
+                container.addItem(nextLevel.item);
+            }
+            player.sendMessage(sprintf(PURCHASE_MESSAGE, nextLevel.name))
+            playerInfo.swordLevel = nextLevel;
+            result = true;
+        } else if (action.type == ActionType.BuyShear) {
+            if(playerInfo.hasShear) {
+                result = false;
+                break execute;
+            }
+            if(!isTokenSatisfying(tokens, action.cost)) {
+                // Failed to buy, insufficient tokens
+                result = false;
+                break execute;
+            }
+            consumeToken(container, action.cost);
+            container.addItem(new mc.ItemStack(MinecraftItemTypes.Shears));
+            player.sendMessage(sprintf(PURCHASE_MESSAGE, "Shears"));
+            playerInfo.hasShear = true;
+            result = true;
+        } else if (action.type == ActionType.BuyArmor) {
+            const currentLevel = playerInfo.armorLevel;
+            if(currentLevel.level >= action.toLevel.level) {
+                result = false;
+                break execute;
+            }
+            if(!isTokenSatisfying(tokens, action.toLevel.cost)) {
+                // Failed to buy, insufficient tokens
+                result = false;
+                break execute;
+            }
+            consumeToken(container, action.toLevel.cost);
+            playerInfo.armorLevel = action.toLevel;
+            const equipment = player.getComponent("equippable")!
+            equipment.setEquipment(mc.EquipmentSlot.Legs, playerInfo.armorLevel.leggings);
+            equipment.setEquipment(mc.EquipmentSlot.Feet, playerInfo.armorLevel.boots);
+            player.sendMessage(sprintf(PURCHASE_MESSAGE, playerInfo.armorLevel.name));
+            result = true;
         }
+
+        if(result) {
+            player.playSound("mob.endermen.portal");
+        } else {
+            player.playSound("note.bass");
+        }
+        results.push(result);
     }
     return results;
 }
 
 export function openShop(playerInfo: PlayerGameInformation, game: BedWarsGame) {
     playerInfo.lastActionResults = [];
+    if(!SHOP_DATA) {
+        SHOP_DATA = getShopData();
+    }
     showMenuForPlayer(playerInfo, SHOP_DATA, game, false);
 }

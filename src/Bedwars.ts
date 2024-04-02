@@ -5,7 +5,7 @@ import { setupGameTest } from './GameTest.js';
 import { MinecraftBlockTypes, MinecraftEffectTypes, MinecraftEntityTypes, MinecraftItemTypes } from '@minecraft/vanilla-data';
 
 import { sprintf, vsprintf } from 'sprintf-js';
-import { ActionResult, openShop, TokenValue } from './BedwarsShop.js';
+import { openShop, TokenValue } from './BedwarsShop.js';
 import { isLocationPartOfAnyPlatforms } from './RescuePlatform.js';
 import {SimulatedPlayer} from '@minecraft/server-gametest';
 
@@ -90,6 +90,8 @@ export const TEAM_CONSTANTS: Record<TeamType, {
     colorPrefix: string;
     woolName: string;
     woolIconPath: string;
+    // hardenedClayName: string;
+    // hardenedClayIconPath: string;
     leatherHelmet: mc.ItemStack;
     leatherChestplate: mc.ItemStack;
     leatherLeggings: mc.ItemStack;
@@ -151,11 +153,13 @@ export const TEAM_CONSTANTS: Record<TeamType, {
 
 interface SwordLevel {
     level: number;
+    name: string;
+    icon: string;
     item: mc.ItemStack;
-    cost: TokenValue;
+    toNextLevelCost: TokenValue;
 }
 
-const SWORD_LEVELS: SwordLevel[] = (() => {
+export const SWORD_LEVELS: SwordLevel[] = (() => {
     function setupItem(type: MinecraftItemTypes) {
         const i = new mc.ItemStack(type);
         i.lockMode = mc.ItemLockMode.inventory;
@@ -165,36 +169,89 @@ const SWORD_LEVELS: SwordLevel[] = (() => {
     return [
         {
             level: 0,
+            name: "Wooden Sword",
+            icon: "textures/items/wood_sword.png",
             item: setupItem(MinecraftItemTypes.WoodenSword),
-            cost: { ironAmount: 0, goldAmount: 0, diamondAmount: 0, emeraldAmount: 0 }
-        },
-        {
+            toNextLevelCost: { ironAmount: 10, goldAmount: 0, diamondAmount: 0, emeraldAmount: 0 }
+        }, {
             level: 1,
+            name: "Stone Sword",
+            icon: "textures/items/stone_sword.png",
             item: setupItem(MinecraftItemTypes.StoneSword),
-            cost: { ironAmount: 10, goldAmount: 0, diamondAmount: 0, emeraldAmount: 0 }
-        },
-        {
+            toNextLevelCost: { ironAmount: 0, goldAmount: 7, diamondAmount: 0, emeraldAmount: 0 }
+        }, {
             level: 2,
+            name: "Iron Sword",
+            icon: "textures/items/iron_sword.png",
             item: setupItem(MinecraftItemTypes.IronSword),
-            cost: { ironAmount: 0, goldAmount: 6, diamondAmount: 0, emeraldAmount: 0 }
-        },
-        {
+            toNextLevelCost: { ironAmount: 0, goldAmount: 0, diamondAmount: 0, emeraldAmount: 4 }
+        }, {
             level: 3,
+            name: "Diamond Sword",
+            icon: "textures/items/diamond_sword.png",
             item: setupItem(MinecraftItemTypes.DiamondSword),
+            toNextLevelCost: { ironAmount: 0, goldAmount: 0, diamondAmount: 0, emeraldAmount: 0 }
+        }
+    ];
+})();
+
+export function hasNextSwordLevel(level: SwordLevel) {
+    return level.level != SWORD_LEVELS.length - 1;
+}
+export function hasPrevSwordLevel(level: SwordLevel) {
+    return level.level != 0;
+}
+
+export interface ArmorLevel {
+    level: number;
+    name: string;
+    icon: string;
+    leggings: mc.ItemStack;
+    boots: mc.ItemStack;
+    cost: TokenValue;
+}
+
+export const ARMOR_LEVELS: ArmorLevel[] = (() => {
+    function setupItem(type: MinecraftItemTypes) {
+        const i = new mc.ItemStack(type);
+        i.lockMode = mc.ItemLockMode.slot;
+        return i;
+    }
+
+    return [
+        {
+            level: 0,
+            name: "Leather Armor",
+            icon: "textures/items/leather_boots.tga",
+            leggings: setupItem(MinecraftItemTypes.LeatherLeggings),
+            boots: setupItem(MinecraftItemTypes.LeatherBoots),
+            cost: { ironAmount: 0, goldAmount: 0, diamondAmount: 0, emeraldAmount: 0 }
+        }, {
+            level: 1,
+            name: "Chainmail Armor",
+            icon: "textures/items/chainmail_boots.png",
+            leggings: setupItem(MinecraftItemTypes.ChainmailLeggings),
+            boots: setupItem(MinecraftItemTypes.ChainmailBoots),
+            cost: { ironAmount: 30, goldAmount: 0, diamondAmount: 0, emeraldAmount: 0 }
+        }, {
+            level: 2,
+            name: "Iron Armor",
+            icon: "textures/items/iron_boots.png",
+            leggings: setupItem(MinecraftItemTypes.IronLeggings),
+            boots: setupItem(MinecraftItemTypes.IronBoots),
+            cost: { ironAmount: 0, goldAmount: 12, diamondAmount: 0, emeraldAmount: 0 }
+        }, {
+            level: 3,
+            name: "Diamond Armor",
+            icon: "textures/items/diamond_boots.png",
+            leggings: setupItem(MinecraftItemTypes.DiamondLeggings),
+            boots: setupItem(MinecraftItemTypes.DiamondBoots),
             cost: { ironAmount: 0, goldAmount: 0, diamondAmount: 0, emeraldAmount: 6 }
         }
     ];
 })();
 
-function hasNextSwordLevel(level: SwordLevel) {
-    return level.level != SWORD_LEVELS.length - 1;
-}
-function hasPrevSwordLevel(level: SwordLevel) {
-    return level.level != 0;
-}
-
-
-const testMap: MapInformation = {
+/*const testMap: MapInformation = {
     size: { x: 21, y: 3, z: 5 },
     fallbackRespawnPoint: { x: 0, y: 50, z: 0 },
     voidY: -48,
@@ -251,7 +308,7 @@ const testMap: MapInformation = {
             defaultCapacity: 32
         }
     ]
-};
+};*/
 const testMap2: MapInformation = {
     size: { x: 21, y: 3, z: 5 },
     fallbackRespawnPoint: { x: 0+104, y: 149-54, z: 0 +65},
@@ -369,7 +426,7 @@ export interface PlayerGameInformation {
      * Cleared when the player opens menu or press the back button,
      * set when the player perform an action
      */
-    lastActionResults: ActionResult[];
+    lastActionResults: boolean[];
     /**
      * Stores the attacker.
      * this field is cleared on death
@@ -377,6 +434,8 @@ export interface PlayerGameInformation {
     lastHurtBy?: PlayerGameInformation;
     placement: BlockPlacementTracker;
     swordLevel: SwordLevel;
+    armorLevel: ArmorLevel;
+    hasShear: boolean;
 }
 export class BedWarsGame {
     private map: MapInformation;
@@ -456,7 +515,9 @@ export class BedWarsGame {
             deathRotaion: { x: 0, y: 0 },
             lastActionResults: [],
             placement: new BlockPlacementTracker(),
-            swordLevel: SWORD_LEVELS[0]
+            swordLevel: SWORD_LEVELS[0],
+            armorLevel: ARMOR_LEVELS[0],
+            hasShear: false
         });
     }
 
@@ -534,6 +595,10 @@ export class BedWarsGame {
             amplifier: 127,
             showParticles: false
         });
+        playerInfo.player.addEffect(MinecraftEffectTypes.Resistance, 3 * 20, {
+            amplifier: 127,
+            showParticles: true
+        });
         playerInfo.player.extinguishFire();
         this.resetInventory(playerInfo);
         playerInfo.lastHurtBy = undefined;
@@ -546,24 +611,35 @@ export class BedWarsGame {
         const t = TEAM_CONSTANTS[playerInfo.team];
         equipment.setEquipment(mc.EquipmentSlot.Head, t.leatherHelmet);
         equipment.setEquipment(mc.EquipmentSlot.Chest, t.leatherChestplate);
-        equipment.setEquipment(mc.EquipmentSlot.Legs, t.leatherLeggings);
-        equipment.setEquipment(mc.EquipmentSlot.Feet, t.leatherBoots);
+        if(playerInfo.armorLevel.level == 0) {
+            equipment.setEquipment(mc.EquipmentSlot.Legs, t.leatherLeggings);
+            equipment.setEquipment(mc.EquipmentSlot.Feet, t.leatherBoots);
+        } else {
+            equipment.setEquipment(mc.EquipmentSlot.Legs, playerInfo.armorLevel.leggings);
+            equipment.setEquipment(mc.EquipmentSlot.Feet, playerInfo.armorLevel.boots);
+        }
         const container = playerInfo.player.getComponent("inventory")!.container!;
+        playerInfo.swordLevel = SWORD_LEVELS[0];
         let hasSword = false;
+        let foundShear = false;
         for (const { item, index } of containerIterator(container)) {
             if (!item) continue;
             if (item.hasTag("is_sword") && !hasSword) {
                 hasSword = true;
-                if (hasPrevSwordLevel(playerInfo.swordLevel)) {
-                    playerInfo.swordLevel = SWORD_LEVELS[playerInfo.swordLevel.level - 1];
-                }
                 container.setItem(index, playerInfo.swordLevel.item);
                 continue;
+            }
+            if (item.typeId == MinecraftItemTypes.Shears) {
+                foundShear = true;
+                if(playerInfo.hasShear) continue;
             }
             container.setItem(index);
         }
         if (!hasSword) {
             container.addItem(playerInfo.swordLevel.item);
+        }
+        if(!foundShear && playerInfo.hasShear) {
+            container.addItem(new mc.ItemStack(MinecraftItemTypes.Shears));
         }
     }
     private setupSpawnPoint(player: mc.Player) {
@@ -760,6 +836,26 @@ export class BedWarsGame {
                 [mc.EquipmentSlot.Head, mc.EquipmentSlot.Chest, mc.EquipmentSlot.Legs, mc.EquipmentSlot.Feet, mc.EquipmentSlot.Mainhand].forEach(slotName => {
                     const item = equipment.getEquipment(slotName);
                     if (!item) return;
+                    if(slotName == mc.EquipmentSlot.Mainhand) {
+                        let erase = false;
+                        // detects illeagl items
+                        if([MinecraftItemTypes.CraftingTable,
+                            MinecraftItemTypes.WoodenButton,
+                            MinecraftItemTypes.IronNugget,
+                            MinecraftItemTypes.GoldNugget,
+                            MinecraftItemTypes.WoodenPressurePlate,
+                            MinecraftItemTypes.HeavyWeightedPressurePlate,
+                            MinecraftItemTypes.LightWeightedPressurePlate].includes(item.typeId as MinecraftItemTypes)) {
+                            erase = true;
+                        }
+                        if(item.typeId == MinecraftItemTypes.Shears && !playerInfo.hasShear) {
+                            erase = true;
+                        }
+                        if(erase) {
+                            equipment.getEquipmentSlot(slotName).setItem();
+                            return;
+                        }
+                    }
                     const com = item.getComponent("durability");
                     if (!com) return;
                     if (com.damage > 20) {
@@ -906,7 +1002,9 @@ export class BedWarsGame {
         const playerPlacedBlocks = Array.from(impactedBlocks);
         for (let index = impactedBlocks.length - 1; index >= 0; --index) {
             const block = impactedBlocks[index];
-            if (!this.removeBlockFromRecord(block)) {
+            if (block.typeId == MinecraftBlockTypes.EndStone) {
+                playerPlacedBlocks.splice(index, 1);
+            } else if (!this.removeBlockFromRecord(block)) {
                 playerPlacedBlocks.splice(index, 1);
             }
         }
@@ -928,6 +1026,24 @@ export class BedWarsGame {
         }
         this.playerDieOrOffline(victimInfo, killerInfo);
     }
+
+    afterEntityHurt(event: mc.EntityHurtAfterEvent) {
+        if (this.state != GameState.started) return;
+
+        if(!(event.hurtEntity instanceof mc.Player)) return;
+        if(!(event.damageSource.damagingEntity instanceof mc.Player)) return;
+        const victim = event.hurtEntity;
+        const hurter = event.damageSource.damagingEntity;
+        const victimInfo = this.players.get(victim.name);
+        const hurterInfo = this.players.get(hurter.name);
+        if(!victimInfo) return;
+        if(!hurterInfo) return;
+        if(victimInfo.team == hurterInfo.team) {
+            // workaround for disabling in-team damage
+            const health = victim.getComponent("health")!;
+            health.setCurrentValue(health.currentValue + event.damage);
+        }
+    }
     afterEntityHitEntity(event: mc.EntityHitEntityAfterEvent) {
         if (this.state != GameState.started) return;
 
@@ -940,7 +1056,6 @@ export class BedWarsGame {
             if (hurterInfo) {
                 if(hurterInfo.team == victimInfo.team) {
                     // TOWAIT TODO
-                    hurterInfo.player.sendMessage("Well, don't do this.");
                     return;
                 }
                 victimInfo.lastHurtBy = hurterInfo;
@@ -963,7 +1078,6 @@ export class BedWarsGame {
                 if(hurterInfo) {
                     if(hurterInfo.team == victimInfo.team) {
                         // TOWAIT TODO
-                        hurterInfo.player.sendMessage("Well, don't do this.");
                     } else {
                         victimInfo.lastHurtBy = hurterInfo;
                         return;
@@ -1115,6 +1229,12 @@ export class BedWarsGame {
                 slot.setItem();
             }
             return;
+        } else if(event.permutationBeingPlaced.type.id == MinecraftBlockTypes.CraftingTable) {
+            // disallow the player to place crafting table
+            // and then clear it
+            event.cancel = true;
+            await sleep(0);
+            playerInfo.player.getComponent("equippable")!.getEquipmentSlot(mc.EquipmentSlot.Mainhand).setItem();
         }
         // disallow the player to place blocks near generators
         for (const gen of this.generators) {
@@ -1324,6 +1444,11 @@ mc.world.afterEvents.projectileHitEntity.subscribe(event => {
         game.afterProjectileHitEntity(event);
     }
 });
+mc.world.afterEvents.entityHurt.subscribe(event => {
+    if(game) {
+        game.afterEntityHurt(event);
+    }
+})
 mc.system.runInterval(() => {
     if (game) game.tickEvent();
 });
