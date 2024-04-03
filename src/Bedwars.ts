@@ -299,7 +299,7 @@ export const AXE_LEVELS: AxeLevel[] = (() => {
             level: 1,
             name: "Stone Axe",
             icon: "textures/items/stone_axe.png",
-            item: setupItem(MinecraftItemTypes.IronAxe, [
+            item: setupItem(MinecraftItemTypes.StoneAxe, [
                 {
                     type: MinecraftEnchantmentTypes.Efficiency,
                     level: 1
