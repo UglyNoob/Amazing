@@ -9,33 +9,38 @@ import {
     PlayerState,
     TEAM_CONSTANTS,
     PURCHASE_MESSAGE,
-    hasNextSwordLevel,
     SWORD_LEVELS,
     ARMOR_LEVELS,
-    ArmorLevel
+    PICKAXE_LEVELS,
+    AXE_LEVELS,
+    hasNextPickaxeLevel,
+    hasNextAxeLevel,
+    PickaxeLevel,
+    AxeLevel,
+    ArmorLevel,
+    SwordLevel,
 } from "./Bedwars.js";
 import { ActionFormData } from "@minecraft/server-ui";
 import { containerIterator, containerSlotIterator, itemEqual, stackFirstContainerAdd } from './utility.js'
 import { Vector3Utils as v3 } from "@minecraft/math";
 import { MinecraftEnchantmentTypes, MinecraftItemTypes } from "@minecraft/vanilla-data";
-import {PLATFORM_ITEM} from "./RescuePlatform.js";
-import {sprintf} from "sprintf-js";
-
-
-enum ActionType {
-    BuyNormalItem,
-    BuyArmor,
-    UpgradeSword,
-    UpgradePickaxe,
-    UpgradeAxe,
-    BuyShear
-}
+import { PLATFORM_ITEM } from "./RescuePlatform.js";
+import { sprintf } from "sprintf-js";
 
 export interface TokenValue {
     ironAmount: number;
     goldAmount: number;
     diamondAmount: number;
     emeraldAmount: number;
+}
+
+enum ActionType {
+    BuyNormalItem,
+    BuyArmor,
+    BuySword,
+    UpgradePickaxe,
+    UpgradeAxe,
+    BuyShear
 }
 
 interface BuyNormalItemAction {
@@ -48,8 +53,15 @@ interface BuyArmorAction {
     type: ActionType.BuyArmor;
     toLevel: ArmorLevel;
 }
-interface UpgradeSwordAction {
-    type: ActionType.UpgradeSword;
+interface BuySwordAction {
+    type: ActionType.BuySword;
+    toLevel: SwordLevel;
+}
+interface UpgradePickaxeAction {
+    type: ActionType.UpgradePickaxe;
+}
+interface UpgradeAxeAction {
+    type: ActionType.UpgradeAxe;
 }
 interface BuyShearAction {
     type: ActionType.BuyShear;
@@ -57,7 +69,9 @@ interface BuyShearAction {
 }
 
 type Action = BuyNormalItemAction |
-    UpgradeSwordAction |
+    BuySwordAction |
+    UpgradePickaxeAction |
+    UpgradeAxeAction |
     BuyShearAction |
     BuyArmorAction;
 
@@ -118,17 +132,39 @@ function generateSecondMenuGetBody(defaultText: string) {
         return defaultText;
     }
 }
+function generateBuySwordMenu(toLevel: SwordLevel): Menu {
+    return {
+        type: "action",
+        getDisplay(playerInfo, currentTokens) {
+            if (playerInfo.swordLevel.level >= toLevel.level) {
+                return "§h" + toLevel.name;
+            }
+            const cost = toLevel.toCurrentLevelCost;
+            let color: string;
+            if (isTokenSatisfying(currentTokens, cost)) {
+                color = "§a§l";
+            } else {
+                color = "§4";
+            }
+            return `${color}${toLevel.name}\n${tokenToString(cost)}`;
+        },
+        icon: toLevel.icon,
+        actions: [{
+            type: ActionType.BuySword,
+            toLevel
+        }]
+    };
+}
 function generateBuyArmorMenu(toLevel: ArmorLevel): Menu {
     return {
         type: "action",
         getDisplay(playerInfo, currentTokens) {
-            const currentLevel = playerInfo.armorLevel;
-            if(currentLevel.level >= toLevel.level) {
+            if (playerInfo.armorLevel.level >= toLevel.level) {
                 return "§h" + toLevel.name;
             }
             const cost = toLevel.cost;
             let color: string;
-            if(isTokenSatisfying(currentTokens, cost)) {
+            if (isTokenSatisfying(currentTokens, cost)) {
                 color = "§a§l";
             } else {
                 color = "§4";
@@ -140,7 +176,7 @@ function generateBuyArmorMenu(toLevel: ArmorLevel): Menu {
             type: ActionType.BuyArmor,
             toLevel
         }]
-    }
+    };
 }
 
 const SHEARS_COST: TokenValue = {
@@ -208,7 +244,7 @@ const getShopData: () => Menu = () => ({
                 generateBuyOneItemMenu("Hardened Clay", () => ({
                     type: ActionType.BuyNormalItem,
                     itemName: "Hardened Clay",
-                    cost: {ironAmount: 12, goldAmount: 0, emeraldAmount: 0, diamondAmount: 0},
+                    cost: { ironAmount: 12, goldAmount: 0, emeraldAmount: 0, diamondAmount: 0 },
                     item: HARDENED_CLAY_ITEM
                 }), () => "textures/blocks/hardened_clay.png"),
                 generateBuyOneItemMenu("Plank", () => ({
@@ -231,33 +267,9 @@ const getShopData: () => Menu = () => ({
             title: "Weapon Shop",
             getBody: generateSecondMenuGetBody("Buy weapons"),
             subMenus: [
-                {
-                    type: "action",
-                    getDisplay(playerInfo, currentTokens) {
-                        const level = playerInfo.swordLevel;
-                        if(!hasNextSwordLevel(level)) {
-                            return "§hYour sword is\nof the max level."
-                        }
-                        const cost = level.toNextLevelCost;
-                        let color: string;
-                        if(isTokenSatisfying(currentTokens, cost)) {
-                            color = "§a§l";
-                        } else {
-                            color = "§4";
-                        }
-                        return `${color}${level.name}\n${tokenToString(cost)}`;
-                    },
-                    getIcon(playerInfo) {
-                        let level = playerInfo.swordLevel;
-                        if(hasNextSwordLevel(level)) {
-                            level = SWORD_LEVELS[level.level + 1];
-                        }
-                        return level.icon;
-                    },
-                    actions: [{
-                        type: ActionType.UpgradeSword
-                    }]
-                }
+                generateBuySwordMenu(SWORD_LEVELS[1]),
+                generateBuySwordMenu(SWORD_LEVELS[2]),
+                generateBuySwordMenu(SWORD_LEVELS[3])
             ]
         }, {
             type: "entry",
@@ -280,7 +292,7 @@ const getShopData: () => Menu = () => ({
                 {
                     type: "action",
                     getDisplay(playerInfo, tokens) {
-                        if(playerInfo.hasShear) {
+                        if (playerInfo.hasShear) {
                             return "§hYou already have this item.";
                         }
                         const cost = SHEARS_COST;
@@ -296,6 +308,82 @@ const getShopData: () => Menu = () => ({
                     actions: [{
                         type: ActionType.BuyShear,
                         cost: SHEARS_COST
+                    }]
+                }, {
+                    type: "action",
+                    getDisplay(playerInfo, currentTokens) {
+                        let toLevel: PickaxeLevel;
+                        if (playerInfo.pickaxeLevel) {
+                            if (!hasNextPickaxeLevel(playerInfo.pickaxeLevel)) {
+                                return "§hYour pickaxe is\nof the max level."
+                            }
+                            toLevel = PICKAXE_LEVELS[playerInfo.pickaxeLevel.level + 1];
+                        } else {
+                            toLevel = PICKAXE_LEVELS[0];
+                        }
+
+                        const cost = toLevel.toCurrentLevelCost;
+                        let color: string;
+                        if (isTokenSatisfying(currentTokens, cost)) {
+                            color = "§a§l";
+                        } else {
+                            color = "§4";
+                        }
+                        return `${color}${toLevel.name}\n${tokenToString(cost)}`;
+                    },
+                    getIcon(playerInfo) {
+                        let toLevel: PickaxeLevel;
+                        if (playerInfo.pickaxeLevel) {
+                            if (!hasNextPickaxeLevel(playerInfo.pickaxeLevel)) {
+                                toLevel = playerInfo.pickaxeLevel;
+                            } else {
+                                toLevel = PICKAXE_LEVELS[playerInfo.pickaxeLevel.level + 1];
+                            }
+                        } else {
+                            toLevel = PICKAXE_LEVELS[0];
+                        }
+                        return toLevel.icon;
+                    },
+                    actions: [{
+                        type: ActionType.UpgradePickaxe
+                    }]
+                }, {
+                    type: "action",
+                    getDisplay(playerInfo, currentTokens) {
+                        let toLevel: AxeLevel;
+                        if (playerInfo.axeLevel) {
+                            if (!hasNextAxeLevel(playerInfo.axeLevel)) {
+                                return "§hYour axe is\nof the max level."
+                            }
+                            toLevel = AXE_LEVELS[playerInfo.axeLevel.level + 1];
+                        } else {
+                            toLevel = AXE_LEVELS[0];
+                        }
+
+                        const cost = toLevel.toCurrentLevelCost;
+                        let color: string;
+                        if (isTokenSatisfying(currentTokens, cost)) {
+                            color = "§a§l";
+                        } else {
+                            color = "§4";
+                        }
+                        return `${color}${toLevel.name}\n${tokenToString(cost)}`;
+                    },
+                    getIcon(playerInfo) {
+                        let toLevel: AxeLevel;
+                        if (playerInfo.axeLevel) {
+                            if (!hasNextAxeLevel(playerInfo.axeLevel)) {
+                                toLevel = playerInfo.axeLevel;
+                            } else {
+                                toLevel = AXE_LEVELS[playerInfo.axeLevel.level + 1];
+                            }
+                        } else {
+                            toLevel = AXE_LEVELS[0];
+                        }
+                        return toLevel.icon;
+                    },
+                    actions: [{
+                        type: ActionType.UpgradeAxe
                     }]
                 }
             ]
@@ -341,7 +429,7 @@ const getShopData: () => Menu = () => ({
                 generateBuyOneItemMenu("Tnt", () => ({
                     type: ActionType.BuyNormalItem,
                     itemName: "Tnt",
-                    cost: { ironAmount: 0, goldAmount: 8, emeraldAmount: 0, diamondAmount: 0 },
+                    cost: { ironAmount: 0, goldAmount: 4, emeraldAmount: 0, diamondAmount: 0 },
                     item: TNT_ITEM
                 }), () => "textures/blocks/tnt_side.png"),
                 generateBuyOneItemMenu("Golden Apple", () => ({
@@ -407,7 +495,7 @@ function tokenToString(t: TokenValue) {
     if (t.emeraldAmount) {
         result += `${t.emeraldAmount} Emeralds `;
     }
-    if(result.length > 0)
+    if (result.length > 0)
         result = result.slice(0, result.length - 1);
     return result;
 }
@@ -574,41 +662,40 @@ function performAction(playerInfo: PlayerGameInformation, actions: Action[]) {
             }
             player.sendMessage(sprintf(PURCHASE_MESSAGE, action.itemName))
             result = true;
-        } else if (action.type == ActionType.UpgradeSword) {
-            if(!hasNextSwordLevel(playerInfo.swordLevel)) {
+        } else if (action.type == ActionType.BuySword) {
+            if (playerInfo.swordLevel.level >= action.toLevel.level) {
                 result = false;
                 break execute;
             }
-            const cost = playerInfo.swordLevel.toNextLevelCost;
-            if(!isTokenSatisfying(tokens, cost)) {
+            const cost = action.toLevel.toCurrentLevelCost;
+            if (!isTokenSatisfying(tokens, cost)) {
                 // Failed to buy, insufficient tokens
                 result = false;
                 break execute;
             }
             consumeToken(container, cost);
-            const nextLevel = SWORD_LEVELS[playerInfo.swordLevel.level + 1];
             let foundSword = false;
-            for (const {slot} of containerSlotIterator(container)) {
+            for (const { slot } of containerSlotIterator(container)) {
                 const item = slot.getItem();
-                if(!item) continue;
-                if(itemEqual(item, playerInfo.swordLevel.item)) {
-                    slot.setItem(nextLevel.item);
+                if (!item) continue;
+                if (itemEqual(item, playerInfo.swordLevel.item)) {
+                    slot.setItem(action.toLevel.item);
                     foundSword = true;
                     break;
                 }
             }
-            if(!foundSword) {
-                container.addItem(nextLevel.item);
+            if (!foundSword) {
+                container.addItem(action.toLevel.item);
             }
-            player.sendMessage(sprintf(PURCHASE_MESSAGE, nextLevel.name))
-            playerInfo.swordLevel = nextLevel;
+            player.sendMessage(sprintf(PURCHASE_MESSAGE, action.toLevel.name))
+            playerInfo.swordLevel = action.toLevel;
             result = true;
         } else if (action.type == ActionType.BuyShear) {
-            if(playerInfo.hasShear) {
+            if (playerInfo.hasShear) {
                 result = false;
                 break execute;
             }
-            if(!isTokenSatisfying(tokens, action.cost)) {
+            if (!isTokenSatisfying(tokens, action.cost)) {
                 // Failed to buy, insufficient tokens
                 result = false;
                 break execute;
@@ -620,11 +707,11 @@ function performAction(playerInfo: PlayerGameInformation, actions: Action[]) {
             result = true;
         } else if (action.type == ActionType.BuyArmor) {
             const currentLevel = playerInfo.armorLevel;
-            if(currentLevel.level >= action.toLevel.level) {
+            if (currentLevel.level >= action.toLevel.level) {
                 result = false;
                 break execute;
             }
-            if(!isTokenSatisfying(tokens, action.toLevel.cost)) {
+            if (!isTokenSatisfying(tokens, action.toLevel.cost)) {
                 // Failed to buy, insufficient tokens
                 result = false;
                 break execute;
@@ -636,9 +723,85 @@ function performAction(playerInfo: PlayerGameInformation, actions: Action[]) {
             equipment.setEquipment(mc.EquipmentSlot.Feet, playerInfo.armorLevel.boots);
             player.sendMessage(sprintf(PURCHASE_MESSAGE, playerInfo.armorLevel.name));
             result = true;
+        } else if (action.type == ActionType.UpgradePickaxe) {
+            let toLevel: PickaxeLevel;
+            if (playerInfo.pickaxeLevel) {
+                if (!hasNextPickaxeLevel(playerInfo.pickaxeLevel)) {
+                    result = false;
+                    break execute;
+                }
+                toLevel = PICKAXE_LEVELS[playerInfo.pickaxeLevel.level + 1];
+            } else {
+                toLevel = PICKAXE_LEVELS[0];
+            }
+            const cost = toLevel.toCurrentLevelCost;
+            if (!isTokenSatisfying(tokens, cost)) {
+                // Failed to buy, insufficient tokens
+                result = false;
+                break execute;
+            }
+            consumeToken(container, cost);
+            if (playerInfo.pickaxeLevel) {
+                let foundPickaxe = false;
+                for (const { slot } of containerSlotIterator(container)) {
+                    const item = slot.getItem();
+                    if (!item) continue;
+                    if (itemEqual(item, playerInfo.pickaxeLevel.item)) {
+                        slot.setItem(toLevel.item);
+                        foundPickaxe = true;
+                        break;
+                    }
+                }
+                if (!foundPickaxe) {
+                    container.addItem(toLevel.item);
+                }
+            } else {
+                container.addItem(toLevel.item);
+            }
+            player.sendMessage(sprintf(PURCHASE_MESSAGE, toLevel.name))
+            playerInfo.pickaxeLevel = toLevel;
+            result = true;
+        } else if (action.type == ActionType.UpgradeAxe) {
+            let toLevel: AxeLevel;
+            if (playerInfo.axeLevel) {
+                if (!hasNextAxeLevel(playerInfo.axeLevel)) {
+                    result = false;
+                    break execute;
+                }
+                toLevel = AXE_LEVELS[playerInfo.axeLevel.level + 1];
+            } else {
+                toLevel = AXE_LEVELS[0];
+            }
+            const cost = toLevel.toCurrentLevelCost;
+            if (!isTokenSatisfying(tokens, cost)) {
+                // Failed to buy, insufficient tokens
+                result = false;
+                break execute;
+            }
+            consumeToken(container, cost);
+            if (playerInfo.axeLevel) {
+                let foundAxe = false;
+                for (const { slot } of containerSlotIterator(container)) {
+                    const item = slot.getItem();
+                    if (!item) continue;
+                    if (itemEqual(item, playerInfo.axeLevel.item)) {
+                        slot.setItem(toLevel.item);
+                        foundAxe = true;
+                        break;
+                    }
+                }
+                if (!foundAxe) {
+                    container.addItem(toLevel.item);
+                }
+            } else {
+                container.addItem(toLevel.item);
+            }
+            player.sendMessage(sprintf(PURCHASE_MESSAGE, toLevel.name))
+            playerInfo.axeLevel = toLevel;
+            result = true;
         }
 
-        if(result) {
+        if (result) {
             player.playSound("mob.endermen.portal");
         } else {
             player.playSound("note.bass");
@@ -650,7 +813,7 @@ function performAction(playerInfo: PlayerGameInformation, actions: Action[]) {
 
 export function openShop(playerInfo: PlayerGameInformation, game: BedWarsGame) {
     playerInfo.lastActionResults = [];
-    if(!SHOP_DATA) {
+    if (!SHOP_DATA) {
         SHOP_DATA = getShopData();
     }
     showMenuForPlayer(playerInfo, SHOP_DATA, game, false);

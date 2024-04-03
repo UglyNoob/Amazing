@@ -2,12 +2,12 @@ import { Vector3Utils as v3 } from '@minecraft/math';
 import * as mc from '@minecraft/server';
 import { itemEqual, Area, sleep, vectorAdd, vectorWithinArea, containerIterator, capitalize, getPlayerByName } from './utility.js';
 import { setupGameTest } from './GameTest.js';
-import { MinecraftBlockTypes, MinecraftEffectTypes, MinecraftEntityTypes, MinecraftItemTypes } from '@minecraft/vanilla-data';
+import { MinecraftBlockTypes, MinecraftEffectTypes, MinecraftEnchantmentTypes, MinecraftEntityTypes, MinecraftItemTypes } from '@minecraft/vanilla-data';
 
 import { sprintf, vsprintf } from 'sprintf-js';
 import { openShop, TokenValue } from './BedwarsShop.js';
 import { isLocationPartOfAnyPlatforms } from './RescuePlatform.js';
-import {SimulatedPlayer} from '@minecraft/server-gametest';
+import { SimulatedPlayer } from '@minecraft/server-gametest';
 
 const RESPAWN_TIME = 100; // in ticks
 const IRONGOLD_GENERATOR_INTERVAL = 60;
@@ -151,12 +151,12 @@ export const TEAM_CONSTANTS: Record<TeamType, {
     }
 }
 
-interface SwordLevel {
+export interface SwordLevel {
     level: number;
     name: string;
     icon: string;
     item: mc.ItemStack;
-    toNextLevelCost: TokenValue;
+    toCurrentLevelCost: TokenValue;
 }
 
 export const SWORD_LEVELS: SwordLevel[] = (() => {
@@ -172,33 +172,169 @@ export const SWORD_LEVELS: SwordLevel[] = (() => {
             name: "Wooden Sword",
             icon: "textures/items/wood_sword.png",
             item: setupItem(MinecraftItemTypes.WoodenSword),
-            toNextLevelCost: { ironAmount: 10, goldAmount: 0, diamondAmount: 0, emeraldAmount: 0 }
+            toCurrentLevelCost: { ironAmount: 0, goldAmount: 0, diamondAmount: 0, emeraldAmount: 0 }
         }, {
             level: 1,
             name: "Stone Sword",
             icon: "textures/items/stone_sword.png",
             item: setupItem(MinecraftItemTypes.StoneSword),
-            toNextLevelCost: { ironAmount: 0, goldAmount: 7, diamondAmount: 0, emeraldAmount: 0 }
+            toCurrentLevelCost: { ironAmount: 10, goldAmount: 0, diamondAmount: 0, emeraldAmount: 0 }
         }, {
             level: 2,
             name: "Iron Sword",
             icon: "textures/items/iron_sword.png",
             item: setupItem(MinecraftItemTypes.IronSword),
-            toNextLevelCost: { ironAmount: 0, goldAmount: 0, diamondAmount: 0, emeraldAmount: 4 }
+            toCurrentLevelCost: { ironAmount: 0, goldAmount: 7, diamondAmount: 0, emeraldAmount: 0 }
         }, {
             level: 3,
             name: "Diamond Sword",
             icon: "textures/items/diamond_sword.png",
             item: setupItem(MinecraftItemTypes.DiamondSword),
-            toNextLevelCost: { ironAmount: 0, goldAmount: 0, diamondAmount: 0, emeraldAmount: 0 }
+            toCurrentLevelCost: { ironAmount: 0, goldAmount: 0, diamondAmount: 0, emeraldAmount: 4 }
         }
     ];
 })();
 
-export function hasNextSwordLevel(level: SwordLevel) {
-    return level.level != SWORD_LEVELS.length - 1;
+export interface PickaxeLevel {
+    level: number;
+    name: string;
+    icon: string;
+    item: mc.ItemStack;
+    toCurrentLevelCost: TokenValue;
 }
-export function hasPrevSwordLevel(level: SwordLevel) {
+
+export const PICKAXE_LEVELS: PickaxeLevel[] = (() => {
+    function setupItem(type: MinecraftItemTypes, enchantments: mc.Enchantment[]) {
+        const i = new mc.ItemStack(type);
+        i.lockMode = mc.ItemLockMode.inventory;
+        const e = i.getComponent("enchantable")!;
+        e.addEnchantments(enchantments);
+        return i;
+    }
+
+    return [
+        {
+            level: 0,
+            name: "Wooden Pickaxe",
+            icon: "textures/items/wood_pickaxe.png",
+            item: setupItem(MinecraftItemTypes.WoodenPickaxe, [
+                {
+                    type: MinecraftEnchantmentTypes.Efficiency,
+                    level: 1
+                }
+            ]),
+            toCurrentLevelCost: { ironAmount: 10, goldAmount: 0, diamondAmount: 0, emeraldAmount: 0 }
+        }, {
+            level: 1,
+            name: "Iron Pickaxe",
+            icon: "textures/items/iron_pickaxe.png",
+            item: setupItem(MinecraftItemTypes.IronPickaxe, [
+                {
+                    type: MinecraftEnchantmentTypes.Efficiency,
+                    level: 2
+                }
+            ]),
+            toCurrentLevelCost: { ironAmount: 10, goldAmount: 0, diamondAmount: 0, emeraldAmount: 0 }
+        }, {
+            level: 2,
+            name: "Golden Pickaxe",
+            icon: "textures/items/gold_pickaxe.png",
+            item: setupItem(MinecraftItemTypes.GoldenPickaxe, [
+                {
+                    type: MinecraftEnchantmentTypes.Efficiency,
+                    level: 3
+                }
+            ]),
+            toCurrentLevelCost: { ironAmount: 0, goldAmount: 3, diamondAmount: 0, emeraldAmount: 0 }
+        }, {
+            level: 3,
+            name: "Diamond Pickaxe",
+            icon: "textures/items/diamond_pickaxe.png",
+            item: setupItem(MinecraftItemTypes.DiamondPickaxe, [
+                {
+                    type: MinecraftEnchantmentTypes.Efficiency,
+                    level: 3
+                }
+            ]),
+            toCurrentLevelCost: { ironAmount: 0, goldAmount: 6, diamondAmount: 0, emeraldAmount: 0 }
+        }
+    ];
+})();
+export function hasNextPickaxeLevel(level: PickaxeLevel) {
+    return level.level != PICKAXE_LEVELS.length - 1;
+}
+export function hasPrevPickaxeLevel(level: PickaxeLevel) {
+    return level.level != 0;
+}
+
+export interface AxeLevel {
+    level: number;
+    name: string;
+    icon: string;
+    item: mc.ItemStack;
+    toCurrentLevelCost: TokenValue;
+}
+export const AXE_LEVELS: AxeLevel[] = (() => {
+    function setupItem(type: MinecraftItemTypes, enchantments: mc.Enchantment[]) {
+        const i = new mc.ItemStack(type);
+        i.lockMode = mc.ItemLockMode.inventory;
+        const e = i.getComponent("enchantable")!;
+        e.addEnchantments(enchantments);
+        return i;
+    }
+
+    return [
+        {
+            level: 0,
+            name: "Wooden Axe",
+            icon: "textures/items/wood_axe.png",
+            item: setupItem(MinecraftItemTypes.WoodenAxe, [
+                {
+                    type: MinecraftEnchantmentTypes.Efficiency,
+                    level: 1
+                }
+            ]),
+            toCurrentLevelCost: { ironAmount: 10, goldAmount: 0, diamondAmount: 0, emeraldAmount: 0 }
+        }, {
+            level: 1,
+            name: "Stone Axe",
+            icon: "textures/items/stone_axe.png",
+            item: setupItem(MinecraftItemTypes.IronAxe, [
+                {
+                    type: MinecraftEnchantmentTypes.Efficiency,
+                    level: 1
+                }
+            ]),
+            toCurrentLevelCost: { ironAmount: 10, goldAmount: 0, diamondAmount: 0, emeraldAmount: 0 }
+        }, {
+            level: 2,
+            name: "Iron Axe",
+            icon: "textures/items/iron_axe.png",
+            item: setupItem(MinecraftItemTypes.IronAxe, [
+                {
+                    type: MinecraftEnchantmentTypes.Efficiency,
+                    level: 2
+                }
+            ]),
+            toCurrentLevelCost: { ironAmount: 0, goldAmount: 3, diamondAmount: 0, emeraldAmount: 0 }
+        }, {
+            level: 3,
+            name: "Diamond Axe",
+            icon: "textures/items/diamond_axe.png",
+            item: setupItem(MinecraftItemTypes.DiamondAxe, [
+                {
+                    type: MinecraftEnchantmentTypes.Efficiency,
+                    level: 3
+                }
+            ]),
+            toCurrentLevelCost: { ironAmount: 0, goldAmount: 6, diamondAmount: 0, emeraldAmount: 0 }
+        }
+    ];
+})();
+export function hasNextAxeLevel(level: AxeLevel) {
+    return level.level != AXE_LEVELS.length - 1;
+}
+export function hasPrevAxeLevel(level: AxeLevel) {
     return level.level != 0;
 }
 
@@ -251,7 +387,7 @@ export const ARMOR_LEVELS: ArmorLevel[] = (() => {
     ];
 })();
 
-/*const testMap: MapInformation = {
+const testMap: MapInformation = {
     size: { x: 21, y: 3, z: 5 },
     fallbackRespawnPoint: { x: 0, y: 50, z: 0 },
     voidY: -48,
@@ -259,26 +395,27 @@ export const ARMOR_LEVELS: ArmorLevel[] = (() => {
         {
             type: TeamType.Red,
             shopLocation: { x: 6, y: 2, z: 4 },
+            teamChestLocation: { x: 5, y: 1, z: 4 },
             teamGenerator: {
                 type: GeneratorType.IronGold,
                 spawnLocation: { x: 1.5, y: 1.5, z: 2.5 },
                 location: { x: 0, y: 1, z: 1 },
                 defaultInterval: IRONGOLD_GENERATOR_INTERVAL,
-                defaultCapacity: 48
+                defaultCapacity: 64
             },
             bedLocation: [{ x: 4, y: 1, z: 2 }, { x: 5, y: 1, z: 2 }],
             playerSpawn: { x: 3.5, y: 1, z: 2.5 },
             playerSpawnViewDirection: { x: 1, y: 0, z: 0 }
-        },
-        {
+        }, {
             type: TeamType.Blue,
             shopLocation: { x: 14, y: 2, z: 0 },
+            teamChestLocation: { x: 15, y: 1, z: 0 },
             teamGenerator: {
                 type: GeneratorType.IronGold,
                 spawnLocation: { x: 19.5, y: 1.5, z: 2.5 },
                 location: { x: 18, y: 1, z: 1 },
                 defaultInterval: IRONGOLD_GENERATOR_INTERVAL,
-                defaultCapacity: 48
+                defaultCapacity: 64
             },
             bedLocation: [{ x: 16, y: 1, z: 2 }, { x: 15, y: 1, z: 2 }],
             playerSpawn: { x: 17.5, y: 1, z: 2.5 },
@@ -292,15 +429,13 @@ export const ARMOR_LEVELS: ArmorLevel[] = (() => {
             location: { x: 10, y: 0, z: 0 },
             defaultInterval: DIAMOND_GENERATOR_INTERVAL,
             defaultCapacity: 32
-        },
-        {
+        }, {
             type: GeneratorType.Diamond,
             spawnLocation: { x: 10.5, y: 1, z: 4.5 },
             location: { x: 10, y: 0, z: 4 },
             defaultInterval: DIAMOND_GENERATOR_INTERVAL,
             defaultCapacity: 32
-        },
-        {
+        }, {
             type: GeneratorType.Emerald,
             spawnLocation: { x: 10.5, y: 1, z: 2.5 },
             location: { x: 10, y: 0, z: 2 },
@@ -308,74 +443,70 @@ export const ARMOR_LEVELS: ArmorLevel[] = (() => {
             defaultCapacity: 32
         }
     ]
-};*/
-const testMap2: MapInformation = {
+};
+/*const testMap: MapInformation = {
     size: { x: 21, y: 3, z: 5 },
-    fallbackRespawnPoint: { x: 0+104, y: 149-54, z: 0 +65},
+    fallbackRespawnPoint: { x: 0 + 104, y: 149 - 54, z: 0 + 65 },
     voidY: -64,
     teams: [
         {
             type: TeamType.Red,
-            shopLocation: { x: 95+104, y: 80-54, z: 8 +65},
+            shopLocation: { x: 95 + 104, y: 80 - 54, z: 8 + 65 },
             teamGenerator: {
                 type: GeneratorType.IronGold,
-                spawnLocation: { x: 98.5+104, y: 78.5-54, z: 0.5 +65},
-                location: { x: 97+104, y: 78-54, z: -1 +65},
+                spawnLocation: { x: 98.5 + 104, y: 78.5 - 54, z: 0.5 + 65 },
+                location: { x: 97 + 104, y: 78 - 54, z: -1 + 65 },
                 defaultInterval: IRONGOLD_GENERATOR_INTERVAL,
                 defaultCapacity: 48
             },
-            bedLocation: [{ x: 80+104, y: 77-54, z: 0 +65}, { x: 79+104, y: 77-54, z: 0 +65}],
-            playerSpawn: { x: 94.5+104, y: 79-54, z: 0.5 +65},
+            bedLocation: [{ x: 80 + 104, y: 77 - 54, z: 0 + 65 }, { x: 79 + 104, y: 77 - 54, z: 0 + 65 }],
+            playerSpawn: { x: 94.5 + 104, y: 79 - 54, z: 0.5 + 65 },
             playerSpawnViewDirection: { x: -1, y: 0, z: 0 },
-            teamChestLocation: { x: 91+104, y: 79-54, z: 4 +65},
-        },
-        {
+            teamChestLocation: { x: 91 + 104, y: 79 - 54, z: 4 + 65 },
+        }, {
             type: TeamType.Blue,
-            shopLocation: { x: -95+104, y: 80-54, z: -8 +65},
+            shopLocation: { x: -95 + 104, y: 80 - 54, z: -8 + 65 },
             teamGenerator: {
                 type: GeneratorType.IronGold,
-                spawnLocation: { x: -97.5+104, y: 78.5-54, z: 0.5 +65},
-                location: { x: -99+104, y: 78-54, z: -1 +65},
+                spawnLocation: { x: -97.5 + 104, y: 78.5 - 54, z: 0.5 + 65 },
+                location: { x: -99 + 104, y: 78 - 54, z: -1 + 65 },
                 defaultInterval: IRONGOLD_GENERATOR_INTERVAL,
                 defaultCapacity: 48
             },
-            bedLocation: [{ x: -80+104, y: 77-54, z: 0 +65}, { x: -79+104, y: 77-54, z: 0 +65}],
-            playerSpawn: { x: -93.5+104, y: 79-54, z: 0.5 +65},
+            bedLocation: [{ x: -80 + 104, y: 77 - 54, z: 0 + 65 }, { x: -79 + 104, y: 77 - 54, z: 0 + 65 }],
+            playerSpawn: { x: -93.5 + 104, y: 79 - 54, z: 0.5 + 65 },
             playerSpawnViewDirection: { x: 1, y: 0, z: 0 },
-            teamChestLocation: { x: -91+104, y: 79-54, z: 4 +65},
+            teamChestLocation: { x: -91 + 104, y: 79 - 54, z: 4 + 65 },
         }
     ],
     extraGenerators: [
         {
             type: GeneratorType.Diamond,
-            spawnLocation: { x: 0.5+104, y: 78-54, z: -51.5 +65},
-            location: { x: 0+104, y: 77-54, z: -52 +65},
+            spawnLocation: { x: 0.5 + 104, y: 78 - 54, z: -51.5 + 65 },
+            location: { x: 0 + 104, y: 77 - 54, z: -52 + 65 },
             defaultInterval: DIAMOND_GENERATOR_INTERVAL,
             defaultCapacity: 32
-        },
-        {
+        }, {
             type: GeneratorType.Diamond,
-            spawnLocation: { x: 0.5+104, y: 78-54, z: 52.5 +65},
-            location: { x: 0+104, y: 77-54, z: 52 +65},
+            spawnLocation: { x: 0.5 + 104, y: 78 - 54, z: 52.5 + 65 },
+            location: { x: 0 + 104, y: 77 - 54, z: 52 + 65 },
             defaultInterval: DIAMOND_GENERATOR_INTERVAL,
             defaultCapacity: 32
-        },
-        {
+        }, {
             type: GeneratorType.Emerald,
-            spawnLocation: { x: -20.5+104, y: 77-54, z: -20.5 +65},
-            location: { x: -21+104, y: 76-54, z: -21 +65},
+            spawnLocation: { x: -20.5 + 104, y: 77 - 54, z: -20.5 + 65 },
+            location: { x: -21 + 104, y: 76 - 54, z: -21 + 65 },
             defaultInterval: EMERLAD_GENERATOR_INTERVAL,
             defaultCapacity: 32
-        },
-        {
+        }, {
             type: GeneratorType.Emerald,
-            spawnLocation: { x: 21.5+104, y: 77-54, z: 21.5 +65},
-            location: { x: 21+104, y: 76-54, z: 21 +65},
+            spawnLocation: { x: 21.5 + 104, y: 77 - 54, z: 21.5 + 65 },
+            location: { x: 21 + 104, y: 76 - 54, z: 21 + 65 },
             defaultInterval: EMERLAD_GENERATOR_INTERVAL,
             defaultCapacity: 32
         }
     ]
-};
+};*/
 
 export enum PlayerState {
     Alive/* = "alive"*/,
@@ -435,6 +566,8 @@ export interface PlayerGameInformation {
     placement: BlockPlacementTracker;
     swordLevel: SwordLevel;
     armorLevel: ArmorLevel;
+    pickaxeLevel?: PickaxeLevel;
+    axeLevel?: AxeLevel;
     hasShear: boolean;
 }
 export class BedWarsGame {
@@ -536,8 +669,11 @@ export class BedWarsGame {
         for (const gen of this.generators) {
             gen.remainingCooldown = gen.interval;
         }
-        for(const {teamChestLocation} of this.map.teams) {
+        for (const { teamChestLocation, bedLocation } of this.map.teams) {
             this.dimension.getBlock(v3.add(teamChestLocation, this.originPos))?.getComponent("inventory")?.container?.clearAll();
+
+            // const location = bedLocation[0];
+            // const p: mc.BlockPermutation = mc.BlockPermutation.resolve(MinecraftBlockTypes.Bed)
         }
 
         mc.world.scoreboard.setObjectiveAtDisplaySlot(mc.DisplaySlotId.Sidebar, {
@@ -551,11 +687,11 @@ export class BedWarsGame {
         this.scoreObj.setScore("§eminecraft.net", 1);
         this.scoreObj.setScore("", 2);
         let index = 2;
-        for(const [teamType, state] of this.teamStates) {
+        for (const [teamType, state] of this.teamStates) {
             ++index;
             const t = TEAM_CONSTANTS[teamType];
             let result = `${t.colorPrefix}${t.name.charAt(0).toUpperCase()} §r${capitalize(t.name)}: `;
-            switch(state) {
+            switch (state) {
                 case TeamState.BedAlive:
                     // result += "§a✔";
                     result += "§aV"; // Mojangles will be broke by unicode characters
@@ -566,9 +702,9 @@ export class BedWarsGame {
                     break;
                 case TeamState.BedDestoryed:
                     let aliveCount = 0;
-                    for(const playerInfo of this.players.values()) {
-                        if(playerInfo.team != teamType) continue;
-                        if(this.isPlayerInGame(playerInfo)) ++aliveCount;
+                    for (const playerInfo of this.players.values()) {
+                        if (playerInfo.team != teamType) continue;
+                        if (this.isPlayerInGame(playerInfo)) ++aliveCount;
                     }
                     result += `§a${aliveCount}`;
             }
@@ -579,9 +715,9 @@ export class BedWarsGame {
         ++index;
         const date = new Date((mc.system.currentTick - this.startTime) * 50);
         let seconds = date.getSeconds().toString();
-        if(seconds.length == 1) seconds = "0" + seconds;
+        if (seconds.length == 1) seconds = "0" + seconds;
         let minutes = date.getMinutes().toString();
-        if(minutes.length == 1) minutes = "0" + minutes;
+        if (minutes.length == 1) minutes = "0" + minutes;
         this.scoreObj.setScore(`  §a${minutes}:${seconds}`, index);
     }
 
@@ -600,6 +736,7 @@ export class BedWarsGame {
             showParticles: true
         });
         playerInfo.player.extinguishFire();
+        playerInfo.player.nameTag = `${TEAM_CONSTANTS[playerInfo.team].colorPrefix}${playerInfo.name}`;
         this.resetInventory(playerInfo);
         playerInfo.lastHurtBy = undefined;
 
@@ -611,7 +748,7 @@ export class BedWarsGame {
         const t = TEAM_CONSTANTS[playerInfo.team];
         equipment.setEquipment(mc.EquipmentSlot.Head, t.leatherHelmet);
         equipment.setEquipment(mc.EquipmentSlot.Chest, t.leatherChestplate);
-        if(playerInfo.armorLevel.level == 0) {
+        if (playerInfo.armorLevel.level == 0) {
             equipment.setEquipment(mc.EquipmentSlot.Legs, t.leatherLeggings);
             equipment.setEquipment(mc.EquipmentSlot.Feet, t.leatherBoots);
         } else {
@@ -622,24 +759,47 @@ export class BedWarsGame {
         playerInfo.swordLevel = SWORD_LEVELS[0];
         let hasSword = false;
         let foundShear = false;
+        let foundPickaxe = false;
+        let foundAxe = false;
         for (const { item, index } of containerIterator(container)) {
             if (!item) continue;
-            if (item.hasTag("is_sword") && !hasSword) {
+            if (itemEqual(playerInfo.swordLevel.item, item)) {
                 hasSword = true;
                 container.setItem(index, playerInfo.swordLevel.item);
                 continue;
-            }
-            if (item.typeId == MinecraftItemTypes.Shears) {
+            } else if (item.typeId == MinecraftItemTypes.Shears) {
                 foundShear = true;
-                if(playerInfo.hasShear) continue;
+                if (playerInfo.hasShear) continue;
+            }
+            if (playerInfo.pickaxeLevel && itemEqual(playerInfo.pickaxeLevel.item, item)) {
+                foundPickaxe = true;
+                if (hasPrevPickaxeLevel(playerInfo.pickaxeLevel)) {
+                    playerInfo.pickaxeLevel = PICKAXE_LEVELS[playerInfo.pickaxeLevel.level - 1];
+                    container.setItem(index, playerInfo.pickaxeLevel.item);
+                }
+                continue;
+            }
+            if (playerInfo.axeLevel && itemEqual(playerInfo.axeLevel.item, item)) {
+                foundAxe = true;
+                if (hasPrevAxeLevel(playerInfo.axeLevel)) {
+                    playerInfo.axeLevel = AXE_LEVELS[playerInfo.axeLevel.level - 1];
+                    container.setItem(index, playerInfo.axeLevel.item);
+                }
+                continue;
             }
             container.setItem(index);
         }
         if (!hasSword) {
             container.addItem(playerInfo.swordLevel.item);
         }
-        if(!foundShear && playerInfo.hasShear) {
+        if (!foundShear && playerInfo.hasShear) {
             container.addItem(new mc.ItemStack(MinecraftItemTypes.Shears));
+        }
+        if (!foundPickaxe && playerInfo.pickaxeLevel) {
+            container.addItem(playerInfo.pickaxeLevel.item);
+        }
+        if (!foundAxe && playerInfo.axeLevel) {
+            container.addItem(playerInfo.axeLevel.item);
         }
     }
     private setupSpawnPoint(player: mc.Player) {
@@ -713,8 +873,8 @@ export class BedWarsGame {
                     fadeOutDuration: 20
                 });
             }
-            for(const playerInfo of this.players.values()) {
-                for(const loc of playerInfo.placement) {
+            for (const playerInfo of this.players.values()) {
+                for (const loc of playerInfo.placement) {
                     this.dimension.fillBlocks(loc, loc, MinecraftBlockTypes.Air);
                 }
             }
@@ -836,22 +996,24 @@ export class BedWarsGame {
                 [mc.EquipmentSlot.Head, mc.EquipmentSlot.Chest, mc.EquipmentSlot.Legs, mc.EquipmentSlot.Feet, mc.EquipmentSlot.Mainhand].forEach(slotName => {
                     const item = equipment.getEquipment(slotName);
                     if (!item) return;
-                    if(slotName == mc.EquipmentSlot.Mainhand) {
+                    if (slotName == mc.EquipmentSlot.Mainhand) {
                         let erase = false;
                         // detects illeagl items
-                        if([MinecraftItemTypes.CraftingTable,
+                        if ([
+                            MinecraftItemTypes.CraftingTable,
                             MinecraftItemTypes.WoodenButton,
                             MinecraftItemTypes.IronNugget,
                             MinecraftItemTypes.GoldNugget,
                             MinecraftItemTypes.WoodenPressurePlate,
                             MinecraftItemTypes.HeavyWeightedPressurePlate,
-                            MinecraftItemTypes.LightWeightedPressurePlate].includes(item.typeId as MinecraftItemTypes)) {
+                            MinecraftItemTypes.LightWeightedPressurePlate
+                        ].includes(item.typeId as MinecraftItemTypes)) {
                             erase = true;
                         }
-                        if(item.typeId == MinecraftItemTypes.Shears && !playerInfo.hasShear) {
+                        if (item.typeId == MinecraftItemTypes.Shears && !playerInfo.hasShear) {
                             erase = true;
                         }
-                        if(erase) {
+                        if (erase) {
                             equipment.getEquipmentSlot(slotName).setItem();
                             return;
                         }
@@ -939,7 +1101,7 @@ export class BedWarsGame {
             v.z = -v.z;
             itemEntity.applyImpulse(v);
         }
-        if((mc.system.currentTick - this.startTime) % 20 == 0) {
+        if ((mc.system.currentTick - this.startTime) % 20 == 0) {
             this.updateScoreboard();
         }
     }
@@ -1030,15 +1192,15 @@ export class BedWarsGame {
     afterEntityHurt(event: mc.EntityHurtAfterEvent) {
         if (this.state != GameState.started) return;
 
-        if(!(event.hurtEntity instanceof mc.Player)) return;
-        if(!(event.damageSource.damagingEntity instanceof mc.Player)) return;
+        if (!(event.hurtEntity instanceof mc.Player)) return;
+        if (!(event.damageSource.damagingEntity instanceof mc.Player)) return;
         const victim = event.hurtEntity;
         const hurter = event.damageSource.damagingEntity;
         const victimInfo = this.players.get(victim.name);
         const hurterInfo = this.players.get(hurter.name);
-        if(!victimInfo) return;
-        if(!hurterInfo) return;
-        if(victimInfo.team == hurterInfo.team) {
+        if (!victimInfo) return;
+        if (!hurterInfo) return;
+        if (victimInfo.team == hurterInfo.team) {
             // workaround for disabling in-team damage
             const health = victim.getComponent("health")!;
             health.setCurrentValue(health.currentValue + event.damage);
@@ -1054,7 +1216,7 @@ export class BedWarsGame {
         if (event.damagingEntity instanceof mc.Player) {
             const hurterInfo = this.players.get(event.damagingEntity.name);
             if (hurterInfo) {
-                if(hurterInfo.team == victimInfo.team) {
+                if (hurterInfo.team == victimInfo.team) {
                     // TOWAIT TODO
                     return;
                 }
@@ -1066,17 +1228,17 @@ export class BedWarsGame {
         }
     }
     afterProjectileHitEntity(event: mc.ProjectileHitEntityAfterEvent) {
-        if(event.dimension != this.dimension) return;
+        if (event.dimension != this.dimension) return;
         const victim = event.getEntityHit().entity;
-        if(!victim) return;
-        if(!(victim instanceof mc.Player)) return;
+        if (!victim) return;
+        if (!(victim instanceof mc.Player)) return;
         const victimInfo = this.players.get(victim.name);
-        if(!victimInfo) return;
-        if(event.source) {
-            if(event.source instanceof mc.Player) {
+        if (!victimInfo) return;
+        if (event.source) {
+            if (event.source instanceof mc.Player) {
                 const hurterInfo = this.players.get(event.source.name);
-                if(hurterInfo) {
-                    if(hurterInfo.team == victimInfo.team) {
+                if (hurterInfo) {
+                    if (hurterInfo.team == victimInfo.team) {
                         // TOWAIT TODO
                     } else {
                         victimInfo.lastHurtBy = hurterInfo;
@@ -1101,10 +1263,10 @@ export class BedWarsGame {
             }
             return;
         }
-        if(event.block.typeId == MinecraftBlockTypes.Chest) {
-            for(const team of this.map.teams) {
-                if(v3.equals(event.block.location, v3.add(team.teamChestLocation, this.originPos))) {
-                    if(playerInfo.team != team.type) {
+        if (event.block.typeId == MinecraftBlockTypes.Chest) {
+            for (const team of this.map.teams) {
+                if (v3.equals(event.block.location, v3.add(team.teamChestLocation, this.originPos))) {
+                    if (playerInfo.team != team.type) {
                         playerInfo.player.sendMessage("§cYou can't open enemy's chest.");
                         event.cancel = true;
                     }
@@ -1211,6 +1373,30 @@ export class BedWarsGame {
         }
     }
 
+    private isBlockLocationProtected(location: mc.Vector3) {
+        for (const gen of this.generators) {
+            let protected_area: Area;
+            let original_protected_area: Area;
+            switch (gen.type) {
+                case GeneratorType.IronGold:
+                    original_protected_area = PROTECTED_AREA_IRONGOLD;
+                    break;
+                case GeneratorType.Diamond:
+                    original_protected_area = PROTECTED_AREA_DIAMOND;
+                    break;
+                case GeneratorType.Emerald:
+                    original_protected_area = PROTECTED_AREA_EMERALD;
+                    break;
+            }
+            protected_area = original_protected_area.map(
+                vec => vectorAdd(vec, gen.location, this.originPos)) as Area;
+            if (vectorWithinArea(location, protected_area)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     async beforePlayerPlaceBlock(event: mc.PlayerPlaceBlockBeforeEvent) {
         if (this.state != GameState.started) return;
 
@@ -1229,35 +1415,18 @@ export class BedWarsGame {
                 slot.setItem();
             }
             return;
-        } else if(event.permutationBeingPlaced.type.id == MinecraftBlockTypes.CraftingTable) {
+        } else if (event.permutationBeingPlaced.type.id == MinecraftBlockTypes.CraftingTable) {
             // disallow the player to place crafting table
             // and then clear it
             event.cancel = true;
             await sleep(0);
             playerInfo.player.getComponent("equippable")!.getEquipmentSlot(mc.EquipmentSlot.Mainhand).setItem();
         }
-        // disallow the player to place blocks near generators
-        for (const gen of this.generators) {
-            let protected_area: Area;
-            let original_protected_area: Area;
-            switch (gen.type) {
-                case GeneratorType.IronGold:
-                    original_protected_area = PROTECTED_AREA_IRONGOLD;
-                    break;
-                case GeneratorType.Diamond:
-                    original_protected_area = PROTECTED_AREA_DIAMOND;
-                    break;
-                case GeneratorType.Emerald:
-                    original_protected_area = PROTECTED_AREA_EMERALD;
-                    break;
-            }
-            protected_area = original_protected_area.map(
-                vec => vectorAdd(vec, gen.location, this.originPos)) as Area;
-            if (vectorWithinArea(event.block.location, protected_area)) {
-                event.cancel = true;
-                playerInfo.player.sendMessage(PLACING_BLOCK_ILLAGEL_MESSAGE);
-                return;
-            }
+        // disallow the player to place blocks in protected area
+        if (this.isBlockLocationProtected(event.block.location)) {
+            event.cancel = true;
+            playerInfo.player.sendMessage(PLACING_BLOCK_ILLAGEL_MESSAGE);
+            return;
         }
         // Allow the player to place block
         playerInfo.placement.push(event.block.location);
@@ -1341,7 +1510,7 @@ class BlockPlacementTracker {
     }
 
     *[Symbol.iterator]() {
-        for(const bucket of this.data) {
+        for (const bucket of this.data) {
             yield* bucket;
         }
     }
@@ -1354,7 +1523,7 @@ mc.world.beforeEvents.chatSend.subscribe(async event => {
         event.cancel = true;
         await sleep(0); // get out of read-only mode
 
-        const switchTeam = (t:TeamType)=>t==TeamType.Blue?TeamType.Red:TeamType.Blue;
+        const switchTeam = (t: TeamType) => t == TeamType.Blue ? TeamType.Red : TeamType.Blue;
 
         if (!globalThis.test) setupGameTest(event.sender.location.x, event.sender.location.z, event.sender.dimension);
         while (!globalThis.test) {
@@ -1363,35 +1532,37 @@ mc.world.beforeEvents.chatSend.subscribe(async event => {
 
         const players = mc.world.getAllPlayers();
         game = new BedWarsGame({
-            map: testMap2,
-            originLocation: { x: -104, y: 54, z: -65 },
+            map: testMap,
+            // originLocation: { x: -104, y: 54, z: -65 },
+            originLocation: { x: -17, y: 5, z: 32 },
             dimension: players[0].dimension,
             scoreboardObjective: mc.world.scoreboard.getObjective("GAME") ?? mc.world.scoreboard.addObjective("GAME", "§e§lBED WARS")
         });
-        const realPlayers = players.filter(p=>!(p instanceof SimulatedPlayer));
-        const fakePlayers = players.filter(p=>p instanceof SimulatedPlayer);
+        const realPlayers = players.filter(p => !(p instanceof SimulatedPlayer));
+        const fakePlayers = players.filter(p => p instanceof SimulatedPlayer);
         let team = TeamType.Blue;
         let redCount = 0;
         let blueCount = 0;
-        if(Math.random() >= 0.5) team = switchTeam(team);
-        for(const p of realPlayers) {
+
+        if (Math.random() >= 0.5) team = switchTeam(team);
+        for (const p of realPlayers) {
             game.setPlayer(p, team);
-            if(team == TeamType.Blue) ++blueCount;
+            if (team == TeamType.Blue) ++blueCount;
             else ++redCount;
             team = switchTeam(team);
         }
-        for(const p of fakePlayers) {
+        for (const p of fakePlayers) {
             game.setPlayer(p, team);
-            if(team == TeamType.Blue) ++blueCount;
+            if (team == TeamType.Blue) ++blueCount;
             else ++redCount;
             team = switchTeam(team);
         }
         const maxPlayer = Math.max(2, Math.max(redCount, blueCount));
-        for(let i = maxPlayer - redCount - 1; i >= 0; --i) {
+        for (let i = maxPlayer - redCount - 1; i >= 0; --i) {
             const p = globalThis.test.spawnSimulatedPlayer(event.sender.location as any, "a");
             game.setPlayer(p as any, TeamType.Red);
         }
-        for(let i = maxPlayer - blueCount - 1; i >= 0; --i) {
+        for (let i = maxPlayer - blueCount - 1; i >= 0; --i) {
             const p = globalThis.test.spawnSimulatedPlayer(event.sender.location as any, "a");
             game.setPlayer(p as any, TeamType.Blue);
         }
@@ -1440,17 +1611,15 @@ mc.world.beforeEvents.playerInteractWithEntity.subscribe(event => {
     }
 });
 mc.world.afterEvents.projectileHitEntity.subscribe(event => {
-    if(game) {
+    if (game) {
         game.afterProjectileHitEntity(event);
     }
 });
 mc.world.afterEvents.entityHurt.subscribe(event => {
-    if(game) {
+    if (game) {
         game.afterEntityHurt(event);
     }
 })
 mc.system.runInterval(() => {
     if (game) game.tickEvent();
 });
-
-(globalThis as any).me = mc.world.getAllPlayers().filter(p => p.name == "SkeletonSquid12")[0];
