@@ -477,7 +477,7 @@ const testMap: MapInformation = {
         }
     ]
 };
-/*const testMap: MapInformation = {
+const testMap2: MapInformation = {
     size: { x: 21, y: 3, z: 5 },
     fallbackRespawnPoint: { x: 0 + 104, y: 149 - 54, z: 0 + 65 },
     voidY: -64,
@@ -539,7 +539,7 @@ const testMap: MapInformation = {
             defaultCapacity: 32
         }
     ]
-};*/
+};
 
 export enum PlayerState {
     Alive/* = "alive"*/,
@@ -1668,56 +1668,63 @@ class BlockPlacementTracker {
 let game: BedWarsGame;
 
 mc.world.beforeEvents.chatSend.subscribe(async event => {
+    let map: MapInformation;
+    let originLocation: mc.Vector3;
     if (event.message == "start") {
-        event.cancel = true;
-        await sleep(0); // get out of read-only mode
+        map = testMap;
+        originLocation = { x: -17, y: 5, z: 32 };
+    } else if (event.message == "start2") {
+        map = testMap2;
+        originLocation = { x: -104, y: 54, z: -65 };
+    } else return;
 
-        const switchTeam = (t: TeamType) => t == TeamType.Blue ? TeamType.Red : TeamType.Blue;
+    event.cancel = true;
+    await sleep(0); // get out of read-only mode
 
-        if (!globalThis.test) setupGameTest(event.sender.location.x, event.sender.location.z, event.sender.dimension);
-        while (!globalThis.test) {
-            await sleep(0);
-        }
+    const switchTeam = (t: TeamType) => t == TeamType.Blue ? TeamType.Red : TeamType.Blue;
 
-        const players = mc.world.getAllPlayers();
-        game = new BedWarsGame({
-            map: testMap,
-            // originLocation: { x: -104, y: 54, z: -65 },
-            originLocation: { x: -17, y: 5, z: 32 },
-            dimension: players[0].dimension,
-            scoreboardObjective: mc.world.scoreboard.getObjective("GAME") ?? mc.world.scoreboard.addObjective("GAME", "§e§lBED WARS")
-        });
-        const realPlayers = players.filter(p => !(p instanceof SimulatedPlayer));
-        const fakePlayers = players.filter(p => p instanceof SimulatedPlayer);
-        let team = TeamType.Blue;
-        let redCount = 0;
-        let blueCount = 0;
-
-        if (Math.random() >= 0.5) team = switchTeam(team);
-        for (const p of realPlayers) {
-            game.setPlayer(p, team);
-            if (team == TeamType.Blue) ++blueCount;
-            else ++redCount;
-            team = switchTeam(team);
-        }
-        for (const p of fakePlayers) {
-            game.setPlayer(p, team);
-            if (team == TeamType.Blue) ++blueCount;
-            else ++redCount;
-            team = switchTeam(team);
-        }
-        const maxPlayer = Math.max(2, Math.max(redCount, blueCount));
-        for (let i = maxPlayer - redCount - 1; i >= 0; --i) {
-            const p = globalThis.test.spawnSimulatedPlayer(event.sender.location as any, "a");
-            game.setPlayer(p as any, TeamType.Red);
-        }
-        for (let i = maxPlayer - blueCount - 1; i >= 0; --i) {
-            const p = globalThis.test.spawnSimulatedPlayer(event.sender.location as any, "a");
-            game.setPlayer(p as any, TeamType.Blue);
-        }
-        game.start();
-        globalThis.game = game;
+    if (!globalThis.test) setupGameTest(event.sender.location.x, event.sender.location.z, event.sender.dimension);
+    while (!globalThis.test) {
+        await sleep(0);
     }
+
+    const players = mc.world.getAllPlayers();
+    game = new BedWarsGame({
+        map,
+        originLocation,
+        dimension: players[0].dimension,
+        scoreboardObjective: mc.world.scoreboard.getObjective("GAME") ?? mc.world.scoreboard.addObjective("GAME", "§e§lBED WARS")
+    });
+    const realPlayers = players.filter(p => !(p instanceof SimulatedPlayer));
+    const fakePlayers = players.filter(p => p instanceof SimulatedPlayer);
+    let team = TeamType.Blue;
+    let redCount = 0;
+    let blueCount = 0;
+
+    if (Math.random() >= 0.5) team = switchTeam(team);
+    for (const p of realPlayers) {
+        game.setPlayer(p, team);
+        if (team == TeamType.Blue) ++blueCount;
+        else ++redCount;
+        team = switchTeam(team);
+    }
+    for (const p of fakePlayers) {
+        game.setPlayer(p, team);
+        if (team == TeamType.Blue) ++blueCount;
+        else ++redCount;
+        team = switchTeam(team);
+    }
+    const maxPlayer = Math.max(2, Math.max(redCount, blueCount));
+    for (let i = maxPlayer - redCount - 1; i >= 0; --i) {
+        const p = globalThis.test.spawnSimulatedPlayer(event.sender.location as any, "a");
+        game.setPlayer(p as any, TeamType.Red);
+    }
+    for (let i = maxPlayer - blueCount - 1; i >= 0; --i) {
+        const p = globalThis.test.spawnSimulatedPlayer(event.sender.location as any, "a");
+        game.setPlayer(p as any, TeamType.Blue);
+    }
+    game.start();
+    globalThis.game = game;
 })
 
 mc.world.afterEvents.entityDie.subscribe(event => {
