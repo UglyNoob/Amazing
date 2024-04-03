@@ -13,7 +13,7 @@ async function main() {
         fs.copyFile("manifest.json", "out/AmazingBP/manifest.json"),
         fs.copyFile("scripts/main.js", "out/AmazingBP/scripts/main.js"),
         fs.copyFile("structures/void/void.mcstructure", "out/AmazingBP/structures/void/void.mcstructure"),
-        fs.copyFile("entities/fireball.json", "out/AmazingBP/entities"),
+        fs.copyFile("entities/fireball.json", "out/AmazingBP/entities/fireball.json"),
     ]);
 
     console.log("Publish complete");
