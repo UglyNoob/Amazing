@@ -19,6 +19,8 @@ import {
     AxeLevel,
     ArmorLevel,
     SwordLevel,
+    BRIDGE_EGG_ITEM,
+    FIRE_BALL_ITEM,
 } from "./Bedwars.js";
 import { ActionFormData } from "@minecraft/server-ui";
 import { containerIterator, containerSlotIterator, itemEqual, stackFirstContainerAdd } from './utility.js'
@@ -438,12 +440,24 @@ const getShopData: () => Menu = () => ({
                     cost: { ironAmount: 0, goldAmount: 3, emeraldAmount: 0, diamondAmount: 0 },
                     item: GOLDEN_APPLE_ITEM
                 }), () => "textures/items/apple_golden.png"),
+                generateBuyOneItemMenu("Fire Ball", () => ({
+                    type: ActionType.BuyNormalItem,
+                    itemName: "Fire Ball",
+                    cost: { ironAmount: 40, goldAmount: 0, emeraldAmount: 0, diamondAmount: 0 },
+                    item: FIRE_BALL_ITEM
+                }), () => "textures/items/fireball.png"),
                 generateBuyOneItemMenu("Ender Pearl", () => ({
                     type: ActionType.BuyNormalItem,
                     itemName: "Ender Pearl",
                     cost: { ironAmount: 0, goldAmount: 0, emeraldAmount: 4, diamondAmount: 0 },
                     item: ENDER_PEARL_ITEM
                 }), () => "textures/items/ender_pearl.png"),
+                generateBuyOneItemMenu("Bridge Egg", () => ({
+                    type: ActionType.BuyNormalItem,
+                    itemName: "Bridge Egg",
+                    cost: { ironAmount: 0, goldAmount: 0, emeraldAmount: 1, diamondAmount: 0 },
+                    item: BRIDGE_EGG_ITEM
+                }), () => "textures/items/egg.png"),
                 generateBuyOneItemMenu("Rescue Platform", () => ({
                     type: ActionType.BuyNormalItem,
                     itemName: "Rescue Platform",

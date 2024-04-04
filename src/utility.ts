@@ -137,6 +137,18 @@ export function vectorAdd(...vecs: mc.Vector3[]): mc.Vector3 {
     return result;
 }
 
+export function makeItem(item: mc.ItemStack, newAmount: number): mc.ItemStack;
+export function makeItem(itemType: string, amount: number): mc.ItemStack;
+
+export function makeItem(item: mc.ItemStack | string, newAmount: number) {
+    if (typeof item == 'string') {
+        return new mc.ItemStack(item, newAmount);
+    }
+    const i = item.clone();
+    i.amount = newAmount;
+    return i;
+}
+
 export function* containerIterator(container: mc.Container) {
     for (let i = 0; i < container.size; ++i) {
         yield {
@@ -154,23 +166,41 @@ export function* containerSlotIterator(container: mc.Container) {
     }
 }
 
+export function consumeMainHandItem(player: mc.Player, consumeOnCreative = false) {
+    switch (getGameMode(player)) {
+        case mc.GameMode.adventure:
+        case mc.GameMode.survival:
+            const equip = player.getComponent("equippable")!;
+            const slot = equip.getEquipmentSlot(mc.EquipmentSlot.Mainhand);
+            if (slot.amount >= 2) {
+                --slot.amount;
+            } else {
+                slot.setItem();
+            }
+            break;
+        default:
+            break;
+    }
+}
+
 export function stackFirstContainerAdd(container: mc.Container, item: mc.ItemStack) {
-    if(!item.isStackable) {
+    if (!item.isStackable) {
         return container.addItem(item);
     }
     let amount = item.amount;
-    for(const {index, item: contItem} of containerIterator(container)) {
-        if(!contItem) continue;
-        if(item.isStackableWith(contItem)) {
+    for (const { index, item: contItem } of containerIterator(container)) {
+        if (!contItem) continue;
+        if (item.isStackableWith(contItem)) {
             const slot = container.getSlot(index);
             const increment = Math.min(amount, slot.maxAmount - slot.amount);
             slot.amount += increment;
             amount -= increment;
-            if(amount == 0) return;
+            if (amount == 0) return;
         }
     }
-    item.amount = amount;
-    return container.addItem(item);
+    const tempItem = item.clone();
+    tempItem.amount = amount;
+    return container.addItem(tempItem);
 }
 
 export function assert(predicate: boolean, message?: string) {

@@ -11,12 +11,15 @@
         {
             "desription": "Script module",
             "uuid": "94130dee-b63d-4214-ae87-4512f9417553",
-            "version": [
-                1, 0, 0
-            ],
+            "version": [ 1, 0, 0 ],
             "type": "script",
             "language": "javascript",
             "entry": "scripts/main.js"
+        }, {
+            "desription": "Data module",
+            "type": "data",
+            "uuid": "88ddd681-6ed3-40bb-8f56-e390f608d5ea",
+            "version": [ 1, 0, 0 ]
         }
     ],
     "capabilities": [
@@ -26,12 +29,10 @@
         {
             "module_name": "@minecraft/server",
             "version": "1.9.0-beta"
-        },
-        {
+        }, {
             "module_name": "@minecraft/server-ui",
             "version": "1.2.0-beta"
-        },
-        {
+        }, {
             "module_name": "@minecraft/server-gametest",
             "version": "1.0.0-beta"
         }

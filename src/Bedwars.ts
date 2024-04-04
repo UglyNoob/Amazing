@@ -1,6 +1,6 @@
 import { Vector3Utils as v3 } from '@minecraft/math';
 import * as mc from '@minecraft/server';
-import { itemEqual, Area, sleep, vectorAdd, vectorWithinArea, containerIterator, capitalize, getPlayerByName } from './utility.js';
+import { itemEqual, Area, sleep, vectorAdd, vectorWithinArea, containerIterator, capitalize, getPlayerByName, showObjectToPlayer, consumeMainHandItem } from './utility.js';
 import { setupGameTest } from './GameTest.js';
 import { MinecraftBlockTypes, MinecraftEffectTypes, MinecraftEnchantmentTypes, MinecraftEntityTypes, MinecraftItemTypes } from '@minecraft/vanilla-data';
 
@@ -29,6 +29,36 @@ const PRODUCING_AREA_IRONGOLD: Area = [{ x: 0, y: 0, z: 0 }, { x: 3, y: 1, z: 3 
 const PRODUCING_AREA_DIAMOND: Area = [{ x: 0, y: 1, z: 0 }, { x: 1, y: 2, z: 1 }];
 const PRODUCING_AREA_EMERALD: Area = [{ x: 0, y: 1, z: 0 }, { x: 1, y: 2, z: 1 }];
 
+export const BRIDGE_EGG_ITEM = (() => {
+    const i = new mc.ItemStack(MinecraftItemTypes.Egg);
+    i.nameTag = "§r§2Bridge Egg";
+    i.setLore(["", "§r§2Automatically builds a birdge for you"]);
+    return i;
+})();
+const BRIDGE_EGG_OWNER_SYMBOL = Symbol('owner');
+const BRIDGE_EGG_COOLDOWN = 20; // in ticks
+
+function isBridgeEggItem(item: mc.ItemStack) {
+    return item.getLore()[1] == BRIDGE_EGG_ITEM.getLore()[1];
+}
+
+export const FIRE_BALL_ITEM = (() => {
+    const i = new mc.ItemStack(MinecraftItemTypes.FireCharge);
+    i.nameTag = "§r§6Fire Ball";
+    i.setLore(["", "§r§7Launch it!"]);
+    return i;
+})();
+/**
+ * Used to calculate how far it has travelled.
+ */
+const SPAWN_LOCATION_SYMBOL = Symbol('spawn location');
+const FIRE_BALL_COOLDOWN = 20; // in ticks
+const FIRE_BALL_MAX_TRAVEL_DISTANCE = 200; // in blocks
+
+function isFireBallItem(item: mc.ItemStack) {
+    return item.getLore()[1] == FIRE_BALL_ITEM.getLore()[1];
+}
+
 const DEATH_TITLE = "§cYOU DIED!";
 const DEATH_SUBTITLE = "§eYou will respawn in §c%d §eseconds!";
 const SPECTATE_TITLE = "SPECTATING!"
@@ -47,6 +77,13 @@ const RECONNECTION_MESSAGE = "%s%s §7has reconnected.";
 const PLACING_BLOCK_ILLAGEL_MESSAGE = "§cYou can't place blocks here!";
 const GAME_ENDED_MESSAGE = "§lGAME ENDED > §r%s%s §7is the winner!"
 export const PURCHASE_MESSAGE = "§aYou purchased §6%s";
+
+declare module '@minecraft/server' {
+    interface Entity {
+        [BRIDGE_EGG_OWNER_SYMBOL]?: PlayerGameInformation;
+        [SPAWN_LOCATION_SYMBOL]?: mc.Vector3;
+    }
+}
 
 enum GeneratorType {
     IronGold,
@@ -102,10 +139,6 @@ export const TEAM_CONSTANTS: Record<TeamType, {
     function setupItem(type: MinecraftItemTypes, team: TeamType) {
         const i = new mc.ItemStack(type);
         i.lockMode = mc.ItemLockMode.slot;
-        /*i.getComponent("enchantable")!.addEnchantment({
-            level: 3,
-            type: MinecraftEnchantmentTypes.Unbreaking
-        });*/
         return i;
     }
 
@@ -560,7 +593,7 @@ export interface PlayerGameInformation {
     lastActionResults: boolean[];
     /**
      * Stores the attacker.
-     * this field is cleared on death
+     * This field is cleared on death
      */
     lastHurtBy?: PlayerGameInformation;
     placement: BlockPlacementTracker;
@@ -569,6 +602,8 @@ export interface PlayerGameInformation {
     pickaxeLevel?: PickaxeLevel;
     axeLevel?: AxeLevel;
     hasShear: boolean;
+    bridgeEggCooldown: number;
+    fireBallCooldown: number;
 }
 export class BedWarsGame {
     private map: MapInformation;
@@ -650,7 +685,9 @@ export class BedWarsGame {
             placement: new BlockPlacementTracker(),
             swordLevel: SWORD_LEVELS[0],
             armorLevel: ARMOR_LEVELS[0],
-            hasShear: false
+            hasShear: false,
+            bridgeEggCooldown: 0,
+            fireBallCooldown: 0
         });
     }
 
@@ -704,7 +741,7 @@ export class BedWarsGame {
                     let aliveCount = 0;
                     for (const playerInfo of this.players.values()) {
                         if (playerInfo.team != teamType) continue;
-                        if (this.isPlayerInGame(playerInfo)) ++aliveCount;
+                        if (this.isPlayerPlaying(playerInfo)) ++aliveCount;
                     }
                     result += `§a${aliveCount}`;
             }
@@ -718,7 +755,7 @@ export class BedWarsGame {
         if (seconds.length == 1) seconds = "0" + seconds;
         let minutes = date.getMinutes().toString();
         if (minutes.length == 1) minutes = "0" + minutes;
-        this.scoreObj.setScore(`  §a${minutes}:${seconds}`, index);
+        this.scoreObj.setScore(`§a${minutes}:${seconds}`, index);
     }
 
     private respawnPlayer(playerInfo: PlayerGameInformation) {
@@ -806,7 +843,7 @@ export class BedWarsGame {
         player.setSpawnPoint(Object.assign({ dimension: player.dimension }, v3.add(this.originPos, this.map.fallbackRespawnPoint)));
     }
 
-    private isPlayerInGame(playerInfo: PlayerGameInformation) {
+    private isPlayerPlaying(playerInfo: PlayerGameInformation) {
         const teamState = this.teamStates.get(playerInfo.team);
         if (teamState == TeamState.BedAlive) {
             if (playerInfo.state == PlayerState.Alive ||
@@ -830,7 +867,7 @@ export class BedWarsGame {
         }
 
         for (const playerInfo of this.players.values()) {
-            if (this.isPlayerInGame(playerInfo)) {
+            if (this.isPlayerPlaying(playerInfo)) {
                 remainingPlayerCounts.set(playerInfo.team, 1 + remainingPlayerCounts.get(playerInfo.team)!);
             }
         }
@@ -933,8 +970,32 @@ export class BedWarsGame {
                 this.broadcast(DISCONNECTED_MESSAGE,
                     TEAM_CONSTANTS[playerInfo.team].colorPrefix,
                     playerInfo.name);
-                this.playerDieOrOffline(playerInfo, playerInfo.lastHurtBy);
+                this.onPlayerDieOrOffline(playerInfo, playerInfo.lastHurtBy);
                 continue;
+            }
+
+            if (playerInfo.player.dimension != this.dimension) {
+                player.runCommand("gamemode spectator");
+                this.onPlayerDieOrOffline(playerInfo, playerInfo.lastHurtBy);
+                const team = this.map.teams.find(t => t.type == playerInfo.team)!;
+                playerInfo.player.teleport(v3.add(team.playerSpawn, this.originPos), {
+                    dimension: this.dimension,
+                    facingLocation: vectorAdd(this.originPos, team.playerSpawn, team.playerSpawnViewDirection)
+                });
+
+
+                const isTeamBedAlive = this.teamStates.get(playerInfo.team) == TeamState.BedAlive;
+                player.onScreenDisplay.setTitle(DEATH_TITLE, {
+                    subtitle: isTeamBedAlive ? sprintf(DEATH_SUBTITLE, RESPAWN_TIME / 20) : undefined,
+                    fadeInDuration: 0,
+                    stayDuration: 30,
+                    fadeOutDuration: 20
+                });
+                if (isTeamBedAlive) {
+                    playerInfo.state = PlayerState.Respawning;
+                } else {
+                    playerInfo.state = PlayerState.Spectating;
+                }
             }
 
             if (playerInfo.state == PlayerState.dead &&
@@ -975,7 +1036,7 @@ export class BedWarsGame {
             } else if (playerInfo.state == PlayerState.Alive) {
                 if (player.location.y <= this.originPos.y + this.map.voidY) { // The player falls to the void
                     player.runCommand("gamemode spectator");
-                    this.playerDieOrOffline(playerInfo, playerInfo.lastHurtBy);
+                    this.onPlayerDieOrOffline(playerInfo, playerInfo.lastHurtBy);
 
                     const isTeamBedAlive = this.teamStates.get(playerInfo.team) == TeamState.BedAlive;
                     player.onScreenDisplay.setTitle(DEATH_TITLE, {
@@ -1006,7 +1067,11 @@ export class BedWarsGame {
                             MinecraftItemTypes.GoldNugget,
                             MinecraftItemTypes.WoodenPressurePlate,
                             MinecraftItemTypes.HeavyWeightedPressurePlate,
-                            MinecraftItemTypes.LightWeightedPressurePlate
+                            MinecraftItemTypes.LightWeightedPressurePlate,
+                            MinecraftItemTypes.BlueCarpet,
+                            MinecraftItemTypes.RedCarpet,
+                            MinecraftItemTypes.YellowCarpet,
+                            MinecraftItemTypes.GreenCarpet
                         ].includes(item.typeId as MinecraftItemTypes)) {
                             erase = true;
                         }
@@ -1025,6 +1090,8 @@ export class BedWarsGame {
                         equipment.setEquipment(slotName, item);
                     }
                 });
+                if (playerInfo.bridgeEggCooldown > 0) --playerInfo.bridgeEggCooldown;
+                if (playerInfo.fireBallCooldown > 0) --playerInfo.fireBallCooldown;
             }
         }
         for (const gen of this.generators) {
@@ -1104,9 +1171,39 @@ export class BedWarsGame {
         if ((mc.system.currentTick - this.startTime) % 20 == 0) {
             this.updateScoreboard();
         }
+        for (const eggEntity of this.dimension.getEntities({ type: "minecraft:egg" })) {
+            const ownerInfo = eggEntity[BRIDGE_EGG_OWNER_SYMBOL];
+            if (!ownerInfo) continue;
+            const baseLocation = v3.floor(eggEntity.location);
+            baseLocation.y -= 2;
+            [
+                { x: 0, y: 0, z: 0 },
+                { x: -1, y: 0, z: 0 },
+                { x: 1, y: 0, z: 0 },
+                { x: 0, y: 0, z: -1 },
+                { x: 0, y: 0, z: 1 },
+            ].forEach(_pos => {
+                const location = v3.add(baseLocation, _pos);
+                const preExistingBlock = this.dimension.getBlock(location);
+                if (this.isBlockLocationPlayerPlacable(location) &&
+                    (!preExistingBlock || preExistingBlock.type.id == MinecraftBlockTypes.Air)) {
+                    this.dimension.fillBlocks(location, location, TEAM_CONSTANTS[ownerInfo.team].woolName);
+                    ownerInfo.placement.push(location);
+                }
+            });
+
+        }
+        for (const fireBall of this.dimension.getEntities({
+            type: "minecraft:fireball"
+        }).filter(e => e[SPAWN_LOCATION_SYMBOL])) {
+            const location = fireBall[SPAWN_LOCATION_SYMBOL]!;
+            if (v3.distance(fireBall.location, location) >= FIRE_BALL_MAX_TRAVEL_DISTANCE) {
+                fireBall.kill();
+            }
+        }
     }
 
-    private playerDieOrOffline(victimInfo: PlayerGameInformation, killerInfo?: PlayerGameInformation) {
+    private onPlayerDieOrOffline(victimInfo: PlayerGameInformation, killerInfo?: PlayerGameInformation) {
         victimInfo.deathTime = mc.system.currentTick;
         ++victimInfo.deathCount;
         victimInfo.lastHurtBy = undefined;
@@ -1115,7 +1212,6 @@ export class BedWarsGame {
             victimOffline = true;
             const teamInfo = this.map.teams.find(ele => ele.type === victimInfo.team)!;
             victimInfo.deathLocation = v3.add(this.originPos, teamInfo.playerSpawn);
-            victimInfo.deathRotaion = teamInfo.playerSpawnViewDirection;
         } else {
             victimInfo.deathLocation = victimInfo.player.location;
             victimInfo.deathRotaion = victimInfo.player.getRotation();
@@ -1186,7 +1282,7 @@ export class BedWarsGame {
         } else if (victimInfo.lastHurtBy) {
             killerInfo = victimInfo.lastHurtBy;
         }
-        this.playerDieOrOffline(victimInfo, killerInfo);
+        this.onPlayerDieOrOffline(victimInfo, killerInfo);
     }
 
     afterEntityHurt(event: mc.EntityHurtAfterEvent) {
@@ -1288,6 +1384,7 @@ export class BedWarsGame {
         if (this.state != GameState.started) return;
     }
     private removeBlockFromRecord(block: mc.Block) {
+        let result = false;
         for (const { placement } of this.players.values()) {
             if (!placement.remove(block.location)) continue;
             // the location appears in the tracker.
@@ -1313,9 +1410,10 @@ export class BedWarsGame {
                 placement.remove(location);
             }
 
-            return true;
+            // One record may appear in different instances
+            result = true;
         }
-        return false;
+        return result;
     }
     async beforePlayerBreakBlock(event: mc.PlayerBreakBlockBeforeEvent) {
         if (this.state != GameState.started) return;
@@ -1373,7 +1471,8 @@ export class BedWarsGame {
         }
     }
 
-    private isBlockLocationProtected(location: mc.Vector3) {
+    private isBlockLocationPlayerPlacable(location: mc.Vector3) {
+        if (location.y < this.map.voidY + this.originPos.y) return false;
         for (const gen of this.generators) {
             let protected_area: Area;
             let original_protected_area: Area;
@@ -1391,10 +1490,10 @@ export class BedWarsGame {
             protected_area = original_protected_area.map(
                 vec => vectorAdd(vec, gen.location, this.originPos)) as Area;
             if (vectorWithinArea(location, protected_area)) {
-                return true;
+                return false;
             }
         }
-        return false;
+        return true;
     }
 
     async beforePlayerPlaceBlock(event: mc.PlayerPlaceBlockBeforeEvent) {
@@ -1408,12 +1507,7 @@ export class BedWarsGame {
             await sleep(0);
             playerInfo.player.dimension.spawnEntity(MinecraftEntityTypes.Tnt, event.block.bottomCenter());
             // consume tnt
-            const slot = playerInfo.player.getComponent("equippable")!.getEquipmentSlot(mc.EquipmentSlot.Mainhand);
-            if (slot.amount >= 2) {
-                --slot.amount;
-            } else {
-                slot.setItem();
-            }
+            consumeMainHandItem(playerInfo.player);
             return;
         } else if (event.permutationBeingPlaced.type.id == MinecraftBlockTypes.CraftingTable) {
             // disallow the player to place crafting table
@@ -1423,7 +1517,7 @@ export class BedWarsGame {
             playerInfo.player.getComponent("equippable")!.getEquipmentSlot(mc.EquipmentSlot.Mainhand).setItem();
         }
         // disallow the player to place blocks in protected area
-        if (this.isBlockLocationProtected(event.block.location)) {
+        if (!this.isBlockLocationPlayerPlacable(event.block.location)) {
             event.cancel = true;
             playerInfo.player.sendMessage(PLACING_BLOCK_ILLAGEL_MESSAGE);
             return;
@@ -1450,6 +1544,61 @@ export class BedWarsGame {
                 case 3: location.x += 1; break; // EAST
             }
             playerInfo.placement.push(location);
+        }
+    }
+    async beforeItemUse(event: mc.ItemUseBeforeEvent) {
+        if (this.state != GameState.started) return;
+        if (!(event.source instanceof mc.Player)) return;
+        const playerInfo = this.players.get(event.source.name);
+        if (!playerInfo) return;
+
+        if (isBridgeEggItem(event.itemStack)) {
+            if (playerInfo.bridgeEggCooldown > 0) {
+                event.cancel = true;
+                return;
+            }
+            await sleep(0);
+
+            const eggEntity = this.dimension.getEntities({
+                type: "minecraft:egg"
+            }).filter(entity => entity.getComponent("projectile")?.owner == playerInfo.player && entity[BRIDGE_EGG_OWNER_SYMBOL] == undefined)[0];
+            if (!eggEntity) return;
+
+            eggEntity[BRIDGE_EGG_OWNER_SYMBOL] = playerInfo;
+            playerInfo.bridgeEggCooldown = BRIDGE_EGG_COOLDOWN;
+        } else if (isFireBallItem(event.itemStack)) {
+            event.cancel = true;
+            if (playerInfo.fireBallCooldown > 0) {
+                return;
+            }
+            await sleep(0);
+
+            const location = playerInfo.player.getHeadLocation();
+            const fireBall = this.dimension.spawnEntity(MinecraftEntityTypes.Fireball, location);
+            fireBall.getComponent("projectile")!.owner = playerInfo.player;
+            fireBall.applyImpulse(v3.normalize(playerInfo.player.getViewDirection()));
+            fireBall[SPAWN_LOCATION_SYMBOL] = fireBall.location;
+
+            consumeMainHandItem(playerInfo.player);
+            playerInfo.fireBallCooldown = FIRE_BALL_COOLDOWN;
+        }
+    }
+    beforeItemUseOn(event: mc.ItemUseOnBeforeEvent) {
+        if (this.state != GameState.started) return;
+        if (!(event.source instanceof mc.Player)) return;
+        const playerInfo = this.players.get(event.source.name);
+        if (!playerInfo) return;
+
+        if (isFireBallItem(event.itemStack)) {
+            event.cancel = true;
+        }
+    }
+
+    afterWeatherChange(event: mc.WeatherChangeAfterEvent) {
+        if (this.state != GameState.started) return;
+        if (mc.world.getDimension(event.dimension) != this.dimension) return;
+        if (event.newWeather == mc.WeatherType.Thunder) {
+            this.dimension.setWeather(mc.WeatherType.Rain);
         }
     }
 };
@@ -1598,8 +1747,14 @@ mc.world.beforeEvents.explosion.subscribe(event => {
 });
 mc.world.beforeEvents.itemUse.subscribe(event => {
     if (game) {
+        game.beforeItemUse(event);
     }
 });
+mc.world.beforeEvents.itemUseOn.subscribe(event => {
+    if (game) {
+        game.beforeItemUseOn(event);
+    }
+})
 mc.world.beforeEvents.playerInteractWithBlock.subscribe(event => {
     if (game) {
         game.beforePlayerInteractWithBlock(event);
@@ -1618,6 +1773,11 @@ mc.world.afterEvents.projectileHitEntity.subscribe(event => {
 mc.world.afterEvents.entityHurt.subscribe(event => {
     if (game) {
         game.afterEntityHurt(event);
+    }
+})
+mc.world.afterEvents.weatherChange.subscribe(event => {
+    if (game) {
+        game.afterWeatherChange(event);
     }
 })
 mc.system.runInterval(() => {
