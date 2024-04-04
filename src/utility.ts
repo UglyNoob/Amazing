@@ -167,19 +167,30 @@ export function* containerSlotIterator(container: mc.Container) {
 }
 
 export function consumeMainHandItem(player: mc.Player, consumeOnCreative = false) {
-    switch (getGameMode(player)) {
-        case mc.GameMode.adventure:
-        case mc.GameMode.survival:
-            const equip = player.getComponent("equippable")!;
-            const slot = equip.getEquipmentSlot(mc.EquipmentSlot.Mainhand);
-            if (slot.amount >= 2) {
-                --slot.amount;
-            } else {
-                slot.setItem();
-            }
-            break;
-        default:
-            break;
+    let consume: boolean;
+    if(consumeOnCreative) {
+        consume = true;
+    } else {
+        const gameMode = getGameMode(player);
+        switch(gameMode) {
+            case mc.GameMode.adventure:
+            case mc.GameMode.survival:
+                consume = true;
+                break;
+            case mc.GameMode.creative:
+            case mc.GameMode.spectator:
+                consume = false;
+                break;
+        }
+    }
+    if(consume) {
+        const equip = player.getComponent("equippable")!;
+        const slot = equip.getEquipmentSlot(mc.EquipmentSlot.Mainhand);
+        if (slot.amount >= 2) {
+            --slot.amount;
+        } else {
+            slot.setItem();
+        }
     }
 }
 
@@ -203,10 +214,8 @@ export function stackFirstContainerAdd(container: mc.Container, item: mc.ItemSta
     return container.addItem(tempItem);
 }
 
-export function assert(predicate: boolean, message?: string) {
-    if (!predicate) throw new Error(message);
-}
-
 export function sleep(ticks: number): Promise<void> {
-    return new Promise(resolve => mc.system.runTimeout(resolve, ticks));
+    if(ticks)
+        return new Promise(resolve => mc.system.runTimeout(resolve, ticks));
+    return new Promise(resolve => mc.system.run(resolve));
 }

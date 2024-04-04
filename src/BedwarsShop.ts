@@ -21,6 +21,9 @@ import {
     SwordLevel,
     BRIDGE_EGG_ITEM,
     FIRE_BALL_ITEM,
+    INVISIBLILITY_POTION_ITEM,
+    SPEED_POTION_ITEM,
+    JUMP_BOOST_POTION_ITEM,
 } from "./Bedwars.js";
 import { ActionFormData } from "@minecraft/server-ui";
 import { containerIterator, containerSlotIterator, itemEqual, stackFirstContainerAdd } from './utility.js'
@@ -219,7 +222,7 @@ const BOW_POWERI_PUNCHI_ITEM = (() => {
 })();
 
 let SHOP_DATA: Menu | null = null;
-// SHOP_DATA relies on global variable ARMOR_LEVELS
+// SHOP_DATA relies on global variable ARMOR_LEVELS and SWORD_LEVELS
 // so it has to be initialized afterwards
 const getShopData: () => Menu = () => ({
     type: "entry",
@@ -388,6 +391,32 @@ const getShopData: () => Menu = () => ({
                         type: ActionType.UpgradeAxe
                     }]
                 }
+            ]
+        }, {
+            type: "entry",
+            display: "Potions",
+            icon: "textures/items/potion_bottle_invisibility.png",
+            title: "Potion Shop",
+            getBody: generateSecondMenuGetBody("Buy potions"),
+            subMenus: [
+                generateBuyOneItemMenu("Invisible Potion", () => ({
+                    type: ActionType.BuyNormalItem,
+                    itemName: "Invisible Potion",
+                    cost: { ironAmount: 0, goldAmount: 0, emeraldAmount: 2, diamondAmount: 0 },
+                    item: INVISIBLILITY_POTION_ITEM
+                }), () => "textures/items/potion_bottle_invisibility.png"),
+                generateBuyOneItemMenu("Jump V Potion", () => ({
+                    type: ActionType.BuyNormalItem,
+                    itemName: "Jump V Potion",
+                    cost: { ironAmount: 0, goldAmount: 0, emeraldAmount: 1, diamondAmount: 0 },
+                    item: JUMP_BOOST_POTION_ITEM
+                }), () => "textures/items/potion_bottle_jump.png"),
+                generateBuyOneItemMenu("Speed II Potion", () => ({
+                    type: ActionType.BuyNormalItem,
+                    itemName: "Speed II Potion",
+                    cost: { ironAmount: 0, goldAmount: 0, emeraldAmount: 1, diamondAmount: 0 },
+                    item: SPEED_POTION_ITEM
+                }), () => "textures/items/potion_bottle_moveSpeed.png")
             ]
         }, {
             type: "entry",

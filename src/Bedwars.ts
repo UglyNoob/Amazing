@@ -59,6 +59,61 @@ function isFireBallItem(item: mc.ItemStack) {
     return item.getLore()[1] == FIRE_BALL_ITEM.getLore()[1];
 }
 
+export const INVISIBLILITY_POTION_ITEM = (() => {
+    const i = new mc.ItemStack(MinecraftItemTypes.Potion);
+    i.nameTag = "§r§5Invisiblility Potion";
+    i.setLore([
+        '',
+        '§r§9Complete Invisibility (0:30)',
+    ]);
+    return i;
+})();
+const INVISIBLILITY_DURATION = 600; // in ticks
+
+function isInvisiblePotionItem(item: mc.ItemStack) {
+    const loreA = item.getLore();
+    const loreB = INVISIBLILITY_POTION_ITEM.getLore();
+    return loreA.length == loreB.length &&
+        loreA[1] == loreB[1];
+}
+
+export const JUMP_BOOST_POTION_ITEM = (() => {
+    const i = new mc.ItemStack(MinecraftItemTypes.Potion);
+    i.nameTag = "§r§aJump V Potion";
+    i.setLore([
+        '',
+        '§r§9Jump Boost V (0:45)'
+    ]);
+    return i;
+})();
+const JUMP_BOOST_DURATION = 900; // in ticks
+
+function isJumpBoostPotionItem(item: mc.ItemStack) {
+    const loreA = item.getLore();
+    const loreB = JUMP_BOOST_POTION_ITEM.getLore();
+    return loreA.length == loreB.length &&
+        loreA[1] == loreB[1];
+}
+
+export const SPEED_POTION_ITEM = (() => {
+    const i = new mc.ItemStack(MinecraftItemTypes.Potion);
+    i.nameTag = "§r§eSpeed II Potion";
+    i.setLore([
+        '',
+        '§r§9Speed II (0:45)'
+    ]);
+    return i;
+})();
+const SPEED_DURATION = 900; // in ticks
+
+function isSpeedPotionItem(item: mc.ItemStack) {
+    const loreA = item.getLore();
+    const loreB = SPEED_POTION_ITEM.getLore();
+    return loreA.length == loreB.length &&
+        loreA[1] == loreB[1];
+}
+
+
 const DEATH_TITLE = "§cYOU DIED!";
 const DEATH_SUBTITLE = "§eYou will respawn in §c%d §eseconds!";
 const SPECTATE_TITLE = "SPECTATING!"
@@ -604,6 +659,8 @@ export interface PlayerGameInformation {
     hasShear: boolean;
     bridgeEggCooldown: number;
     fireBallCooldown: number;
+    armorDisabled: boolean;
+    armorToEnablingTicks: number;
 }
 export class BedWarsGame {
     private map: MapInformation;
@@ -687,7 +744,9 @@ export class BedWarsGame {
             armorLevel: ARMOR_LEVELS[0],
             hasShear: false,
             bridgeEggCooldown: 0,
-            fireBallCooldown: 0
+            fireBallCooldown: 0,
+            armorDisabled: false,
+            armorToEnablingTicks: 0
         });
     }
 
@@ -764,6 +823,7 @@ export class BedWarsGame {
         playerInfo.player.teleport(spawnPoint, { facingLocation: v3.add(spawnPoint, teamInfo.playerSpawnViewDirection) });
         playerInfo.player.runCommand("gamemode survival");
         playerInfo.player.getComponent("minecraft:health")!.resetToMaxValue();
+        playerInfo.player.runCommand("effect @s clear");
         playerInfo.player.addEffect(MinecraftEffectTypes.Saturation, 100000, {
             amplifier: 100,
             showParticles: false
@@ -774,15 +834,17 @@ export class BedWarsGame {
         });
         playerInfo.player.extinguishFire();
         playerInfo.player.nameTag = `${TEAM_CONSTANTS[playerInfo.team].colorPrefix}${playerInfo.name}`;
+        playerInfo.armorDisabled = false;
+        playerInfo.armorToEnablingTicks = 0;
         this.resetInventory(playerInfo);
         playerInfo.lastHurtBy = undefined;
 
         playerInfo.state = PlayerState.Alive;
     }
 
-    private resetInventory(playerInfo: PlayerGameInformation) {
-        const equipment = playerInfo.player.getComponent("minecraft:equippable")!;
+    private resetArmor(playerInfo: PlayerGameInformation) {
         const t = TEAM_CONSTANTS[playerInfo.team];
+        const equipment = playerInfo.player.getComponent("minecraft:equippable")!;
         equipment.setEquipment(mc.EquipmentSlot.Head, t.leatherHelmet);
         equipment.setEquipment(mc.EquipmentSlot.Chest, t.leatherChestplate);
         if (playerInfo.armorLevel.level == 0) {
@@ -792,6 +854,9 @@ export class BedWarsGame {
             equipment.setEquipment(mc.EquipmentSlot.Legs, playerInfo.armorLevel.leggings);
             equipment.setEquipment(mc.EquipmentSlot.Feet, playerInfo.armorLevel.boots);
         }
+    }
+    private resetInventory(playerInfo: PlayerGameInformation) {
+        this.resetArmor(playerInfo);
         const container = playerInfo.player.getComponent("inventory")!.container!;
         playerInfo.swordLevel = SWORD_LEVELS[0];
         let hasSword = false;
@@ -1059,8 +1124,9 @@ export class BedWarsGame {
                     if (!item) return;
                     if (slotName == mc.EquipmentSlot.Mainhand) {
                         let erase = false;
-                        // detects illeagl items
+                        // clean items
                         if ([
+                            MinecraftItemTypes.GlassBottle,
                             MinecraftItemTypes.CraftingTable,
                             MinecraftItemTypes.WoodenButton,
                             MinecraftItemTypes.IronNugget,
@@ -1092,6 +1158,14 @@ export class BedWarsGame {
                 });
                 if (playerInfo.bridgeEggCooldown > 0) --playerInfo.bridgeEggCooldown;
                 if (playerInfo.fireBallCooldown > 0) --playerInfo.fireBallCooldown;
+                if (playerInfo.armorToEnablingTicks > 0) {
+                    --playerInfo.armorToEnablingTicks;
+                } else { // enable the armor
+                    if (playerInfo.armorDisabled) {
+                        playerInfo.armorDisabled = false;
+                        this.resetArmor(playerInfo);
+                    }
+                }
             }
         }
         for (const gen of this.generators) {
@@ -1304,13 +1378,17 @@ export class BedWarsGame {
     }
     afterEntityHitEntity(event: mc.EntityHitEntityAfterEvent) {
         if (this.state != GameState.started) return;
+        let victimInfo: PlayerGameInformation | undefined;
+        let hurterInfo: PlayerGameInformation | undefined;
 
-        if (!(event.hitEntity instanceof mc.Player)) return;
-        const victimInfo = this.players.get(event.hitEntity.name);
-        if (!victimInfo) return;
-
+        if (event.hitEntity instanceof mc.Player) {
+            victimInfo = this.players.get(event.hitEntity.name);
+        }
         if (event.damagingEntity instanceof mc.Player) {
-            const hurterInfo = this.players.get(event.damagingEntity.name);
+            hurterInfo = this.players.get(event.damagingEntity.name);
+        }
+
+        if (victimInfo) {
             if (hurterInfo) {
                 if (hurterInfo.team == victimInfo.team) {
                     // TOWAIT TODO
@@ -1320,7 +1398,12 @@ export class BedWarsGame {
             } else {
                 victimInfo.lastHurtBy = undefined;
             }
-            return;
+        }
+        if (hurterInfo) {
+            if (hurterInfo.armorDisabled) {
+                hurterInfo.armorDisabled = false;
+                this.resetArmor(hurterInfo);
+            }
         }
     }
     afterProjectileHitEntity(event: mc.ProjectileHitEntityAfterEvent) {
@@ -1593,6 +1676,31 @@ export class BedWarsGame {
             event.cancel = true;
         }
     }
+    afterItemCompleteUse(event: mc.ItemCompleteUseAfterEvent) {
+        if (this.state != GameState.started) return;
+
+        if (!(event.source instanceof mc.Player)) return;
+        const playerInfo = this.players.get(event.source.name);
+        if (!playerInfo) return;
+
+        if (isInvisiblePotionItem(event.itemStack)) {
+            playerInfo.player.addEffect(MinecraftEffectTypes.Invisibility, INVISIBLILITY_DURATION);
+            playerInfo.armorDisabled = true;
+            playerInfo.armorToEnablingTicks = INVISIBLILITY_DURATION;
+            const equip = playerInfo.player.getComponent('equippable')!;
+            [mc.EquipmentSlot.Head, mc.EquipmentSlot.Chest, mc.EquipmentSlot.Legs, mc.EquipmentSlot.Feet].forEach(slotName => {
+                equip.getEquipmentSlot(slotName).setItem();
+            });
+        } else if (isJumpBoostPotionItem(event.itemStack)) {
+            playerInfo.player.addEffect(MinecraftEffectTypes.JumpBoost, JUMP_BOOST_DURATION, {
+                amplifier: 4
+            });
+        } else if (isSpeedPotionItem(event.itemStack)) {
+            playerInfo.player.addEffect(MinecraftEffectTypes.Speed, SPEED_DURATION, {
+                amplifier: 1
+            });
+        }
+    }
 
     afterWeatherChange(event: mc.WeatherChangeAfterEvent) {
         if (this.state != GameState.started) return;
@@ -1725,7 +1833,7 @@ mc.world.beforeEvents.chatSend.subscribe(async event => {
     }
     game.start();
     globalThis.game = game;
-})
+});
 
 mc.world.afterEvents.entityDie.subscribe(event => {
     if (game) {
@@ -1761,12 +1869,17 @@ mc.world.beforeEvents.itemUseOn.subscribe(event => {
     if (game) {
         game.beforeItemUseOn(event);
     }
-})
+});
+mc.world.afterEvents.itemCompleteUse.subscribe(event => {
+    if (game) {
+        game.afterItemCompleteUse(event);
+    }
+});
 mc.world.beforeEvents.playerInteractWithBlock.subscribe(event => {
     if (game) {
         game.beforePlayerInteractWithBlock(event);
     }
-})
+});
 mc.world.beforeEvents.playerInteractWithEntity.subscribe(event => {
     if (game) {
         game.beforePlayerInteractWithEntity(event);
@@ -1781,12 +1894,12 @@ mc.world.afterEvents.entityHurt.subscribe(event => {
     if (game) {
         game.afterEntityHurt(event);
     }
-})
+});
 mc.world.afterEvents.weatherChange.subscribe(event => {
     if (game) {
         game.afterWeatherChange(event);
     }
-})
+});
 mc.system.runInterval(() => {
     if (game) game.tickEvent();
 });
