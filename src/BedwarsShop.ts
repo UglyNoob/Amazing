@@ -24,6 +24,7 @@ import {
     INVISIBLILITY_POTION_ITEM,
     SPEED_POTION_ITEM,
     JUMP_BOOST_POTION_ITEM,
+    TeamGameInformation
 } from "./Bedwars.js";
 import { ActionFormData } from "@minecraft/server-ui";
 import { containerIterator, containerSlotIterator, itemEqual, stackFirstContainerAdd } from './utility.js'
@@ -45,7 +46,11 @@ enum ActionType {
     BuySword,
     UpgradePickaxe,
     UpgradeAxe,
-    BuyShear
+    BuyShear,
+    UpgradeHaste,
+    BuySharpness,
+    UpgradeProtection,
+    UpgradeIronForge
 }
 
 interface BuyNormalItemAction {
@@ -57,10 +62,12 @@ interface BuyNormalItemAction {
 interface BuyArmorAction {
     type: ActionType.BuyArmor;
     toLevel: ArmorLevel;
+    cost: TokenValue;
 }
 interface BuySwordAction {
     type: ActionType.BuySword;
     toLevel: SwordLevel;
+    cost: TokenValue;
 }
 interface UpgradePickaxeAction {
     type: ActionType.UpgradePickaxe;
@@ -72,13 +79,26 @@ interface BuyShearAction {
     type: ActionType.BuyShear;
     cost: TokenValue;
 }
+interface BuySharpnessAction {
+    type: ActionType.BuySharpness;
+    cost: TokenValue;
+}
+interface UpgradeProtectionAction {
+    type: ActionType.UpgradeProtection;
+}
+interface UpgradeIronForgeAction {
+    type: ActionType.UpgradeIronForge;
+}
 
 type Action = BuyNormalItemAction |
     BuySwordAction |
     UpgradePickaxeAction |
     UpgradeAxeAction |
     BuyShearAction |
-    BuyArmorAction;
+    BuyArmorAction |
+    BuySharpnessAction |
+    UpgradeProtectionAction |
+    UpgradeIronForgeAction;
 
 type isUnion<T, K = T> = T extends any ? (Exclude<K, T> extends T ? false : true) : false;
 
@@ -86,7 +106,7 @@ type FieldOrFunction<PropName extends string, ValueType> = isUnion<PropName> ext
     [prop in PropName]: ValueType;
 } | {
         [prop in PropName as `get${Capitalize<prop>}`]:
-        (playerInfo: PlayerGameInformation, currentTokens: TokenValue, game: BedWarsGame) => ValueType;
+        (playerInfo: PlayerGameInformation, currentTokens: TokenValue, teamInfo: TeamGameInformation, game: BedWarsGame) => ValueType;
     }
 
 type Menu = FieldOrFunction<"display", string> & FieldOrFunction<"icon", string> &
@@ -97,7 +117,7 @@ type Menu = FieldOrFunction<"display", string> & FieldOrFunction<"icon", string>
             & FieldOrFunction<"subMenus", Menu[]>)
         |
         ({ type: "action"; }
-            & FieldOrFunction<"actions", Action[]>)
+            & FieldOrFunction<"action", Action>)
     );
 
 function generateBuyOneItemMenu(
@@ -118,33 +138,36 @@ function generateBuyOneItemMenu(
             } else {
                 color = "§4";
             }
-            return `${color}${name} * ${item.amount}\n${tokenToString(cost)}`;
+            if (item.amount == 1) {
+                return `${color}${name}\n${tokenToString(cost)}`;
+            } else {
+                return `${color}${name} * ${item.amount}\n${tokenToString(cost)}`;
+            }
         },
-        getActions(playerInfo) { return [getAction(playerInfo)]; }
+        getAction
     };
 }
 
 function generateSecondMenuGetBody(defaultText: string) {
     return (playerInfo: PlayerGameInformation) => {
-        if (playerInfo.lastActionResults.length != 0) {
-            for (const result of playerInfo.lastActionResults) {
-                if (!result) {
-                    return "Failed to perform action.";
-                }
+        if (playerInfo.lastActionSucceed == null) {
+            return defaultText;
+        } else {
+            if (playerInfo.lastActionSucceed) {
+                return "Success!";
+            } else {
+                return "Failed to perform action.";
             }
-            return "Success!";
         }
-        return defaultText;
     }
 }
-function generateBuySwordMenu(toLevel: SwordLevel): Menu {
+function generateBuySwordMenu(toLevel: SwordLevel, cost: TokenValue): Menu {
     return {
         type: "action",
         getDisplay(playerInfo, currentTokens) {
             if (playerInfo.swordLevel.level >= toLevel.level) {
                 return "§h" + toLevel.name;
             }
-            const cost = toLevel.toCurrentLevelCost;
             let color: string;
             if (isTokenSatisfying(currentTokens, cost)) {
                 color = "§a§l";
@@ -154,20 +177,20 @@ function generateBuySwordMenu(toLevel: SwordLevel): Menu {
             return `${color}${toLevel.name}\n${tokenToString(cost)}`;
         },
         icon: toLevel.icon,
-        actions: [{
+        action: {
             type: ActionType.BuySword,
-            toLevel
-        }]
+            toLevel,
+            cost
+        }
     };
 }
-function generateBuyArmorMenu(toLevel: ArmorLevel): Menu {
+function generateBuyArmorMenu(toLevel: ArmorLevel, cost: TokenValue): Menu {
     return {
         type: "action",
         getDisplay(playerInfo, currentTokens) {
             if (playerInfo.armorLevel.level >= toLevel.level) {
                 return "§h" + toLevel.name;
             }
-            const cost = toLevel.cost;
             let color: string;
             if (isTokenSatisfying(currentTokens, cost)) {
                 color = "§a§l";
@@ -177,10 +200,11 @@ function generateBuyArmorMenu(toLevel: ArmorLevel): Menu {
             return `${color}${toLevel.name}\n${tokenToString(cost)}`;
         },
         icon: toLevel.icon,
-        actions: [{
+        action: {
             type: ActionType.BuyArmor,
-            toLevel
-        }]
+            toLevel,
+            cost
+        }
     };
 }
 
@@ -190,6 +214,18 @@ const SHEARS_COST: TokenValue = {
     diamondAmount: 0,
     emeraldAmount: 0
 };
+const IRON_FORGE_TO_NEXT_LEVEL_COSTS: TokenValue[] = [
+    { ironAmount: 0, goldAmount: 0, diamondAmount: 2, emeraldAmount: 0 },
+    { ironAmount: 0, goldAmount: 0, diamondAmount: 4, emeraldAmount: 0 },
+    { ironAmount: 0, goldAmount: 0, diamondAmount: 6, emeraldAmount: 0 },
+    { ironAmount: 0, goldAmount: 0, diamondAmount: 8, emeraldAmount: 0 }
+];
+const PROTECTION_TO_NEXT_LEVEL_COSTS: TokenValue[] = [
+    { ironAmount: 0, goldAmount: 0, diamondAmount: 2, emeraldAmount: 0 },
+    { ironAmount: 0, goldAmount: 0, diamondAmount: 4, emeraldAmount: 0 },
+    { ironAmount: 0, goldAmount: 0, diamondAmount: 8, emeraldAmount: 0 },
+    { ironAmount: 0, goldAmount: 0, diamondAmount: 16, emeraldAmount: 0 }
+];
 
 const TNT_ITEM = new mc.ItemStack(MinecraftItemTypes.Tnt);
 const PLANKS_ITEM = new mc.ItemStack(MinecraftItemTypes.Planks, 8);
@@ -221,10 +257,10 @@ const BOW_POWERI_PUNCHI_ITEM = (() => {
     return i;
 })();
 
-let SHOP_DATA: Menu | null = null;
+let itemShopData: Menu | null = null;
 // SHOP_DATA relies on global variable ARMOR_LEVELS and SWORD_LEVELS
 // so it has to be initialized afterwards
-const getShopData: () => Menu = () => ({
+const generateItemShopData: () => Menu = () => ({
     type: "entry",
     body: "",
     icon: "",
@@ -238,14 +274,12 @@ const getShopData: () => Menu = () => ({
             title: "Blocks Shop",
             getBody: generateSecondMenuGetBody("Buy blocks"),
             subMenus: [
-                generateBuyOneItemMenu("Wool", playerInfo => {
-                    return {
-                        type: ActionType.BuyNormalItem,
-                        itemName: "Wool",
-                        cost: { ironAmount: 4, goldAmount: 0, emeraldAmount: 0, diamondAmount: 0 },
-                        item: new mc.ItemStack(TEAM_CONSTANTS[playerInfo.team].woolName, 16)
-                    }
-                }, playerInfo => TEAM_CONSTANTS[playerInfo.team].woolIconPath),
+                generateBuyOneItemMenu("Wool", playerInfo => ({
+                    type: ActionType.BuyNormalItem,
+                    itemName: "Wool",
+                    cost: { ironAmount: 4, goldAmount: 0, emeraldAmount: 0, diamondAmount: 0 },
+                    item: new mc.ItemStack(TEAM_CONSTANTS[playerInfo.team].woolName, 16)
+                }), playerInfo => TEAM_CONSTANTS[playerInfo.team].woolIconPath),
                 generateBuyOneItemMenu("Hardened Clay", () => ({
                     type: ActionType.BuyNormalItem,
                     itemName: "Hardened Clay",
@@ -272,9 +306,9 @@ const getShopData: () => Menu = () => ({
             title: "Weapon Shop",
             getBody: generateSecondMenuGetBody("Buy weapons"),
             subMenus: [
-                generateBuySwordMenu(SWORD_LEVELS[1]),
-                generateBuySwordMenu(SWORD_LEVELS[2]),
-                generateBuySwordMenu(SWORD_LEVELS[3])
+                generateBuySwordMenu(SWORD_LEVELS[1], { ironAmount: 10, goldAmount: 0, diamondAmount: 0, emeraldAmount: 0 }),
+                generateBuySwordMenu(SWORD_LEVELS[2], { ironAmount: 0, goldAmount: 7, diamondAmount: 0, emeraldAmount: 0 }),
+                generateBuySwordMenu(SWORD_LEVELS[3], { ironAmount: 0, goldAmount: 0, diamondAmount: 0, emeraldAmount: 4 })
             ]
         }, {
             type: "entry",
@@ -283,9 +317,9 @@ const getShopData: () => Menu = () => ({
             title: "Armor Shop",
             getBody: generateSecondMenuGetBody("Buy armors"),
             subMenus: [
-                generateBuyArmorMenu(ARMOR_LEVELS[1]),
-                generateBuyArmorMenu(ARMOR_LEVELS[2]),
-                generateBuyArmorMenu(ARMOR_LEVELS[3])
+                generateBuyArmorMenu(ARMOR_LEVELS[1], { ironAmount: 30, goldAmount: 0, diamondAmount: 0, emeraldAmount: 0 }),
+                generateBuyArmorMenu(ARMOR_LEVELS[2], { ironAmount: 0, goldAmount: 12, diamondAmount: 0, emeraldAmount: 0 }),
+                generateBuyArmorMenu(ARMOR_LEVELS[3], { ironAmount: 0, goldAmount: 0, diamondAmount: 0, emeraldAmount: 6 })
             ]
         }, {
             type: "entry",
@@ -310,10 +344,10 @@ const getShopData: () => Menu = () => ({
                         return `${color}Shears\n${tokenToString(cost)}`;
                     },
                     icon: "textures/items/shears.png",
-                    actions: [{
+                    action: {
                         type: ActionType.BuyShear,
                         cost: SHEARS_COST
-                    }]
+                    }
                 }, {
                     type: "action",
                     getDisplay(playerInfo, currentTokens) {
@@ -349,9 +383,9 @@ const getShopData: () => Menu = () => ({
                         }
                         return toLevel.icon;
                     },
-                    actions: [{
+                    action: {
                         type: ActionType.UpgradePickaxe
-                    }]
+                    }
                 }, {
                     type: "action",
                     getDisplay(playerInfo, currentTokens) {
@@ -387,9 +421,9 @@ const getShopData: () => Menu = () => ({
                         }
                         return toLevel.icon;
                     },
-                    actions: [{
+                    action: {
                         type: ActionType.UpgradeAxe
-                    }]
+                    }
                 }
             ]
         }, {
@@ -399,21 +433,21 @@ const getShopData: () => Menu = () => ({
             title: "Potion Shop",
             getBody: generateSecondMenuGetBody("Buy potions"),
             subMenus: [
-                generateBuyOneItemMenu("Invisible Potion", () => ({
+                generateBuyOneItemMenu("Invisible Potion (0:30)", () => ({
                     type: ActionType.BuyNormalItem,
-                    itemName: "Invisible Potion",
+                    itemName: "Invisible Potion (0:30)",
                     cost: { ironAmount: 0, goldAmount: 0, emeraldAmount: 2, diamondAmount: 0 },
                     item: INVISIBLILITY_POTION_ITEM
                 }), () => "textures/items/potion_bottle_invisibility.png"),
-                generateBuyOneItemMenu("Jump V Potion", () => ({
+                generateBuyOneItemMenu("Jump V Potion (0:45)", () => ({
                     type: ActionType.BuyNormalItem,
-                    itemName: "Jump V Potion",
+                    itemName: "Jump V Potion (0:45)",
                     cost: { ironAmount: 0, goldAmount: 0, emeraldAmount: 1, diamondAmount: 0 },
                     item: JUMP_BOOST_POTION_ITEM
                 }), () => "textures/items/potion_bottle_jump.png"),
-                generateBuyOneItemMenu("Speed II Potion", () => ({
+                generateBuyOneItemMenu("Speed II Potion (0:45)", () => ({
                     type: ActionType.BuyNormalItem,
-                    itemName: "Speed II Potion",
+                    itemName: "Speed II Potion (0:45)",
                     cost: { ironAmount: 0, goldAmount: 0, emeraldAmount: 1, diamondAmount: 0 },
                     item: SPEED_POTION_ITEM
                 }), () => "textures/items/potion_bottle_moveSpeed.png")
@@ -493,6 +527,34 @@ const getShopData: () => Menu = () => ({
                     cost: { ironAmount: 0, goldAmount: 0, emeraldAmount: 2, diamondAmount: 0 },
                     item: PLATFORM_ITEM
                 }), () => "textures/items/blaze_rod.png")
+            ]
+        }
+    ]
+});
+
+let teamShopData: Menu | null = null;
+const generateTeamShopData: () => Menu = () => ({
+    type: "entry",
+    display: "",
+    icon: "",
+    title: "Team Upgrade",
+    body: "Team Upgrade",
+    subMenus: [
+        {
+            type: "entry",
+            display: "Iron Forge",
+            icon: "textures/block/furnace.png",
+            title: "Upgrade Iron Forge",
+            body: "",
+            subMenus: [
+                {
+                    type: "action",
+                    display: "Upgrade",
+                    icon: "",
+                    action: {
+                        type: ActionType.UpgradeIronForge
+                    }
+                }
             ]
         }
     ]
@@ -604,7 +666,7 @@ function consumeToken(container: mc.Container, _tokens: TokenValue) {
  * @param hasParentMenu whether to show a Back button
  * @returns Whether the player cancels the menu
  */
-async function showMenuForPlayer(playerInfo: PlayerGameInformation, menu: Menu, game: BedWarsGame, hasParentMenu: boolean): Promise<boolean> {
+async function showMenuForPlayer(menu: Menu, playerInfo: PlayerGameInformation, teamInfo: TeamGameInformation, game: BedWarsGame, hasParentMenu: boolean): Promise<boolean> {
     if (menu.type != "entry") throw new Error();
     while (true) {
         let title: string;
@@ -618,17 +680,17 @@ async function showMenuForPlayer(playerInfo: PlayerGameInformation, menu: Menu, 
         if ("title" in menu) {
             title = menu.title
         } else {
-            title = menu.getTitle(playerInfo, currentTokens, game);
+            title = menu.getTitle(playerInfo, currentTokens, teamInfo, game);
         }
         if ("body" in menu) {
             body = menu.body
         } else {
-            body = menu.getBody(playerInfo, currentTokens, game);
+            body = menu.getBody(playerInfo, currentTokens, teamInfo, game);
         }
         if ("subMenus" in menu) {
             subMenus = menu.subMenus
         } else {
-            subMenus = menu.getSubMenus(playerInfo, currentTokens, game);
+            subMenus = menu.getSubMenus(playerInfo, currentTokens, teamInfo, game);
         }
 
         // Prepare ActionFormData
@@ -641,12 +703,12 @@ async function showMenuForPlayer(playerInfo: PlayerGameInformation, menu: Menu, 
             if ("display" in subMenu) {
                 display = subMenu.display;
             } else {
-                display = subMenu.getDisplay(playerInfo, currentTokens, game);
+                display = subMenu.getDisplay(playerInfo, currentTokens, teamInfo, game);
             }
             if ("icon" in subMenu) {
                 icon = subMenu.icon;
             } else {
-                icon = subMenu.getIcon(playerInfo, currentTokens, game);
+                icon = subMenu.getIcon(playerInfo, currentTokens, teamInfo, game);
             }
             subMenuDisplays.push(display);
             form.button(display, icon || undefined);
@@ -660,204 +722,208 @@ async function showMenuForPlayer(playerInfo: PlayerGameInformation, menu: Menu, 
 
         const selectionIndex = response.selection!;
         if (selectionIndex == subMenus.length) { // Back button choosed
-            playerInfo.lastActionResults = [];
+            playerInfo.lastActionSucceed = null;
             return false;
         }
 
         const selectedMenu = subMenus[selectionIndex];
         if (selectedMenu.type == "action") {
-            let actions: Action[];
-            if ("actions" in selectedMenu) {
-                actions = selectedMenu.actions;
+            let action: Action;
+            if ("action" in selectedMenu) {
+                action = selectedMenu.action;
             } else {
-                actions = selectedMenu.getActions(playerInfo, currentTokens, game);
+                action = selectedMenu.getAction(playerInfo, currentTokens, teamInfo, game);
             }
-            const results = performAction(playerInfo, actions);
-            playerInfo.lastActionResults = results;
+            const results = performAction(playerInfo, action, game);
+            playerInfo.lastActionSucceed = results;
         } else { // entry
-            const canceled = await showMenuForPlayer(playerInfo, selectedMenu, game, true);
+            const canceled = await showMenuForPlayer(selectedMenu, playerInfo, teamInfo, game, true);
             if (canceled) return true;
         }
     }
 }
 
-function performAction(playerInfo: PlayerGameInformation, actions: Action[]) {
-    const results: boolean[] = [];
+function performAction(playerInfo: PlayerGameInformation, action: Action, game: BedWarsGame) {
+    let result = false;
     const player = playerInfo.player;
     const container = player.getComponent("minecraft:inventory")!.container!
 
-    for (const action of actions) {
-        const tokens = calculateTokens(container);
-        let result: boolean = false;
-        execute: if (action.type == ActionType.BuyNormalItem) {
-            if (!isTokenSatisfying(tokens, action.cost)) {
-                // Failed to buy, insufficient tokens
-                result = false;
-                break execute;
-            }
-            consumeToken(container, action.cost);
+    const tokens = calculateTokens(container);
+    execute: if (action.type == ActionType.BuyNormalItem) {
+        if (!isTokenSatisfying(tokens, action.cost)) {
+            // Failed to buy, insufficient tokens
+            result = false;
+            break execute;
+        }
+        consumeToken(container, action.cost);
 
-            const leftover = stackFirstContainerAdd(container, action.item);
-            if (leftover) { // if failed to add item
-                // spawn the item as entity
-                const entity = playerInfo.player.dimension.spawnItem(leftover, player.location);
-                entity.applyImpulse(v3.scale(entity.getVelocity(), -1));
+        const leftover = stackFirstContainerAdd(container, action.item);
+        if (leftover) { // if failed to add item
+            // spawn the item as entity
+            const entity = playerInfo.player.dimension.spawnItem(leftover, player.location);
+            entity.applyImpulse(v3.scale(entity.getVelocity(), -1));
+        }
+        player.sendMessage(sprintf(PURCHASE_MESSAGE, action.itemName))
+        result = true;
+    } else if (action.type == ActionType.BuySword) {
+        if (playerInfo.swordLevel.level >= action.toLevel.level) {
+            result = false;
+            break execute;
+        }
+        if (!isTokenSatisfying(tokens, action.cost)) {
+            // Failed to buy, insufficient tokens
+            result = false;
+            break execute;
+        }
+        consumeToken(container, action.cost);
+        let foundSword = false;
+        for (const { slot } of containerSlotIterator(container)) {
+            const item = slot.getItem();
+            if (!item) continue;
+            if (itemEqual(item, playerInfo.swordLevel.item)) {
+                slot.setItem(action.toLevel.item);
+                foundSword = true;
+                break;
             }
-            player.sendMessage(sprintf(PURCHASE_MESSAGE, action.itemName))
-            result = true;
-        } else if (action.type == ActionType.BuySword) {
-            if (playerInfo.swordLevel.level >= action.toLevel.level) {
+        }
+        if (!foundSword) {
+            container.addItem(action.toLevel.item);
+        }
+        player.sendMessage(sprintf(PURCHASE_MESSAGE, action.toLevel.name))
+        playerInfo.swordLevel = action.toLevel;
+        result = true;
+    } else if (action.type == ActionType.BuyShear) {
+        if (playerInfo.hasShear) {
+            result = false;
+            break execute;
+        }
+        if (!isTokenSatisfying(tokens, action.cost)) {
+            // Failed to buy, insufficient tokens
+            result = false;
+            break execute;
+        }
+        consumeToken(container, action.cost);
+        container.addItem(new mc.ItemStack(MinecraftItemTypes.Shears));
+        player.sendMessage(sprintf(PURCHASE_MESSAGE, "Shears"));
+        playerInfo.hasShear = true;
+        result = true;
+    } else if (action.type == ActionType.BuyArmor) {
+        const currentLevel = playerInfo.armorLevel;
+        if (currentLevel.level >= action.toLevel.level) {
+            result = false;
+            break execute;
+        }
+        if (!isTokenSatisfying(tokens, action.cost)) {
+            // Failed to buy, insufficient tokens
+            result = false;
+            break execute;
+        }
+        consumeToken(container, action.cost);
+        playerInfo.armorLevel = action.toLevel;
+        if (!playerInfo.armorDisabled) {
+            game.resetArmor(playerInfo);
+        }
+        player.sendMessage(sprintf(PURCHASE_MESSAGE, playerInfo.armorLevel.name));
+        result = true;
+    } else if (action.type == ActionType.UpgradePickaxe) {
+        let toLevel: PickaxeLevel;
+        if (playerInfo.pickaxeLevel) {
+            if (!hasNextPickaxeLevel(playerInfo.pickaxeLevel)) {
                 result = false;
                 break execute;
             }
-            const cost = action.toLevel.toCurrentLevelCost;
-            if (!isTokenSatisfying(tokens, cost)) {
-                // Failed to buy, insufficient tokens
-                result = false;
-                break execute;
-            }
-            consumeToken(container, cost);
-            let foundSword = false;
+            toLevel = PICKAXE_LEVELS[playerInfo.pickaxeLevel.level + 1];
+        } else {
+            toLevel = PICKAXE_LEVELS[0];
+        }
+        const cost = toLevel.toCurrentLevelCost;
+        if (!isTokenSatisfying(tokens, cost)) {
+            // Failed to buy, insufficient tokens
+            result = false;
+            break execute;
+        }
+        consumeToken(container, cost);
+        if (playerInfo.pickaxeLevel) {
+            let foundPickaxe = false;
             for (const { slot } of containerSlotIterator(container)) {
                 const item = slot.getItem();
                 if (!item) continue;
-                if (itemEqual(item, playerInfo.swordLevel.item)) {
-                    slot.setItem(action.toLevel.item);
-                    foundSword = true;
+                if (itemEqual(item, playerInfo.pickaxeLevel.item)) {
+                    slot.setItem(toLevel.item);
+                    foundPickaxe = true;
                     break;
                 }
             }
-            if (!foundSword) {
-                container.addItem(action.toLevel.item);
-            }
-            player.sendMessage(sprintf(PURCHASE_MESSAGE, action.toLevel.name))
-            playerInfo.swordLevel = action.toLevel;
-            result = true;
-        } else if (action.type == ActionType.BuyShear) {
-            if (playerInfo.hasShear) {
-                result = false;
-                break execute;
-            }
-            if (!isTokenSatisfying(tokens, action.cost)) {
-                // Failed to buy, insufficient tokens
-                result = false;
-                break execute;
-            }
-            consumeToken(container, action.cost);
-            container.addItem(new mc.ItemStack(MinecraftItemTypes.Shears));
-            player.sendMessage(sprintf(PURCHASE_MESSAGE, "Shears"));
-            playerInfo.hasShear = true;
-            result = true;
-        } else if (action.type == ActionType.BuyArmor) {
-            const currentLevel = playerInfo.armorLevel;
-            if (currentLevel.level >= action.toLevel.level) {
-                result = false;
-                break execute;
-            }
-            if (!isTokenSatisfying(tokens, action.toLevel.cost)) {
-                // Failed to buy, insufficient tokens
-                result = false;
-                break execute;
-            }
-            consumeToken(container, action.toLevel.cost);
-            playerInfo.armorLevel = action.toLevel;
-            const equipment = player.getComponent("equippable")!
-            equipment.setEquipment(mc.EquipmentSlot.Legs, playerInfo.armorLevel.leggings);
-            equipment.setEquipment(mc.EquipmentSlot.Feet, playerInfo.armorLevel.boots);
-            player.sendMessage(sprintf(PURCHASE_MESSAGE, playerInfo.armorLevel.name));
-            result = true;
-        } else if (action.type == ActionType.UpgradePickaxe) {
-            let toLevel: PickaxeLevel;
-            if (playerInfo.pickaxeLevel) {
-                if (!hasNextPickaxeLevel(playerInfo.pickaxeLevel)) {
-                    result = false;
-                    break execute;
-                }
-                toLevel = PICKAXE_LEVELS[playerInfo.pickaxeLevel.level + 1];
-            } else {
-                toLevel = PICKAXE_LEVELS[0];
-            }
-            const cost = toLevel.toCurrentLevelCost;
-            if (!isTokenSatisfying(tokens, cost)) {
-                // Failed to buy, insufficient tokens
-                result = false;
-                break execute;
-            }
-            consumeToken(container, cost);
-            if (playerInfo.pickaxeLevel) {
-                let foundPickaxe = false;
-                for (const { slot } of containerSlotIterator(container)) {
-                    const item = slot.getItem();
-                    if (!item) continue;
-                    if (itemEqual(item, playerInfo.pickaxeLevel.item)) {
-                        slot.setItem(toLevel.item);
-                        foundPickaxe = true;
-                        break;
-                    }
-                }
-                if (!foundPickaxe) {
-                    container.addItem(toLevel.item);
-                }
-            } else {
+            if (!foundPickaxe) {
                 container.addItem(toLevel.item);
             }
-            player.sendMessage(sprintf(PURCHASE_MESSAGE, toLevel.name))
-            playerInfo.pickaxeLevel = toLevel;
-            result = true;
-        } else if (action.type == ActionType.UpgradeAxe) {
-            let toLevel: AxeLevel;
-            if (playerInfo.axeLevel) {
-                if (!hasNextAxeLevel(playerInfo.axeLevel)) {
-                    result = false;
-                    break execute;
-                }
-                toLevel = AXE_LEVELS[playerInfo.axeLevel.level + 1];
-            } else {
-                toLevel = AXE_LEVELS[0];
-            }
-            const cost = toLevel.toCurrentLevelCost;
-            if (!isTokenSatisfying(tokens, cost)) {
-                // Failed to buy, insufficient tokens
-                result = false;
-                break execute;
-            }
-            consumeToken(container, cost);
-            if (playerInfo.axeLevel) {
-                let foundAxe = false;
-                for (const { slot } of containerSlotIterator(container)) {
-                    const item = slot.getItem();
-                    if (!item) continue;
-                    if (itemEqual(item, playerInfo.axeLevel.item)) {
-                        slot.setItem(toLevel.item);
-                        foundAxe = true;
-                        break;
-                    }
-                }
-                if (!foundAxe) {
-                    container.addItem(toLevel.item);
-                }
-            } else {
-                container.addItem(toLevel.item);
-            }
-            player.sendMessage(sprintf(PURCHASE_MESSAGE, toLevel.name))
-            playerInfo.axeLevel = toLevel;
-            result = true;
-        }
-
-        if (result) {
-            player.playSound("mob.endermen.portal");
         } else {
-            player.playSound("note.bass");
+            container.addItem(toLevel.item);
         }
-        results.push(result);
+        player.sendMessage(sprintf(PURCHASE_MESSAGE, toLevel.name))
+        playerInfo.pickaxeLevel = toLevel;
+        result = true;
+    } else if (action.type == ActionType.UpgradeAxe) {
+        let toLevel: AxeLevel;
+        if (playerInfo.axeLevel) {
+            if (!hasNextAxeLevel(playerInfo.axeLevel)) {
+                result = false;
+                break execute;
+            }
+            toLevel = AXE_LEVELS[playerInfo.axeLevel.level + 1];
+        } else {
+            toLevel = AXE_LEVELS[0];
+        }
+        const cost = toLevel.toCurrentLevelCost;
+        if (!isTokenSatisfying(tokens, cost)) {
+            // Failed to buy, insufficient tokens
+            result = false;
+            break execute;
+        }
+        consumeToken(container, cost);
+        if (playerInfo.axeLevel) {
+            let foundAxe = false;
+            for (const { slot } of containerSlotIterator(container)) {
+                const item = slot.getItem();
+                if (!item) continue;
+                if (itemEqual(item, playerInfo.axeLevel.item)) {
+                    slot.setItem(toLevel.item);
+                    foundAxe = true;
+                    break;
+                }
+            }
+            if (!foundAxe) {
+                container.addItem(toLevel.item);
+            }
+        } else {
+            container.addItem(toLevel.item);
+        }
+        player.sendMessage(sprintf(PURCHASE_MESSAGE, toLevel.name))
+        playerInfo.axeLevel = toLevel;
+        result = true;
     }
-    return results;
+
+    if (result) {
+        player.playSound("mob.endermen.portal");
+    } else {
+        player.playSound("note.bass");
+    }
+
+    return result;
 }
 
-export function openShop(playerInfo: PlayerGameInformation, game: BedWarsGame) {
-    playerInfo.lastActionResults = [];
-    if (!SHOP_DATA) {
-        SHOP_DATA = getShopData();
+export function openShop(playerInfo: PlayerGameInformation, teamInfo: TeamGameInformation, game: BedWarsGame) {
+    playerInfo.lastActionSucceed = null;
+    if (!itemShopData) {
+        itemShopData = generateItemShopData();
     }
-    showMenuForPlayer(playerInfo, SHOP_DATA, game, false);
+    showMenuForPlayer(itemShopData, playerInfo, teamInfo, game, false);
+}
+
+export function openTeamShop(playerInfo: PlayerGameInformation, teamInfo: TeamGameInformation, game: BedWarsGame) {
+    playerInfo.lastActionSucceed = null;
+    if (!teamShopData) {
+        teamShopData = generateTeamShopData();
+    }
+    showMenuForPlayer(teamShopData, playerInfo, teamInfo, game, false);
 }

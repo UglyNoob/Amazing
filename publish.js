@@ -14,6 +14,7 @@ async function main() {
         fs.copyFile("scripts/main.js", "out/AmazingBP/scripts/main.js"),
         fs.copyFile("structures/void/void.mcstructure", "out/AmazingBP/structures/void/void.mcstructure"),
         fs.copyFile("entities/fireball.json", "out/AmazingBP/entities/fireball.json"),
+        fs.copyFile("pack_icon.png", "out/AmazingBP/pack_icon.png")
     ]);
 
     console.log("Publish complete");

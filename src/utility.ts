@@ -3,6 +3,10 @@ import * as ui from '@minecraft/server-ui';
 
 export type Area = [mc.Vector3, mc.Vector3]
 
+/**
+ * Compares types, lores and name tags.
+ * Won't compare enchantment and other things.
+ */
 export function itemEqual(a: mc.ItemStack, b: mc.ItemStack, compareAmount = false) {
     let loreA = a.getLore(), loreB = b.getLore();
     return loreA.length == loreB.length &&
@@ -168,11 +172,11 @@ export function* containerSlotIterator(container: mc.Container) {
 
 export function consumeMainHandItem(player: mc.Player, consumeOnCreative = false) {
     let consume: boolean;
-    if(consumeOnCreative) {
+    if (consumeOnCreative) {
         consume = true;
     } else {
         const gameMode = getGameMode(player);
-        switch(gameMode) {
+        switch (gameMode) {
             case mc.GameMode.adventure:
             case mc.GameMode.survival:
                 consume = true;
@@ -183,7 +187,7 @@ export function consumeMainHandItem(player: mc.Player, consumeOnCreative = false
                 break;
         }
     }
-    if(consume) {
+    if (consume) {
         const equip = player.getComponent("equippable")!;
         const slot = equip.getEquipmentSlot(mc.EquipmentSlot.Mainhand);
         if (slot.amount >= 2) {
@@ -215,7 +219,7 @@ export function stackFirstContainerAdd(container: mc.Container, item: mc.ItemSta
 }
 
 export function sleep(ticks: number): Promise<void> {
-    if(ticks)
+    if (ticks)
         return new Promise(resolve => mc.system.runTimeout(resolve, ticks));
     return new Promise(resolve => mc.system.run(resolve));
 }
