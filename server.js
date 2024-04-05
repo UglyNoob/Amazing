@@ -56,6 +56,8 @@ main: {
             function onInput() {
                 publish("manifest.json");
                 publish("scripts");
+                publish("structures");
+                publish("entities");
 
                 console.log(`${Date()}: Publish complete.`);
             }

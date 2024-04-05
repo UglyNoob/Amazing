@@ -24,7 +24,11 @@ import {
     INVISIBLILITY_POTION_ITEM,
     SPEED_POTION_ITEM,
     JUMP_BOOST_POTION_ITEM,
-    TeamGameInformation
+    TeamGameInformation,
+    MAX_IRON_FORGE_LEVEL,
+    TEAM_PURCHASE_MESSAGE,
+    MAX_PROTECTION_LEVEL,
+    MAX_HASTE_LEVEL
 } from "./Bedwars.js";
 import { ActionFormData } from "@minecraft/server-ui";
 import { containerIterator, containerSlotIterator, itemEqual, stackFirstContainerAdd } from './utility.js'
@@ -50,7 +54,8 @@ enum ActionType {
     UpgradeHaste,
     BuySharpness,
     UpgradeProtection,
-    UpgradeIronForge
+    UpgradeIronForge,
+    BuyHealPool
 }
 
 interface BuyNormalItemAction {
@@ -89,6 +94,13 @@ interface UpgradeProtectionAction {
 interface UpgradeIronForgeAction {
     type: ActionType.UpgradeIronForge;
 }
+interface UpgradeHasteAction {
+    type: ActionType.UpgradeHaste;
+}
+interface BuyHealPoolAction {
+    type: ActionType.BuyHealPool;
+    cost: TokenValue;
+}
 
 type Action = BuyNormalItemAction |
     BuySwordAction |
@@ -98,16 +110,18 @@ type Action = BuyNormalItemAction |
     BuyArmorAction |
     BuySharpnessAction |
     UpgradeProtectionAction |
-    UpgradeIronForgeAction;
+    UpgradeIronForgeAction |
+    UpgradeHasteAction |
+    BuyHealPoolAction;
 
 type isUnion<T, K = T> = T extends any ? (Exclude<K, T> extends T ? false : true) : false;
 
 type FieldOrFunction<PropName extends string, ValueType> = isUnion<PropName> extends true ? never : {
     [prop in PropName]: ValueType;
 } | {
-        [prop in PropName as `get${Capitalize<prop>}`]:
-        (playerInfo: PlayerGameInformation, currentTokens: TokenValue, teamInfo: TeamGameInformation, game: BedWarsGame) => ValueType;
-    }
+    [prop in PropName as `get${Capitalize<prop>}`]:
+    (playerInfo: PlayerGameInformation, currentTokens: TokenValue, teamInfo: TeamGameInformation, game: BedWarsGame) => ValueType;
+}
 
 type Menu = FieldOrFunction<"display", string> & FieldOrFunction<"icon", string> &
     (
@@ -226,6 +240,11 @@ const PROTECTION_TO_NEXT_LEVEL_COSTS: TokenValue[] = [
     { ironAmount: 0, goldAmount: 0, diamondAmount: 8, emeraldAmount: 0 },
     { ironAmount: 0, goldAmount: 0, diamondAmount: 16, emeraldAmount: 0 }
 ];
+const HASTE_TO_NEXT_LEVEL_COSTS: TokenValue[] = [
+    { ironAmount: 0, goldAmount: 0, diamondAmount: 2, emeraldAmount: 0 },
+    { ironAmount: 0, goldAmount: 0, diamondAmount: 4, emeraldAmount: 0 }
+];
+const HEAL_POOL_COST: TokenValue = { ironAmount: 0, goldAmount: 0, diamondAmount: 2, emeraldAmount: 0 };
 
 const TNT_ITEM = new mc.ItemStack(MinecraftItemTypes.Tnt);
 const PLANKS_ITEM = new mc.ItemStack(MinecraftItemTypes.Planks, 8);
@@ -532,6 +551,28 @@ const generateItemShopData: () => Menu = () => ({
     ]
 });
 
+const IRON_FORGE_BODY = `§7Upgrade resources spawning on your island.
+
+§7Tier 1: +50%% Resources, §b2 Diamonds
+§7Tier 2: +100%% Resources, §b4 Diamonds
+§7Tier 3: Spawn emeralds, §b6 Diamonds
+§7Tier 4: +200%% Resources, §b8 Diamonds`;
+const SHARPENED_SWORD_BODY = "§7Your team permanently gains sharpness I on all swords!";
+const SHARPENED_SWORD_COST: TokenValue = { ironAmount: 0, goldAmount: 0, diamondAmount: 2, emeraldAmount: 0 };
+const REINFORCED_ARMOR_BODY = `§7Your team permanently gains Protection on all armor pieces!
+
+§7Tier 1: Protection I, §b2 Diamonds
+§7Tier 2: Protection II, §b4 Diamonds
+§7Tier 3: Protection III, §b8 Diamonds
+§7Tier 4: Protection IV, §b16 Diamonds`;
+const MANIAC_MINER_BODY = `§7All players on your team permanently gain Haste
+
+§7Tier 1: Haste I, §b2 Diamonds
+§7Tier 2: Haste II, §b4 Diamonds`;
+const HEAL_POOL_BODY = "§7Create a regeneration field around your base!";
+
+const TIER_STRING = ['O', 'I', 'II', 'III', 'IV', 'V'];
+
 let teamShopData: Menu | null = null;
 const generateTeamShopData: () => Menu = () => ({
     type: "entry",
@@ -542,17 +583,172 @@ const generateTeamShopData: () => Menu = () => ({
     subMenus: [
         {
             type: "entry",
-            display: "Iron Forge",
-            icon: "textures/block/furnace.png",
+            getDisplay(_, __, teamInfo) {
+                if (teamInfo.ironForgeLevel == MAX_IRON_FORGE_LEVEL) {
+                    return "§hIron Forge";
+                } else {
+                    return "Iron Forge";
+                }
+            },
+            icon: "textures/blocks/furnace_front_off.png",
             title: "Upgrade Iron Forge",
-            body: "",
+            body: IRON_FORGE_BODY,
             subMenus: [
                 {
                     type: "action",
-                    display: "Upgrade",
-                    icon: "",
+                    getDisplay(_, currentTokens, teamInfo) {
+                        if (teamInfo.ironForgeLevel >= MAX_IRON_FORGE_LEVEL) {
+                            return `§hIron Forge ${TIER_STRING[MAX_IRON_FORGE_LEVEL]}`;
+                        }
+                        const cost = IRON_FORGE_TO_NEXT_LEVEL_COSTS[teamInfo.ironForgeLevel];
+                        let color: string;
+                        if (isTokenSatisfying(currentTokens, cost)) {
+                            color = "§a§l";
+                        } else {
+                            color = "§4";
+                        }
+                        return `${color}Iron Forge ${TIER_STRING[teamInfo.ironForgeLevel + 1]}\n${tokenToString(cost)}`;
+                    },
+                    icon: "textures/blocks/furnace_front_off.png",
                     action: {
                         type: ActionType.UpgradeIronForge
+                    }
+                }
+            ]
+        }, {
+            type: "entry",
+            getDisplay(_, __, teamInfo) {
+                if (teamInfo.hasSharpness) {
+                    return "§hSharpened Sword";
+                } else {
+                    return "Sharpened Sword";
+                }
+            },
+            icon: "textures/items/diamond_sword.png",
+            title: "Buy Sharpened Sword",
+            body: SHARPENED_SWORD_BODY,
+            subMenus: [
+                {
+                    type: "action",
+                    getDisplay(_, currentTokens, teamInfo) {
+                        if (teamInfo.hasSharpness) {
+                            return `§hSharpened Sword`;
+                        }
+                        let color: string;
+                        if (isTokenSatisfying(currentTokens, SHARPENED_SWORD_COST)) {
+                            color = "§a§l";
+                        } else {
+                            color = "§4";
+                        }
+                        return `${color}Sharpened Sword\n${tokenToString(SHARPENED_SWORD_COST)}`;
+                    },
+                    icon: "textures/items/diamond_sword.png",
+                    action: {
+                        type: ActionType.BuySharpness,
+                        cost: SHARPENED_SWORD_COST
+                    }
+                }
+            ]
+        }, {
+            type: "entry",
+            getDisplay(_, __, teamInfo) {
+                if (teamInfo.protectionLevel == MAX_PROTECTION_LEVEL) {
+                    return "§hReinforced Armor";
+                } else {
+                    return "Reinforced Armor";
+                }
+            },
+            icon: "textures/items/diamond_boots.png",
+            title: "Reinforced Armor",
+            body: REINFORCED_ARMOR_BODY,
+            subMenus: [
+                {
+                    type: "action",
+                    getDisplay(_, currentTokens, teamInfo) {
+                        if (teamInfo.protectionLevel == MAX_PROTECTION_LEVEL) {
+                            return `§hReinforced Armor ${TIER_STRING[MAX_PROTECTION_LEVEL]}`;
+                        }
+                        let color: string;
+                        const cost = PROTECTION_TO_NEXT_LEVEL_COSTS[teamInfo.protectionLevel];
+                        if (isTokenSatisfying(currentTokens, cost)) {
+                            color = "§a§l";
+                        } else {
+                            color = "§4";
+                        }
+                        return `${color}Reinforced Armor ${TIER_STRING[teamInfo.protectionLevel + 1]}\n${tokenToString(cost)}`;
+                    },
+                    icon: "textures/items/diamond_boots.png",
+                    action: {
+                        type: ActionType.UpgradeProtection
+                    }
+                }
+            ]
+        }, {
+            type: "entry",
+            getDisplay(_, __, teamInfo) {
+                if (teamInfo.hasteLevel == MAX_HASTE_LEVEL) {
+                    return "§hManiac Miner";
+                } else {
+                    return "Maniac Miner";
+                }
+            },
+            icon: "textures/items/gold_pickaxe.png",
+            title: "Maniac Miner",
+            body: MANIAC_MINER_BODY,
+            subMenus: [
+                {
+                    type: "action",
+                    getDisplay(_, currentTokens, teamInfo) {
+                        if (teamInfo.hasteLevel == MAX_HASTE_LEVEL) {
+                            return `§hManiac Miner ${TIER_STRING[MAX_HASTE_LEVEL]}`;
+                        }
+                        let color: string;
+                        const cost = HASTE_TO_NEXT_LEVEL_COSTS[teamInfo.hasteLevel];
+                        if (isTokenSatisfying(currentTokens, cost)) {
+                            color = "§a§l";
+                        } else {
+                            color = "§4";
+                        }
+                        return `${color}Maniac Miner ${TIER_STRING[teamInfo.hasteLevel + 1]}\n${tokenToString(cost)}`;
+                    },
+                    icon: "textures/items/gold_pickaxe.png",
+                    action: {
+                        type: ActionType.UpgradeHaste
+                    }
+                }
+            ]
+        }, {
+            type: "entry",
+            getDisplay(_, __, teamInfo) {
+                if (teamInfo.healPoolEnabled) {
+                    return "§hHeal Pool";
+                } else {
+                    return "Heal Pool";
+                }
+            },
+            icon: "textures/blocks/beacon.png",
+            title: "Heal Pool",
+            body: HEAL_POOL_BODY,
+            subMenus: [
+                {
+                    type: "action",
+                    getDisplay(_, currentTokens, teamInfo) {
+                        if (teamInfo.healPoolEnabled) {
+                            return `§hHeal Pool`;
+                        }
+                        let color: string;
+                        const cost = HEAL_POOL_COST;
+                        if (isTokenSatisfying(currentTokens, cost)) {
+                            color = "§a§l";
+                        } else {
+                            color = "§4";
+                        }
+                        return `${color}Heal Pool ${TIER_STRING[teamInfo.hasteLevel + 1]}\n${tokenToString(cost)}`;
+                    },
+                    icon: "textures/blocks/beacon.png",
+                    action: {
+                        type: ActionType.BuyHealPool,
+                        cost: HEAL_POOL_COST
                     }
                 }
             ]
@@ -734,7 +930,7 @@ async function showMenuForPlayer(menu: Menu, playerInfo: PlayerGameInformation, 
             } else {
                 action = selectedMenu.getAction(playerInfo, currentTokens, teamInfo, game);
             }
-            const results = performAction(playerInfo, action, game);
+            const results = performAction(action, playerInfo, teamInfo, game);
             playerInfo.lastActionSucceed = results;
         } else { // entry
             const canceled = await showMenuForPlayer(selectedMenu, playerInfo, teamInfo, game, true);
@@ -743,7 +939,7 @@ async function showMenuForPlayer(menu: Menu, playerInfo: PlayerGameInformation, 
     }
 }
 
-function performAction(playerInfo: PlayerGameInformation, action: Action, game: BedWarsGame) {
+function performAction(action: Action, playerInfo: PlayerGameInformation, teamInfo: TeamGameInformation, game: BedWarsGame) {
     let result = false;
     const player = playerInfo.player;
     const container = player.getComponent("minecraft:inventory")!.container!
@@ -763,7 +959,7 @@ function performAction(playerInfo: PlayerGameInformation, action: Action, game: 
             const entity = playerInfo.player.dimension.spawnItem(leftover, player.location);
             entity.applyImpulse(v3.scale(entity.getVelocity(), -1));
         }
-        player.sendMessage(sprintf(PURCHASE_MESSAGE, action.itemName))
+        player.sendMessage(sprintf(PURCHASE_MESSAGE, action.itemName));
         result = true;
     } else if (action.type == ActionType.BuySword) {
         if (playerInfo.swordLevel.level >= action.toLevel.level) {
@@ -901,6 +1097,74 @@ function performAction(playerInfo: PlayerGameInformation, action: Action, game: 
         player.sendMessage(sprintf(PURCHASE_MESSAGE, toLevel.name))
         playerInfo.axeLevel = toLevel;
         result = true;
+    } else if (action.type == ActionType.UpgradeIronForge) {
+        if (teamInfo.ironForgeLevel >= MAX_IRON_FORGE_LEVEL) {
+            result = false;
+            break execute;
+        }
+        const cost = IRON_FORGE_TO_NEXT_LEVEL_COSTS[teamInfo.ironForgeLevel];
+        if (!isTokenSatisfying(tokens, cost)) {
+            // Failed to buy, insufficient tokens
+            result = false;
+            break execute;
+        }
+        consumeToken(container, cost);
+        ++teamInfo.ironForgeLevel;
+        game.applyTeamIronForge(teamInfo.type);
+        const t = TEAM_CONSTANTS[teamInfo.type];
+        game.teamBroadcast(teamInfo.type, TEAM_PURCHASE_MESSAGE, t.colorPrefix, player.name, `Iron Forge level ${teamInfo.ironForgeLevel}`);
+        result = true;
+    } else if (action.type == ActionType.UpgradeProtection) {
+        if (teamInfo.protectionLevel >= MAX_PROTECTION_LEVEL) {
+            result = false;
+            break execute;
+        }
+        const cost = PROTECTION_TO_NEXT_LEVEL_COSTS[teamInfo.protectionLevel];
+        if (!isTokenSatisfying(tokens, cost)) {
+            // Failed to buy, insufficient tokens
+            result = false;
+            break execute;
+        }
+        consumeToken(container, cost);
+        ++teamInfo.protectionLevel;
+        const t = TEAM_CONSTANTS[teamInfo.type];
+        game.teamBroadcast(teamInfo.type, TEAM_PURCHASE_MESSAGE, t.colorPrefix, player.name, `Reinforced Armor level ${teamInfo.protectionLevel}`);
+        result = true;
+    } else if (action.type == ActionType.UpgradeHaste) {
+        if (teamInfo.hasteLevel >= MAX_HASTE_LEVEL) {
+            result = false;
+            break execute;
+        }
+        const cost = HASTE_TO_NEXT_LEVEL_COSTS[teamInfo.hasteLevel];
+        if (!isTokenSatisfying(tokens, cost)) {
+            // Failed to buy, insufficient tokens
+            result = false;
+            break execute;
+        }
+        consumeToken(container, cost);
+        ++teamInfo.hasteLevel;
+        game.applyTeamHasteLevel(teamInfo.type);
+        const t = TEAM_CONSTANTS[teamInfo.type];
+        game.teamBroadcast(teamInfo.type, TEAM_PURCHASE_MESSAGE, t.colorPrefix, player.name, `Maniac Miner level ${teamInfo.protectionLevel}`);
+        result = true;
+    } else if (action.type == ActionType.BuySharpness) {
+        if (teamInfo.hasSharpness) {
+            result = false;
+            break execute;
+        }
+        const cost = SHARPENED_SWORD_COST;
+        if (!isTokenSatisfying(tokens, cost)) {
+            // Failed to buy, insufficient tokens
+            result = false;
+            break execute;
+        }
+        consumeToken(container, cost);
+        teamInfo.hasSharpness = true;
+        const t = TEAM_CONSTANTS[teamInfo.type];
+        game.teamBroadcast(teamInfo.type, TEAM_PURCHASE_MESSAGE, t.colorPrefix, player.name, `Sharpened Sword`);
+        result = true;
+    } else if (action.type == ActionType.BuyHealPool) {
+        ;
     }
 
     if (result) {

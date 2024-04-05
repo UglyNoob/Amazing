@@ -1,6 +1,6 @@
 import { Vector3Utils as v3 } from '@minecraft/math';
 import * as mc from '@minecraft/server';
-import { itemEqual, Area, sleep, vectorAdd, vectorWithinArea, containerIterator, capitalize, getPlayerByName, consumeMainHandItem, containerSlotIterator } from './utility.js';
+import { itemEqual, Area, sleep, vectorAdd, vectorWithinArea, containerIterator, capitalize, getPlayerByName, consumeMainHandItem, containerSlotIterator, makeItem } from './utility.js';
 import { setupGameTest } from './GameTest.js';
 import { MinecraftBlockTypes, MinecraftEffectTypes, MinecraftEnchantmentTypes, MinecraftEntityTypes, MinecraftItemTypes } from '@minecraft/vanilla-data';
 
@@ -131,6 +131,7 @@ const DISCONNECTED_MESSAGE = "%s%s §7has disconnected.";
 const RECONNECTION_MESSAGE = "%s%s §7has reconnected.";
 const PLACING_BLOCK_ILLAGEL_MESSAGE = "§cYou can't place blocks here!";
 const GAME_ENDED_MESSAGE = "§lGAME ENDED > §r%s%s §7is the winner!"
+export const TEAM_PURCHASE_MESSAGE = "%s%s §ahas purchased §6%s";
 export const PURCHASE_MESSAGE = "§aYou purchased §6%s";
 
 declare module '@minecraft/server' {
@@ -674,9 +675,12 @@ export interface PlayerGameInformation {
     armorToEnablingTicks: number;
 }
 
-export const IRON_FORGE_MAX_LEVEL = 4;
+export const MAX_IRON_FORGE_LEVEL = 4;
+export const MAX_PROTECTION_LEVEL = 4;
+export const MAX_HASTE_LEVEL = 2;
 const SHARPNESS_ENCH_LEVEL = 1;
 export interface TeamGameInformation {
+    type: TeamType;
     state: TeamState;
     /**
      * This field defines the level of sharpness the team has.
@@ -725,6 +729,7 @@ export class BedWarsGame {
         this.teams = new Map();
         for (const team of this.map.teams) {
             this.teams.set(team.type, {
+                type: team.type,
                 state: TeamState.BedAlive,
                 hasSharpness: false,
                 protectionLevel: 0,
@@ -734,7 +739,7 @@ export class BedWarsGame {
             });
         }
         this.generators = [];
-        for (const teamInfo of this.map.teams) {
+        for (const teamInfo of map.teams) {
             const genInfo = teamInfo.teamGenerator;
             this.generators.push({
                 spawnLocation: genInfo.spawnLocation,
@@ -751,7 +756,7 @@ export class BedWarsGame {
                 extraEmeraldRemainingCooldown: map.teamExtraEmeraldGenInterval
             });
         }
-        for (const genInfo of this.map.extraGenerators) {
+        for (const genInfo of map.extraGenerators) {
             this.generators.push({
                 spawnLocation: genInfo.spawnLocation,
                 location: genInfo.location,
@@ -998,7 +1003,7 @@ export class BedWarsGame {
     /**
      * Adjust team generator based on its iron forge level
      */
-    private applyTeamIronForge(teamType: TeamType) {
+    applyTeamIronForge(teamType: TeamType) {
         const teamInfo = this.teams.get(teamType)!;
         const teamGenMapInfo = this.map.teams.filter(t => t.type == teamType)[0].teamGenerator;
         const teamGenInfo = this.generators.filter(g => g.belongToTeam && g.team == teamType)[0];
@@ -1018,11 +1023,27 @@ export class BedWarsGame {
                 break;
             case 3:
                 teamGenInfo.spawnExtraEmerald = true;
+                teamGenInfo.extraEmeraldInterval = this.map.teamExtraEmeraldGenInterval;
+                teamGenInfo.extraEmeraldRemainingCooldown = teamGenInfo.extraEmeraldInterval;
                 teamGenInfo.interval = Math.ceil(teamGenMapInfo.defaultInterval / 2);
             case 4:
                 teamGenInfo.spawnExtraEmerald = true;
+                teamGenInfo.extraEmeraldInterval = this.map.teamExtraEmeraldGenInterval;
+                teamGenInfo.extraEmeraldRemainingCooldown = teamGenInfo.extraEmeraldInterval;
                 teamGenInfo.interval = Math.ceil(teamGenMapInfo.defaultInterval / 3);
                 break;
+        }
+    }
+    applyTeamHasteLevel(teamType: TeamType) {
+        const level = this.teams.get(teamType)!.hasteLevel;
+        if (level == 0) return;
+        for (const playerInfo of this.players.values()) {
+            if (playerInfo.team != teamType) continue;
+            if (playerInfo.state != PlayerState.Alive) continue;
+            playerInfo.player.addEffect(MinecraftEffectTypes.Haste, 100000, {
+                amplifier: level - 1,
+                showParticles: false
+            });
         }
     }
     private checkTeamPlayers() {
@@ -1084,10 +1105,18 @@ export class BedWarsGame {
         }
     }
 
-    private broadcast(content: any, ...params: any[]) {
+    teamBroadcast(teamType: TeamType, format: any, ...params: any[]) {
+        for (const playerInfo of this.players.values()) {
+            if (playerInfo.team != teamType) continue;
+            if (playerInfo.state == PlayerState.Offline) continue;
+
+            playerInfo.player.sendMessage(vsprintf(format, params));
+        }
+    }
+    private broadcast(format: any, ...params: any[]) {
         for (const playerInfo of this.players.values()) {
             if (playerInfo.state == PlayerState.Offline) continue;
-            playerInfo.player.sendMessage(vsprintf(String(content), params));
+            playerInfo.player.sendMessage(vsprintf(String(format), params));
         }
     }
 
@@ -1299,8 +1328,10 @@ export class BedWarsGame {
             }
         }
         for (const gen of this.generators) {
-            --gen.remainingCooldown;
-            if (gen.remainingCooldown > 0) continue;
+            if (gen.remainingCooldown > 0) {
+                --gen.remainingCooldown;
+                continue;
+            }
 
             gen.remainingCooldown = gen.interval;
             const spawnLocation = v3.add(gen.spawnLocation, this.originPos);
@@ -1365,12 +1396,24 @@ export class BedWarsGame {
                     itemEntity = this.dimension.spawnItem(EMERALD_ITEM_STACK, spawnLocation);
                     break;
             }
-            if (gen.type == GeneratorType.IronGold) continue;
-            const v = itemEntity.getVelocity();
-            v.x = -v.x;
-            v.y = 0;
-            v.z = -v.z;
-            itemEntity.applyImpulse(v);
+            if (gen.type != GeneratorType.IronGold) {
+                const v = itemEntity.getVelocity();
+                v.x = -v.x;
+                v.y = 0;
+                v.z = -v.z;
+                itemEntity.applyImpulse(v);
+            }
+        }
+        for (const gen of this.generators) {
+            const spawnLocation = v3.add(gen.spawnLocation, this.originPos);
+            if (gen.belongToTeam && gen.spawnExtraEmerald) {
+                if (gen.extraEmeraldRemainingCooldown > 0) {
+                    --gen.extraEmeraldRemainingCooldown;
+                    continue;
+                }
+                this.dimension.spawnItem(EMERALD_ITEM_STACK, spawnLocation);
+                gen.extraEmeraldRemainingCooldown = gen.extraEmeraldInterval;
+            }
         }
         if ((mc.system.currentTick - this.startTime) % 20 == 0) {
             this.updateScoreboard();
@@ -1601,8 +1644,6 @@ export class BedWarsGame {
                 openTeamShop(playerInfo, teamInfo, this);
                 return;
             }
-        }
-        for (const {  } of this.map.teams) {
         }
     }
     beforePlayerInteractWithEntity(event: mc.PlayerInteractWithEntityBeforeEvent) {
@@ -1926,7 +1967,17 @@ mc.world.beforeEvents.chatSend.subscribe(async event => {
     } else if (event.message == "start2") {
         map = testMap2;
         originLocation = { x: -104, y: 54, z: -65 };
-    } else return;
+    } else if (event.message == "SPECIAL CODE") {
+        await sleep(0);
+        const container = event.sender.getComponent("inventory")!.container!
+        container.addItem(makeItem(IRON_ITEM_STACK, 64));
+        container.addItem(makeItem(GOLD_ITEM_STACK, 64));
+        container.addItem(makeItem(DIAMOND_ITEM_STACK, 64));
+        container.addItem(makeItem(EMERALD_ITEM_STACK, 64));
+        return;
+    } else {
+        return;
+    }
 
     event.cancel = true;
     await sleep(0); // get out of read-only mode
