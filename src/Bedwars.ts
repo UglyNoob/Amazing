@@ -153,7 +153,11 @@ enum TeamType {
     Red,
     Blue,
     Yellow,
-    Green
+    Green,
+    Pink,
+    Gray,
+    Cyan,
+    White
 }
 interface GeneratorInformation {
     type: GeneratorType;
@@ -164,7 +168,7 @@ interface GeneratorInformation {
 }
 interface TeamInformation {
     type: TeamType;
-    shopLocation: mc.Vector3;
+    itemShopLocation: mc.Vector3;
     teamShopLocation: mc.Vector3;
     teamGenerator: GeneratorInformation;
     /**
@@ -182,7 +186,7 @@ interface MapInformation {
     teams: TeamInformation[];
     voidY: number;
     extraGenerators: GeneratorInformation[];
-    size: mc.Vector3;
+    size: Area;
     /**
      * Used to detect respawned player
      */
@@ -248,6 +252,46 @@ export const TEAM_CONSTANTS: Record<TeamType, {
         leatherChestplate: setupItem(MinecraftItemTypes.LeatherChestplate, TeamType.Yellow),
         leatherLeggings: setupItem(MinecraftItemTypes.LeatherLeggings, TeamType.Yellow),
         leatherBoots: setupItem(MinecraftItemTypes.LeatherBoots, TeamType.Yellow)
+    }
+    TEAM_CONSTANTS[TeamType.Pink] = {
+        name: "pink",
+        colorPrefix: "§d",
+        woolName: MinecraftItemTypes.PinkWool,
+        woolIconPath: "textures/blocks/wool_colored_pink.png",
+        leatherHelmet: setupItem(MinecraftItemTypes.LeatherHelmet, TeamType.Pink),
+        leatherChestplate: setupItem(MinecraftItemTypes.LeatherChestplate, TeamType.Pink),
+        leatherLeggings: setupItem(MinecraftItemTypes.LeatherLeggings, TeamType.Pink),
+        leatherBoots: setupItem(MinecraftItemTypes.LeatherBoots, TeamType.Pink)
+    }
+    TEAM_CONSTANTS[TeamType.Gray] = {
+        name: "gray",
+        colorPrefix: "§8",
+        woolName: MinecraftItemTypes.GrayWool,
+        woolIconPath: "textures/blocks/wool_colored_gray.png",
+        leatherHelmet: setupItem(MinecraftItemTypes.LeatherHelmet, TeamType.Gray),
+        leatherChestplate: setupItem(MinecraftItemTypes.LeatherChestplate, TeamType.Gray),
+        leatherLeggings: setupItem(MinecraftItemTypes.LeatherLeggings, TeamType.Gray),
+        leatherBoots: setupItem(MinecraftItemTypes.LeatherBoots, TeamType.Gray)
+    }
+    TEAM_CONSTANTS[TeamType.Cyan] = {
+        name: "cyan",
+        colorPrefix: "§3",
+        woolName: MinecraftItemTypes.CyanWool,
+        woolIconPath: "textures/blocks/wool_colored_cyan.png",
+        leatherHelmet: setupItem(MinecraftItemTypes.LeatherHelmet, TeamType.Cyan),
+        leatherChestplate: setupItem(MinecraftItemTypes.LeatherChestplate, TeamType.Cyan),
+        leatherLeggings: setupItem(MinecraftItemTypes.LeatherLeggings, TeamType.Cyan),
+        leatherBoots: setupItem(MinecraftItemTypes.LeatherBoots, TeamType.Cyan)
+    }
+    TEAM_CONSTANTS[TeamType.White] = {
+        name: "white",
+        colorPrefix: "§f",
+        woolName: MinecraftItemTypes.WhiteWool,
+        woolIconPath: "textures/blocks/wool_colored_white.png",
+        leatherHelmet: setupItem(MinecraftItemTypes.LeatherHelmet, TeamType.White),
+        leatherChestplate: setupItem(MinecraftItemTypes.LeatherChestplate, TeamType.White),
+        leatherLeggings: setupItem(MinecraftItemTypes.LeatherLeggings, TeamType.White),
+        leatherBoots: setupItem(MinecraftItemTypes.LeatherBoots, TeamType.White)
     }
 }
 
@@ -516,14 +560,14 @@ export const TRAP_CONSTANT: Record<TrapType, {
 }
 
 const testMap: MapInformation = {
-    size: { x: 21, y: 3, z: 5 },
+    size: [{ x: 0, y: 0, z: 0 }, { x: 21, y: 3, z: 5 }],
     fallbackRespawnPoint: { x: 0, y: 50, z: 0 },
     voidY: -48,
     teamExtraEmeraldGenInterval: EMERLAD_GENERATOR_INTERVAL / 2,
     teams: [
         {
             type: TeamType.Red,
-            shopLocation: { x: 6, y: 2, z: 4 },
+            itemShopLocation: { x: 6, y: 2, z: 4 },
             teamShopLocation: { x: 6, y: 2, z: 4 }, // TODO
             teamChestLocation: { x: 5, y: 1, z: 4 },
             islandArea: [{ x: 0, y: 0, z: 0 }, { x: 0, y: 0, z: 0 }], // TODO
@@ -540,7 +584,7 @@ const testMap: MapInformation = {
             playerSpawnViewDirection: { x: 1, y: 0, z: 0 }
         }, {
             type: TeamType.Blue,
-            shopLocation: { x: 14, y: 2, z: 0 },
+            itemShopLocation: { x: 14, y: 2, z: 0 },
             teamShopLocation: { x: 6, y: 2, z: 4 }, // TODO
             teamChestLocation: { x: 15, y: 1, z: 0 },
             islandArea: [{ x: 0, y: 0, z: 0 }, { x: 0, y: 0, z: 0 }], // TODO
@@ -580,14 +624,14 @@ const testMap: MapInformation = {
     ]
 };
 const testMap2: MapInformation = {
-    size: { x: 208, y: 101, z: 130 },
+    size: [{ x: 0, y: 0, z: 0 }, { x: 208, y: 101, z: 130 }],
     fallbackRespawnPoint: { x: 0 + 104, y: 149 - 54, z: 0 + 65 },
     voidY: -64,
     teamExtraEmeraldGenInterval: EMERLAD_GENERATOR_INTERVAL / 2,
     teams: [
         {
             type: TeamType.Red,
-            shopLocation: { x: 95 + 104, y: 80 - 54, z: 8 + 65 },
+            itemShopLocation: { x: 95 + 104, y: 80 - 54, z: 8 + 65 },
             teamShopLocation: { x: 95 + 104, y: 80 - 54, z: -8 + 65 },
             islandArea: [{ x: 70 + 104, y: 69 - 54, z: -17 + 65 }, { x: 106 + 104, y: 92 - 54, z: 16 + 65 }],
             protectedArea: [{ x: 92 + 104, y: 79 - 54, z: -3 + 65 }, { x: 97 + 104, y: 84 - 54, z: 4 + 65 }],
@@ -604,7 +648,7 @@ const testMap2: MapInformation = {
             teamChestLocation: { x: 91 + 104, y: 79 - 54, z: 4 + 65 },
         }, {
             type: TeamType.Blue,
-            shopLocation: { x: -95 + 104, y: 80 - 54, z: -8 + 65 },
+            itemShopLocation: { x: -95 + 104, y: 80 - 54, z: -8 + 65 },
             teamShopLocation: { x: -95 + 104, y: 80 - 54, z: 8 + 65 },
             islandArea: [{ x: -106 + 104, y: 69 - 54, z: -17 + 65 }, { x: -70 + 104, y: 92 - 54, z: 16 + 65 }],
             protectedArea: [{ x: -96 + 104, y: 79 - 54, z: -3 + 65 }, { x: -91 + 104, y: 84 - 54, z: 4 + 65 }],
@@ -649,6 +693,203 @@ const testMap2: MapInformation = {
         }
     ]
 };
+
+const mapSteamPunk: MapInformation = {
+    size: [{ x: -111, y: 48, z: -111 }, { x: 111, y: 139, z: 111 }],
+    fallbackRespawnPoint: { x: 0, y: 133, z: 0 },
+    voidY: -16,
+    teamExtraEmeraldGenInterval: EMERLAD_GENERATOR_INTERVAL / 2,
+    teams: [
+        {
+            type: TeamType.Green,
+            itemShopLocation: { x: 105, y: 74, z: -57 },
+            teamShopLocation: { x: 91, y: 74, z: -57 },
+            islandArea: [{ x: 82, y: 59, z: -67 }, { x: 110, y: 102, z: -40 }],
+            protectedArea: [{ x: 95, y: 73, z: -59 }, { x: 102, y: 77, z: -52 }],
+            teamGenerator: {
+                type: GeneratorType.IronGold,
+                spawnLocation: { x: 98.5, y: 72.5, z: -61.5 },
+                location: { x: 97, y: 72, z: -63 },
+                defaultInterval: IRONGOLD_GENERATOR_INTERVAL,
+                defaultCapacity: 64
+            },
+            bedLocation: [{ x: 98, y: 73, z: -47 }, { x: 98, y: 73, z: -46 }],
+            playerSpawn: { x: 98.5, y: 73, z: -55.5 },
+            playerSpawnViewDirection: { x: 0, y: 0, z: 1 },
+            teamChestLocation: { x: 102, y: 73, z: -52 },
+        }, {
+            type: TeamType.Yellow,
+            itemShopLocation: { x: 91, y: 74, z: 57 },
+            teamShopLocation: { x: 105, y: 74, z: 57 },
+            islandArea: [{ x: 86, y: 59, z: 40 }, { x: 114, y: 102, z: 67 }],
+            protectedArea: [{ x: 95, y: 73, z: 53 }, { x: 102, y: 77, z: 60 }],
+            teamGenerator: {
+                type: GeneratorType.IronGold,
+                spawnLocation: { x: 98.5, y: 72.5, z: 64.5 },
+                location: { x: 97, y: 72, z: 63 },
+                defaultInterval: IRONGOLD_GENERATOR_INTERVAL,
+                defaultCapacity: 64
+            },
+            bedLocation: [{ x: 98, y: 73, z: 47 }, { x: 98, y: 73, z: 46 }],
+            playerSpawn: { x: 98.5, y: 73, z: 56.5 },
+            playerSpawnViewDirection: { x: 0, y: 0, z: -1 },
+            teamChestLocation: { x: 94, y: 73, z: 52 },
+        }, {
+            type: TeamType.Cyan,
+            itemShopLocation: { x: 57, y: 74, z: 105 },
+            teamShopLocation: { x: 57, y: 74, z: 91 },
+            islandArea: [{ x: 40, y: 59, z: 82 }, { x: 67, y: 102, z: 110 }],
+            protectedArea: [{ x: 53, y: 73, z: 95 }, { x: 60, y: 77, z: 102 }],
+            teamGenerator: {
+                type: GeneratorType.IronGold,
+                spawnLocation: { x: 62.5, y: 72.5, z: 98.5 },
+                location: { x: 61, y: 72, z: 97 },
+                defaultInterval: IRONGOLD_GENERATOR_INTERVAL,
+                defaultCapacity: 64
+            },
+            bedLocation: [{ x: 47, y: 73, z: 98 }, { x: 46, y: 73, z: 98 }],
+            playerSpawn: { x: 56, y: 73, z: 98 },
+            playerSpawnViewDirection: { x: -1, y: 0, z: 0 },
+            teamChestLocation: { x: 52, y: 73, z: 102 },
+        }, {
+            type: TeamType.White,
+            itemShopLocation: { x: -57, y: 74, z: 91 },
+            teamShopLocation: { x: -57, y: 74, z: 105 },
+            islandArea: [{ x: -67, y: 59, z: 86 }, { x: -40, y: 102, z: 114 }],
+            protectedArea: [{ x: -59, y: 73, z: 95 }, { x: -53, y: 77, z: 101 }],
+            teamGenerator: {
+                type: GeneratorType.IronGold,
+                spawnLocation: { x: -61.5, y: 72.5, z: 98.5 },
+                location: { x: -63, y: 72, z: 97 },
+                defaultInterval: IRONGOLD_GENERATOR_INTERVAL,
+                defaultCapacity: 64
+            },
+            bedLocation: [{ x: -47, y: 73, z: 98 }, { x: -46, y: 73, z: 98 }],
+            playerSpawn: { x: -55.5, y: 73, z: 98.5 },
+            playerSpawnViewDirection: { x: 1, y: 0, z: 0 },
+            teamChestLocation: { x: -52, y: 73, z: 94 },
+        }, {
+            type: TeamType.Pink,
+            itemShopLocation: { x: -105, y: 74, z: 57 },
+            teamShopLocation: { x: -91, y: 74, z: 57 },
+            islandArea: [{ x: -110, y: 59, z: 40 }, { x: -82, y: 102, z: 67 }],
+            protectedArea: [{ x: -101, y: 73, z: 53 }, { x: -94, y: 77, z: 60 }],
+            teamGenerator: {
+                type: GeneratorType.IronGold,
+                spawnLocation: { x: -97.5, y: 72.5, z: 62.5 },
+                location: { x: -99, y: 72, z: 61 },
+                defaultInterval: IRONGOLD_GENERATOR_INTERVAL,
+                defaultCapacity: 64
+            },
+            bedLocation: [{ x: -98, y: 73, z: 47 }, { x: -98, y: 73, z: 46 }],
+            playerSpawn: { x: -98, y: 73, z: 56 },
+            playerSpawnViewDirection: { x: 0, y: 0, z: -1 },
+            teamChestLocation: { x: -102, y: 73, z: 52 },
+        }, {
+            type: TeamType.Gray,
+            itemShopLocation: { x: -91, y: 74, z: -57 },
+            teamShopLocation: { x: -105, y: 74, z: -57 },
+            islandArea: [{ x: -114, y: 59, z: -67 }, { x: -86, y: 102, z: -40 }],
+            protectedArea: [{ x: -101, y: 73, z: -59 }, { x: -94, y: 77, z: -52 }],
+            teamGenerator: {
+                type: GeneratorType.IronGold,
+                spawnLocation: { x: -97.5, y: 72.5, z: -61.5 },
+                location: { x: -99, y: 72, z: -63 },
+                defaultInterval: IRONGOLD_GENERATOR_INTERVAL,
+                defaultCapacity: 64
+            },
+            bedLocation: [{ x: -98, y: 73, z: -47 }, { x: -98, y: 73, z: -46 }],
+            playerSpawn: { x: -97.5, y: 73, z: -55.5 },
+            playerSpawnViewDirection: { x: 0, y: 0, z: 1 },
+            teamChestLocation: { x: 0, y: 73, z: 0 },
+        }, {
+            type: TeamType.Red,
+            itemShopLocation: { x: -57, y: 74, z: -105 },
+            teamShopLocation: { x: -57, y: 74, z: -91 },
+            islandArea: [{ x: -67, y: 59, z: -110 }, { x: -40, y: 102, z: -82 }],
+            protectedArea: [{ x: -59, y: 73, z: -101 }, { x: -52, y: 77, z: -94 }],
+            teamGenerator: {
+                type: GeneratorType.IronGold,
+                spawnLocation: { x: -61.5, y: 72.5, z: -97.5 },
+                location: { x: -63, y: 72, z: -99 },
+                defaultInterval: IRONGOLD_GENERATOR_INTERVAL,
+                defaultCapacity: 64
+            },
+            bedLocation: [{ x: -47, y: 73, z: -98 }, { x: -46, y: 73, z: -98 }],
+            playerSpawn: { x: -55.5, y: 73, z: -97.5 },
+            playerSpawnViewDirection: { x: 1, y: 0, z: 0 },
+            teamChestLocation: { x: -52, y: 73, z: -102 },
+        }, {
+            type: TeamType.Blue,
+            itemShopLocation: { x: 57, y: 74, z: -91 },
+            teamShopLocation: { x: 57, y: 74, z: -105 },
+            islandArea: [{ x: 40, y: 59, z: -114 }, { x: 67, y: 102, z: -86 }],
+            protectedArea: [{ x: 53, y: 73, z: -101 }, { x: 60, y: 77, z: -94 }],
+            teamGenerator: {
+                type: GeneratorType.IronGold,
+                spawnLocation: { x: 62.5, y: 72.5, z: -97.5 },
+                location: { x: 61, y: 72, z: -99 },
+                defaultInterval: IRONGOLD_GENERATOR_INTERVAL,
+                defaultCapacity: 64
+            },
+            bedLocation: [{ x: 47, y: 73, z: -98 }, { x: 46, y: 73, z: -98 }],
+            playerSpawn: { x: 56.5, y: 73, z: -97.5 },
+            playerSpawnViewDirection: { x: -1, y: 0, z: 0 },
+            teamChestLocation: { x: 52, y: 73, z: -94 },
+        }
+    ],
+    extraGenerators: [
+        {
+            type: GeneratorType.Diamond,
+            spawnLocation: { x: 85.5, y: 73, z: 0.5 },
+            location: { x: 85, y: 73, z: 0 },
+            defaultInterval: DIAMOND_GENERATOR_INTERVAL,
+            defaultCapacity: 32
+        }, {
+            type: GeneratorType.Diamond,
+            spawnLocation: { x: 0.5, y: 73, z: 85.5 },
+            location: { x: 0, y: 73, z: 85 },
+            defaultInterval: DIAMOND_GENERATOR_INTERVAL,
+            defaultCapacity: 32
+        }, {
+            type: GeneratorType.Diamond,
+            spawnLocation: { x: -84.5, y: 73, z: 0.5 },
+            location: { x: -85, y: 73, z: 0 },
+            defaultInterval: DIAMOND_GENERATOR_INTERVAL,
+            defaultCapacity: 32
+        }, {
+            type: GeneratorType.Diamond,
+            spawnLocation: { x: 0, y: 73, z: -84.5 },
+            location: { x: 0, y: 73, z: -85 },
+            defaultInterval: DIAMOND_GENERATOR_INTERVAL,
+            defaultCapacity: 32
+        }, {
+            type: GeneratorType.Emerald,
+            spawnLocation: { x: 24.5, y: 73, z: 24.5 },
+            location: { x: 24, y: 73, z: 24 },
+            defaultInterval: DIAMOND_GENERATOR_INTERVAL,
+            defaultCapacity: 32
+        }, {
+            type: GeneratorType.Emerald,
+            spawnLocation: { x: -23.5, y: 73, z: 24.5 },
+            location: { x: -24, y: 73, z: 24 },
+            defaultInterval: DIAMOND_GENERATOR_INTERVAL,
+            defaultCapacity: 32
+        }, {
+            type: GeneratorType.Emerald,
+            spawnLocation: { x: 24.5, y: 73, z: -23.5 },
+            location: { x: 24, y: 73, z: -24 },
+            defaultInterval: DIAMOND_GENERATOR_INTERVAL,
+            defaultCapacity: 32
+        }, {
+            type: GeneratorType.Emerald,
+            spawnLocation: { x: 2 - 3.5, y: 73, z: -23.5 },
+            location: { x: -24, y: 73, z: -24 },
+            defaultInterval: DIAMOND_GENERATOR_INTERVAL,
+            defaultCapacity: 32
+        }
+    ]
+};;
 
 export enum PlayerState {
     Alive/* = "alive"*/,
@@ -885,7 +1126,7 @@ export class BedWarsGame {
             this.dimension.fillBlocks(bedLocation[0], bedLocation[0], permutation);
         }
 
-        const mapArea: Area = [this.originPos, v3.add(this.originPos, this.map.size)];
+        const mapArea = this.map.size.map(v => v3.add(this.originPos, v)) as Area;
         this.dimension.getEntities({ type: "minecraft:item" }).forEach(e => {
             if (vectorWithinArea(e.location, mapArea)) e.kill();
         });
@@ -1364,6 +1605,7 @@ export class BedWarsGame {
                     player.dimension.spawnEntity(MinecraftEntityTypes.LightningBolt, player.location);
                     continue;
                 }
+                player.onScreenDisplay.setActionBar(String(TEAM_CONSTANTS[playerInfo.teamAreaEntered!]?.name));
                 const equipment = player.getComponent("equippable")!;
                 [mc.EquipmentSlot.Head, mc.EquipmentSlot.Chest, mc.EquipmentSlot.Legs, mc.EquipmentSlot.Feet, mc.EquipmentSlot.Mainhand].forEach(slotName => {
                     const item = equipment.getEquipment(slotName);
@@ -1775,7 +2017,7 @@ export class BedWarsGame {
             return;
         }
 
-        for (const { shopLocation, teamShopLocation } of this.map.teams) {
+        for (const { itemShopLocation: shopLocation, teamShopLocation } of this.map.teams) {
             if (v3.equals(v3.add(this.originPos, shopLocation), event.block.location)) {
                 await sleep(0);
                 const teamInfo = this.teams.get(playerInfo.team)!;
@@ -2048,6 +2290,16 @@ export class BedWarsGame {
             this.dimension.setWeather(mc.WeatherType.Rain);
         }
     }
+
+    beforeChatSend(event: mc.ChatSendBeforeEvent) {
+        if (this.state != GameState.started) return;
+        const sender = event.sender;
+        const senderInfo = this.players.get(sender.name);
+        if (!senderInfo) return;
+
+        event.cancel = true;
+        mc.world.sendMessage(`<${sender.nameTag}§r> ${event.message}`);
+    }
 };
 
 class BlockPlacementTracker {
@@ -2115,14 +2367,24 @@ class BlockPlacementTracker {
 let game: BedWarsGame;
 
 mc.world.beforeEvents.chatSend.subscribe(async event => {
+    if (game) {
+        game.beforeChatSend(event);
+    }
     let map: MapInformation;
     let originLocation: mc.Vector3;
+    let teams: TeamType[];
     if (event.message == "start") {
         map = testMap;
         originLocation = { x: -17, y: 5, z: 32 };
+        teams = [TeamType.Red, TeamType.Blue];
     } else if (event.message == "start2") {
         map = testMap2;
         originLocation = { x: -104, y: 54, z: -65 };
+        teams = [TeamType.Red, TeamType.Blue];
+    } else if (event.message == "start3") {
+        map = mapSteamPunk;
+        originLocation = { x: 0, y: 0, z: 0 };
+        teams = [TeamType.Red, TeamType.Blue, TeamType.Cyan, TeamType.Gray, TeamType.Green, TeamType.Pink, TeamType.White, TeamType.Yellow];
     } else if (event.message == "SPECIAL CODE") {
         await sleep(0);
         const container = event.sender.getComponent("inventory")!.container!
@@ -2138,7 +2400,7 @@ mc.world.beforeEvents.chatSend.subscribe(async event => {
     event.cancel = true;
     await sleep(0); // get out of read-only mode
 
-    const switchTeam = (t: TeamType) => t == TeamType.Blue ? TeamType.Red : TeamType.Blue;
+    const switchTeam = (index: number) => index == teams.length - 1 ? 0 : index + 1;
 
     if (!globalThis.test) setupGameTest(event.sender.location.x, event.sender.location.z, event.sender.dimension);
     while (!globalThis.test) {
@@ -2154,31 +2416,21 @@ mc.world.beforeEvents.chatSend.subscribe(async event => {
     });
     const realPlayers = players.filter(p => !(p instanceof SimulatedPlayer));
     const fakePlayers = players.filter(p => p instanceof SimulatedPlayer);
-    let team = TeamType.Blue;
-    let redCount = 0;
-    let blueCount = 0;
+    let teamPlayerCount: number[] = [];
+    for (let i = 0; i < teams.length; ++i) teamPlayerCount.push(0);
 
-    if (Math.random() >= 0.5) team = switchTeam(team);
-    for (const p of realPlayers) {
-        game.setPlayer(p, team);
-        if (team == TeamType.Blue) ++blueCount;
-        else ++redCount;
-        team = switchTeam(team);
+    let teamIndex = Math.ceil(Math.random() * (teams.length + 1));
+    for (const p of [...realPlayers, ...fakePlayers]) {
+        game.setPlayer(p, teams[teamIndex]);
+        ++teamPlayerCount[teamIndex];
+        teamIndex = switchTeam(teamIndex);
     }
-    for (const p of fakePlayers) {
-        game.setPlayer(p, team);
-        if (team == TeamType.Blue) ++blueCount;
-        else ++redCount;
-        team = switchTeam(team);
-    }
-    const maxPlayer = Math.max(2, Math.max(redCount, blueCount));
-    for (let i = maxPlayer - redCount - 1; i >= 0; --i) {
-        const p = globalThis.test.spawnSimulatedPlayer(event.sender.location as any, "a");
-        game.setPlayer(p as any, TeamType.Red);
-    }
-    for (let i = maxPlayer - blueCount - 1; i >= 0; --i) {
-        const p = globalThis.test.spawnSimulatedPlayer(event.sender.location as any, "a");
-        game.setPlayer(p as any, TeamType.Blue);
+    const maxPlayer = Math.max(1, ...teamPlayerCount);
+    for (teamIndex = 0; teamIndex < teams.length; ++teamIndex) {
+        for (let i = 0; i < maxPlayer - teamPlayerCount[teamIndex]; ++i) {
+            const p = globalThis.test.spawnSimulatedPlayer(event.sender.location as any, "a");
+            game.setPlayer(p as any, teams[teamIndex]);
+        }
     }
     game.start();
     globalThis.game = game;
