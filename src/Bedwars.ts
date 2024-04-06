@@ -119,18 +119,21 @@ const DEATH_SUBTITLE = "§eYou will respawn in §c%d §eseconds!";
 const SPECTATE_TITLE = "SPECTATING!"
 const SPECTATE_SUBTITLE = "Your bed has been destroyed";
 const RESPAWN_TITLE = "§aRESPAWNED!";
+const RESPAWN_MESSAGE = "§eYou have respawned!";
 const BED_DESTROYED_TITLE = "§cBED DESTROYED!";
+const VICTORY_TITLE = "§6§lVICTORY!";
 const BED_DESTROYED_SUBTITLE = "You will no longer respawn!";
-const TEAM_BED_DESTROYED_MESSAGE = "§lBED DESTRUCTION > §r%s%s Bed §7was destroyed by %s%s§7!";
-const TEAM_ELIMINATION_MESSAGE = "§lTEAM ELIMINATED > §r%s%s §chas been eliminated!"
+const TEAM_BED_DESTROYED_MESSAGE = "\n§lBED DESTRUCTION > §r%s%s Bed §7was destroyed by %s%s§7!\n";
+const TEAM_ELIMINATION_MESSAGE = "\n§lTEAM ELIMINATED > §r%s%s §chas been eliminated!\n"
 const FINAL_KILL_MESSAGE = "%(victimColor)s%(victim)s §7was killed by %(killerColor)s%(killer)s§7. §b§lFINAL KILL!";
 const BREAKING_BLOCK_INVALID_MESSAGE = "§cYou cannot break blocks that are not placed by players.";
 const KILL_NOTIFICATION = "KILL: %s%s";
 const FINAL_KILL_NOTIFICATION = "FINAL KILL: %s%s";
-const DISCONNECTED_MESSAGE = "%s%s §7has disconnected.";
-const RECONNECTION_MESSAGE = "%s%s §7has reconnected.";
+const DISCONNECTED_MESSAGE = "%s%s §7disconnected.";
+const RECONNECTION_MESSAGE = "%s%s §ereconnected.";
 const PLACING_BLOCK_ILLAGEL_MESSAGE = "§cYou can't place blocks here!";
-const GAME_ENDED_MESSAGE = "§lGAME ENDED > §r%s%s §7is the winner!"
+const GAME_ENDED_MESSAGE = "§lGAME ENDED > §r%s%s §7is the winner!";
+const OPEN_ENEMY_CHEST_MESSAGE = "§cYou can't open enemy's chest.";
 export const TEAM_PURCHASE_MESSAGE = "%s%s §ahas purchased §6%s";
 export const PURCHASE_MESSAGE = "§aYou purchased §6%s";
 
@@ -164,6 +167,10 @@ interface TeamInformation {
     shopLocation: mc.Vector3;
     teamShopLocation: mc.Vector3;
     teamGenerator: GeneratorInformation;
+    /**
+     * The first element should be the base,
+     * the second element should be the head
+     */
     bedLocation: [mc.Vector3, mc.Vector3];
     teamChestLocation: mc.Vector3;
     playerSpawn: mc.Vector3;
@@ -470,6 +477,44 @@ export const ARMOR_LEVELS: ArmorLevel[] = (() => {
     ];
 })();
 
+export const MAX_TRAP_COUNT = 3;
+
+export enum TrapType {
+    NegativeEffect,
+    Defensive,
+    Alarm,
+    MinerFatigue
+}
+
+export const TRAP_CONSTANT: Record<TrapType, {
+    name: string;
+    description: string;
+    iconPath: string;
+}> = Object.create(null);
+
+{
+    TRAP_CONSTANT[TrapType.NegativeEffect] = {
+        name: "It's a Trap!",
+        description: "§7Inflicts Blindness and Slowness for 8 seconds.",
+        iconPath: "textures/blocks/trip_wire_source.png"
+    };
+    TRAP_CONSTANT[TrapType.Defensive] = {
+        name: "Counter-Offensive Trap",
+        description: "§7Grants Speed II and Jump Boost II for 15 seconds to allied players near your base.",
+        iconPath: "textures/items/feather.png"
+    };
+    TRAP_CONSTANT[TrapType.Alarm] = {
+        name: "Alarm Trap",
+        description: "§7Reveals invisible players as well as their name and team.",
+        iconPath: "textures/blocks/redstone_torch_on.png"
+    };
+    TRAP_CONSTANT[TrapType.MinerFatigue] = {
+        name: "Miner Fatigue Trap",
+        description: "§7Inflict Mining Fatigue for 10 seconds.",
+        iconPath: "textures/items/gold_pickaxe.png"
+    };
+}
+
 const testMap: MapInformation = {
     size: { x: 21, y: 3, z: 5 },
     fallbackRespawnPoint: { x: 0, y: 50, z: 0 },
@@ -535,7 +580,7 @@ const testMap: MapInformation = {
     ]
 };
 const testMap2: MapInformation = {
-    size: { x: 21, y: 3, z: 5 },
+    size: { x: 208, y: 101, z: 130 },
     fallbackRespawnPoint: { x: 0 + 104, y: 149 - 54, z: 0 + 65 },
     voidY: -64,
     teamExtraEmeraldGenInterval: EMERLAD_GENERATOR_INTERVAL / 2,
@@ -544,8 +589,8 @@ const testMap2: MapInformation = {
             type: TeamType.Red,
             shopLocation: { x: 95 + 104, y: 80 - 54, z: 8 + 65 },
             teamShopLocation: { x: 95 + 104, y: 80 - 54, z: -8 + 65 },
-            islandArea: [{ x: 0, y: 0, z: 0 }, { x: 0, y: 0, z: 0 }], // TODO
-            protectedArea: [{ x: 0, y: 0, z: 0 }, { x: 0, y: 0, z: 0 }], // TODO
+            islandArea: [{ x: 70 + 104, y: 69 - 54, z: -17 + 65 }, { x: 106 + 104, y: 92 - 54, z: 16 + 65 }],
+            protectedArea: [{ x: 92 + 104, y: 79 - 54, z: -3 + 65 }, { x: 97 + 104, y: 84 - 54, z: 4 + 65 }],
             teamGenerator: {
                 type: GeneratorType.IronGold,
                 spawnLocation: { x: 98.5 + 104, y: 78.5 - 54, z: 0.5 + 65 },
@@ -553,7 +598,7 @@ const testMap2: MapInformation = {
                 defaultInterval: IRONGOLD_GENERATOR_INTERVAL,
                 defaultCapacity: 64
             },
-            bedLocation: [{ x: 80 + 104, y: 77 - 54, z: 0 + 65 }, { x: 79 + 104, y: 77 - 54, z: 0 + 65 }],
+            bedLocation: [{ x: 79 + 104, y: 77 - 54, z: 0 + 65 }, { x: 80 + 104, y: 77 - 54, z: 0 + 65 }],
             playerSpawn: { x: 94.5 + 104, y: 79 - 54, z: 0.5 + 65 },
             playerSpawnViewDirection: { x: -1, y: 0, z: 0 },
             teamChestLocation: { x: 91 + 104, y: 79 - 54, z: 4 + 65 },
@@ -561,8 +606,8 @@ const testMap2: MapInformation = {
             type: TeamType.Blue,
             shopLocation: { x: -95 + 104, y: 80 - 54, z: -8 + 65 },
             teamShopLocation: { x: -95 + 104, y: 80 - 54, z: 8 + 65 },
-            islandArea: [{ x: 0, y: 0, z: 0 }, { x: 0, y: 0, z: 0 }], // TODO
-            protectedArea: [{ x: 0, y: 0, z: 0 }, { x: 0, y: 0, z: 0 }], // TODO
+            islandArea: [{ x: -106 + 104, y: 69 - 54, z: -17 + 65 }, { x: -70 + 104, y: 92 - 54, z: 16 + 65 }],
+            protectedArea: [{ x: -96 + 104, y: 79 - 54, z: -3 + 65 }, { x: -91 + 104, y: 84 - 54, z: 4 + 65 }],
             teamGenerator: {
                 type: GeneratorType.IronGold,
                 spawnLocation: { x: -97.5 + 104, y: 78.5 - 54, z: 0.5 + 65 },
@@ -570,7 +615,7 @@ const testMap2: MapInformation = {
                 defaultInterval: IRONGOLD_GENERATOR_INTERVAL,
                 defaultCapacity: 64
             },
-            bedLocation: [{ x: -80 + 104, y: 77 - 54, z: 0 + 65 }, { x: -79 + 104, y: 77 - 54, z: 0 + 65 }],
+            bedLocation: [{ x: -79 + 104, y: 77 - 54, z: 0 + 65 }, { x: -80 + 104, y: 77 - 54, z: 0 + 65 }],
             playerSpawn: { x: -93.5 + 104, y: 79 - 54, z: 0.5 + 65 },
             playerSpawnViewDirection: { x: 1, y: 0, z: 0 },
             teamChestLocation: { x: -91 + 104, y: 79 - 54, z: 4 + 65 },
@@ -673,12 +718,13 @@ export interface PlayerGameInformation {
     fireBallCooldown: number;
     armorDisabled: boolean;
     armorToEnablingTicks: number;
+    teamAreaEntered?: TeamType;
 }
 
 export const MAX_IRON_FORGE_LEVEL = 4;
 export const MAX_PROTECTION_LEVEL = 4;
 export const MAX_HASTE_LEVEL = 2;
-const SHARPNESS_ENCH_LEVEL = 1;
+const SHARPNESS_ENCHANMENT_LEVEL = 1;
 export interface TeamGameInformation {
     type: TeamType;
     state: TeamState;
@@ -699,7 +745,8 @@ export interface TeamGameInformation {
      */
     hasteLevel: number;
     healPoolEnabled: boolean;
-    ironForgeLevel: 0 | 1 | 2 | 3 | 4;
+    ironForgeLevel: number;
+    traps: TrapType[];
 }
 
 export class BedWarsGame {
@@ -735,7 +782,8 @@ export class BedWarsGame {
                 protectionLevel: 0,
                 hasteLevel: 0,
                 healPoolEnabled: false,
-                ironForgeLevel: 0
+                ironForgeLevel: 0,
+                traps: []
             });
         }
         this.generators = [];
@@ -816,13 +864,31 @@ export class BedWarsGame {
         for (const gen of this.generators) {
             gen.remainingCooldown = gen.interval;
         }
-        for (const { teamChestLocation, bedLocation } of this.map.teams) {
+        for (const { teamChestLocation, bedLocation: mapBedLocation } of this.map.teams) {
             this.dimension.getBlock(v3.add(teamChestLocation, this.originPos))?.getComponent("inventory")?.container?.clearAll();
 
-            // const location = bedLocation[0];
-            // const p: mc.BlockPermutation = mc.BlockPermutation.resolve(MinecraftBlockTypes.Bed)
+            const bedLocation = mapBedLocation.map(v => v3.add(this.originPos, v));
+            const directionVector = v3.subtract(bedLocation[0], bedLocation[1]);
+            let direction: number;
+            if (directionVector.x == 1) {
+                direction = 3; // east
+            } else if (directionVector.x == -1) {
+                direction = 1; // west
+            } else if (directionVector.z == 1) {
+                direction = 2; // north
+            } else { // directionVector.z == -1
+                direction = 0; // south
+            }
+            const permutation = mc.BlockPermutation.resolve(MinecraftBlockTypes.Bed, {
+                direction
+            });
+            this.dimension.fillBlocks(bedLocation[0], bedLocation[0], permutation);
         }
 
+        const mapArea: Area = [this.originPos, v3.add(this.originPos, this.map.size)];
+        this.dimension.getEntities({ type: "minecraft:item" }).forEach(e => {
+            if (vectorWithinArea(e.location, mapArea)) e.kill();
+        });
         mc.world.scoreboard.setObjectiveAtDisplaySlot(mc.DisplaySlotId.Sidebar, {
             objective: this.scoreObj
         });
@@ -1000,6 +1066,55 @@ export class BedWarsGame {
         }
         return false;
     }
+
+    private activateTrap(playerInfo: PlayerGameInformation, teamInfo: TeamGameInformation) {
+        if (teamInfo.traps.length == 0) return;
+
+        const trapType = teamInfo.traps.shift()!;
+        const player = playerInfo.player;
+        let isDefensiveTrap = false;
+        let isAlarmTrap = false;
+        switch (trapType) {
+            case TrapType.NegativeEffect:
+                player.addEffect(MinecraftEffectTypes.Blindness, 160);
+                player.addEffect(MinecraftEffectTypes.Slowness, 160);
+                break;
+            case TrapType.Defensive:
+                isDefensiveTrap = true;
+                break;
+            case TrapType.Alarm:
+                if (playerInfo.armorDisabled) {
+                    playerInfo.armorDisabled = false;
+                    playerInfo.armorToEnablingTicks = 0;
+                    this.resetArmor(playerInfo);
+                }
+                isAlarmTrap = true;
+                break;
+            case TrapType.MinerFatigue:
+                player.addEffect(MinecraftEffectTypes.MiningFatigue, 200);
+                break;
+        }
+        const teamMapInfo = this.map.teams.filter(t => t.type == teamInfo.type)[0];
+        for (const teamPlayerInfo of this.players.values()) {
+            if (teamPlayerInfo.team != teamInfo.type) continue;
+            const islandArea = teamMapInfo.islandArea.map(v => v3.add(v, this.originPos)) as Area;
+            if (isDefensiveTrap && vectorWithinArea(teamPlayerInfo.player.location, islandArea)) {
+                teamPlayerInfo.player.addEffect(MinecraftEffectTypes.Speed, 300, { amplifier: 1 });
+                teamPlayerInfo.player.addEffect(MinecraftEffectTypes.JumpBoost, 300, { amplifier: 1 });
+            }
+
+            teamPlayerInfo.player.onScreenDisplay.setTitle("§cTRAP ACTIVATED!", {
+                subtitle: isAlarmTrap ? `${TEAM_CONSTANTS[playerInfo.team].colorPrefix}${player.name} §7has entered your base!` : undefined,
+                fadeInDuration: 10,
+                stayDuration: 50,
+                fadeOutDuration: 10
+            });
+            teamPlayerInfo.player.playSound("mob.wither.spawn");
+            player.sendMessage(`§e${TRAP_CONSTANT[trapType].name} §7has activated!`);
+        }
+        player.playSound("mob.wither.spawn");
+        player.sendMessage(`§7You have activated §e${TRAP_CONSTANT[trapType].name}!`);
+    }
     /**
      * Adjust team generator based on its iron forge level
      */
@@ -1040,7 +1155,7 @@ export class BedWarsGame {
         for (const playerInfo of this.players.values()) {
             if (playerInfo.team != teamType) continue;
             if (playerInfo.state != PlayerState.Alive) continue;
-            playerInfo.player.addEffect(MinecraftEffectTypes.Haste, 100000, {
+            playerInfo.player.addEffect(MinecraftEffectTypes.Haste, 1000000, {
                 amplifier: level - 1,
                 showParticles: false
             });
@@ -1091,7 +1206,7 @@ export class BedWarsGame {
                 playerInfo.player.sendMessage(message);
                 if (playerInfo.team != aliveTeam) continue;
 
-                playerInfo.player.onScreenDisplay.setTitle("§a§lVICTORY!", {
+                playerInfo.player.onScreenDisplay.setTitle(VICTORY_TITLE, {
                     fadeInDuration: 0,
                     stayDuration: 100,
                     fadeOutDuration: 20
@@ -1220,6 +1335,7 @@ export class BedWarsGame {
                         stayDuration: 10,
                         fadeOutDuration: 20,
                     });
+                    player.sendMessage(RESPAWN_MESSAGE);
                 } else if (remainingTicks % 20 == 0) {
                     player.onScreenDisplay.setTitle(DEATH_TITLE, {
                         subtitle: sprintf(DEATH_SUBTITLE, remainingTicks / 20),
@@ -1286,7 +1402,7 @@ export class BedWarsGame {
                                 if (!existedEnch) {
                                     enchantment.addEnchantment({
                                         type: MinecraftEnchantmentTypes.Sharpness,
-                                        level: SHARPNESS_ENCH_LEVEL
+                                        level: SHARPNESS_ENCHANMENT_LEVEL
                                     });
                                     equipment.setEquipment(slotName, item);
                                     return;
@@ -1324,6 +1440,33 @@ export class BedWarsGame {
                         playerInfo.armorDisabled = false;
                         this.resetArmor(playerInfo);
                     }
+                }
+
+                let playerWithinTeamArea = false;
+                for (const teamInfo of this.teams.values()) {
+                    const teamMapInfo = this.map.teams.filter(t => t.type == teamInfo.type)[0];
+                    const islandArea = teamMapInfo.islandArea.map(v => v3.add(v, this.originPos)) as Area;
+                    if (!vectorWithinArea(player.location, islandArea)) continue;
+                    playerWithinTeamArea = true;
+                    if (playerInfo.team == teamInfo.type) {
+                        playerInfo.teamAreaEntered = playerInfo.team;
+                        if (teamInfo.healPoolEnabled) {
+                            playerInfo.player.addEffect(MinecraftEffectTypes.Regeneration, 20, {
+                                amplifier: 0,
+                                showParticles: false
+                            });
+                        }
+                        continue;
+                    } else {
+                        if (playerInfo.teamAreaEntered == teamInfo.type) continue;
+                        // the player activates a team's trap
+                        playerInfo.teamAreaEntered = teamInfo.type;
+                        this.activateTrap(playerInfo, teamInfo);
+                    }
+
+                }
+                if (!playerWithinTeamArea) {
+                    playerInfo.teamAreaEntered = undefined;
                 }
             }
         }
@@ -1623,7 +1766,7 @@ export class BedWarsGame {
             for (const team of this.map.teams) {
                 if (v3.equals(event.block.location, v3.add(team.teamChestLocation, this.originPos))) {
                     if (playerInfo.team != team.type) {
-                        playerInfo.player.sendMessage("§cYou can't open enemy's chest.");
+                        playerInfo.player.sendMessage(OPEN_ENEMY_CHEST_MESSAGE);
                         event.cancel = true;
                     }
                     break;
@@ -1703,6 +1846,11 @@ export class BedWarsGame {
                 v3.add(destroyedTeam.bedLocation[1], this.originPos), "minecraft:air");
 
             if (this.teams.get(destroyedTeam.type)!.state == TeamState.Dead) return;
+            if (destroyerInfo.armorDisabled) {
+                destroyerInfo.armorDisabled = false;
+                destroyerInfo.armorToEnablingTicks = 0;
+                this.resetArmor(destroyerInfo);
+            }
 
             /* Inform all the players */
             for (const playerInfo of this.players.values()) {
@@ -1725,6 +1873,7 @@ export class BedWarsGame {
                     TEAM_CONSTANTS[destroyerInfo.team].colorPrefix, destroyerInfo.name));
             }
             this.teams.get(destroyedTeam.type)!.state = TeamState.BedDestoryed;
+            this.checkTeamPlayers();
             return;
         }
 
@@ -1740,7 +1889,7 @@ export class BedWarsGame {
     private isBlockLocationPlayerPlacable(location: mc.Vector3) {
         if (location.y < this.map.voidY + this.originPos.y) return false;
         for (const gen of this.generators) {
-            let protected_area: Area;
+            let protectedArea: Area;
             let original_protected_area: Area;
             switch (gen.type) {
                 case GeneratorType.IronGold:
@@ -1753,9 +1902,16 @@ export class BedWarsGame {
                     original_protected_area = PROTECTED_AREA_EMERALD;
                     break;
             }
-            protected_area = original_protected_area.map(
+            protectedArea = original_protected_area.map(
                 vec => vectorAdd(vec, gen.location, this.originPos)) as Area;
-            if (vectorWithinArea(location, protected_area)) {
+            if (vectorWithinArea(location, protectedArea)) {
+                return false;
+            }
+        }
+        for (const teamMapInfo of this.map.teams) {
+            if (!teamMapInfo.protectedArea) continue;
+            const protectedArea = teamMapInfo.protectedArea.map(v => v3.add(v, this.originPos)) as Area;
+            if (vectorWithinArea(location, protectedArea)) {
                 return false;
             }
         }

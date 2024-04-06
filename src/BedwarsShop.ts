@@ -28,7 +28,10 @@ import {
     MAX_IRON_FORGE_LEVEL,
     TEAM_PURCHASE_MESSAGE,
     MAX_PROTECTION_LEVEL,
-    MAX_HASTE_LEVEL
+    MAX_HASTE_LEVEL,
+    TRAP_CONSTANT,
+    TrapType,
+    MAX_TRAP_COUNT
 } from "./Bedwars.js";
 import { ActionFormData } from "@minecraft/server-ui";
 import { containerIterator, containerSlotIterator, itemEqual, stackFirstContainerAdd } from './utility.js'
@@ -55,7 +58,8 @@ enum ActionType {
     BuySharpness,
     UpgradeProtection,
     UpgradeIronForge,
-    BuyHealPool
+    BuyHealPool,
+    BuyTrap
 }
 
 interface BuyNormalItemAction {
@@ -101,6 +105,11 @@ interface BuyHealPoolAction {
     type: ActionType.BuyHealPool;
     cost: TokenValue;
 }
+interface BuyTrapAction {
+    type: ActionType.BuyTrap;
+    trapType: TrapType;
+    cost: TokenValue;
+}
 
 type Action = BuyNormalItemAction |
     BuySwordAction |
@@ -112,7 +121,8 @@ type Action = BuyNormalItemAction |
     UpgradeProtectionAction |
     UpgradeIronForgeAction |
     UpgradeHasteAction |
-    BuyHealPoolAction;
+    BuyHealPoolAction |
+    BuyTrapAction;
 
 type isUnion<T, K = T> = T extends any ? (Exclude<K, T> extends T ? false : true) : false;
 
@@ -573,6 +583,66 @@ const HEAL_POOL_BODY = "§7Create a regeneration field around your base!";
 
 const TIER_STRING = ['O', 'I', 'II', 'III', 'IV', 'V'];
 
+function calculateTrapCost(teamInfo: TeamGameInformation): TokenValue {
+    return { ironAmount: 0, goldAmount: 0, diamondAmount: teamInfo.traps.length + 1, emeraldAmount: 0 };
+}
+
+function isTrapBought(trap: TrapType, teamInfo: TeamGameInformation) {
+    for (const boughtTrap of teamInfo.traps) {
+        if (boughtTrap == trap) return true;
+    }
+    return false;
+}
+
+function generateTeamFirstGetDisplay(text: string, available: (teamInfo: TeamGameInformation) => boolean) {
+    return (_: any, __: any, teamInfo: TeamGameInformation) => {
+        let color = "§h";
+        if (available(teamInfo)) {
+            color = "";
+        }
+        return `${color}${text}`;
+    };
+}
+function generateTeamSecondGetDisplay(name: string, getCost: (teamInfo: TeamGameInformation) => TokenValue, available: (teamInfo: TeamGameInformation) => boolean) {
+    return (_: any, currentTokens: TokenValue, teamInfo: TeamGameInformation) => {
+        if (!available(teamInfo)) {
+            return `§h${name}`;
+        }
+        let color: string;
+        const cost = getCost(teamInfo);
+        if (isTokenSatisfying(currentTokens, cost)) {
+            color = "§a§l";
+        } else {
+            color = "§4";
+        }
+        return `${color}${name}\n${tokenToString(cost)}`;
+    };
+}
+
+function generateTrapMenu(trapType: TrapType): Menu {
+    return {
+        type: "entry",
+        getDisplay: generateTeamFirstGetDisplay(TRAP_CONSTANT[trapType].name,
+            teamInfo => !isTrapBought(trapType, teamInfo)),
+        icon: TRAP_CONSTANT[trapType].iconPath,
+        title: TRAP_CONSTANT[trapType].name,
+        body: TRAP_CONSTANT[trapType].description,
+        subMenus: [
+            {
+                type: "action",
+                getDisplay: generateTeamSecondGetDisplay(TRAP_CONSTANT[trapType].name,
+                    calculateTrapCost, teamInfo => !isTrapBought(trapType, teamInfo) && teamInfo.traps.length != MAX_TRAP_COUNT),
+                icon: TRAP_CONSTANT[trapType].iconPath,
+                getAction: (_, __, teamInfo) => ({
+                    type: ActionType.BuyTrap,
+                    cost: calculateTrapCost(teamInfo),
+                    trapType: trapType
+                })
+            }
+        ]
+    };
+}
+
 let teamShopData: Menu | null = null;
 const generateTeamShopData: () => Menu = () => ({
     type: "entry",
@@ -583,65 +653,45 @@ const generateTeamShopData: () => Menu = () => ({
     subMenus: [
         {
             type: "entry",
-            getDisplay(_, __, teamInfo) {
-                if (teamInfo.ironForgeLevel == MAX_IRON_FORGE_LEVEL) {
-                    return "§hIron Forge";
-                } else {
-                    return "Iron Forge";
-                }
-            },
-            icon: "textures/blocks/furnace_front_off.png",
-            title: "Upgrade Iron Forge",
-            body: IRON_FORGE_BODY,
+            display: "Traps",
+            icon: TRAP_CONSTANT[TrapType.NegativeEffect].iconPath,
+            getBody: (_, __, teamInfo) => `Buy some traps for your team!${teamInfo.traps.length == MAX_TRAP_COUNT ?
+                "\nYour team's traps have reached the maximum!" : ""}`,
+            title: "Traps Shop",
             subMenus: [
+                generateTrapMenu(TrapType.NegativeEffect),
+                generateTrapMenu(TrapType.Defensive),
+                generateTrapMenu(TrapType.Alarm),
+                generateTrapMenu(TrapType.MinerFatigue),
                 {
-                    type: "action",
-                    getDisplay(_, currentTokens, teamInfo) {
-                        if (teamInfo.ironForgeLevel >= MAX_IRON_FORGE_LEVEL) {
-                            return `§hIron Forge ${TIER_STRING[MAX_IRON_FORGE_LEVEL]}`;
+                    type: "entry",
+                    display: "Your Traps",
+                    icon: "",
+                    getBody(_, __, teamInfo) {
+                        let result = "§7Your team currently has:\n\n";
+                        const words = ["first", "second", "third"];
+                        for (let index = 0; index < MAX_TRAP_COUNT; ++index) {
+                            const fixedIndex = index + 1;
+                            const trapName = TRAP_CONSTANT[teamInfo.traps[index]]?.name ?? "§cNo Trap";
+                            result += `§7Trap #${fixedIndex}: §a${trapName}§7, activates when the ${words[index]} enemy walks into your base\n`;
                         }
-                        const cost = IRON_FORGE_TO_NEXT_LEVEL_COSTS[teamInfo.ironForgeLevel];
-                        let color: string;
-                        if (isTokenSatisfying(currentTokens, cost)) {
-                            color = "§a§l";
-                        } else {
-                            color = "§4";
-                        }
-                        return `${color}Iron Forge ${TIER_STRING[teamInfo.ironForgeLevel + 1]}\n${tokenToString(cost)}`;
+                        return result;
                     },
-                    icon: "textures/blocks/furnace_front_off.png",
-                    action: {
-                        type: ActionType.UpgradeIronForge
-                    }
+                    title: "Your Traps",
+                    subMenus: []
                 }
             ]
         }, {
             type: "entry",
-            getDisplay(_, __, teamInfo) {
-                if (teamInfo.hasSharpness) {
-                    return "§hSharpened Sword";
-                } else {
-                    return "Sharpened Sword";
-                }
-            },
+            getDisplay: generateTeamFirstGetDisplay("Sharpened Sword", teamInfo => !teamInfo.hasSharpness),
             icon: "textures/items/diamond_sword.png",
             title: "Buy Sharpened Sword",
             body: SHARPENED_SWORD_BODY,
             subMenus: [
                 {
                     type: "action",
-                    getDisplay(_, currentTokens, teamInfo) {
-                        if (teamInfo.hasSharpness) {
-                            return `§hSharpened Sword`;
-                        }
-                        let color: string;
-                        if (isTokenSatisfying(currentTokens, SHARPENED_SWORD_COST)) {
-                            color = "§a§l";
-                        } else {
-                            color = "§4";
-                        }
-                        return `${color}Sharpened Sword\n${tokenToString(SHARPENED_SWORD_COST)}`;
-                    },
+                    getDisplay: generateTeamSecondGetDisplay("Sharpened Sword", () => SHARPENED_SWORD_COST,
+                        teamInfo => !teamInfo.hasSharpness),
                     icon: "textures/items/diamond_sword.png",
                     action: {
                         type: ActionType.BuySharpness,
@@ -651,32 +701,16 @@ const generateTeamShopData: () => Menu = () => ({
             ]
         }, {
             type: "entry",
-            getDisplay(_, __, teamInfo) {
-                if (teamInfo.protectionLevel == MAX_PROTECTION_LEVEL) {
-                    return "§hReinforced Armor";
-                } else {
-                    return "Reinforced Armor";
-                }
-            },
+            getDisplay: generateTeamFirstGetDisplay("Reinforced Armor", teamInfo => teamInfo.protectionLevel != MAX_PROTECTION_LEVEL),
             icon: "textures/items/diamond_boots.png",
             title: "Reinforced Armor",
             body: REINFORCED_ARMOR_BODY,
             subMenus: [
                 {
                     type: "action",
-                    getDisplay(_, currentTokens, teamInfo) {
-                        if (teamInfo.protectionLevel == MAX_PROTECTION_LEVEL) {
-                            return `§hReinforced Armor ${TIER_STRING[MAX_PROTECTION_LEVEL]}`;
-                        }
-                        let color: string;
-                        const cost = PROTECTION_TO_NEXT_LEVEL_COSTS[teamInfo.protectionLevel];
-                        if (isTokenSatisfying(currentTokens, cost)) {
-                            color = "§a§l";
-                        } else {
-                            color = "§4";
-                        }
-                        return `${color}Reinforced Armor ${TIER_STRING[teamInfo.protectionLevel + 1]}\n${tokenToString(cost)}`;
-                    },
+                    getDisplay: generateTeamSecondGetDisplay("Reinforced Armor",
+                        teamInfo => PROTECTION_TO_NEXT_LEVEL_COSTS[teamInfo.protectionLevel],
+                        teamInfo => teamInfo.protectionLevel != MAX_PROTECTION_LEVEL),
                     icon: "textures/items/diamond_boots.png",
                     action: {
                         type: ActionType.UpgradeProtection
@@ -685,32 +719,34 @@ const generateTeamShopData: () => Menu = () => ({
             ]
         }, {
             type: "entry",
-            getDisplay(_, __, teamInfo) {
-                if (teamInfo.hasteLevel == MAX_HASTE_LEVEL) {
-                    return "§hManiac Miner";
-                } else {
-                    return "Maniac Miner";
+            getDisplay: generateTeamFirstGetDisplay("Iron Forge", teamInfo => teamInfo.ironForgeLevel != MAX_IRON_FORGE_LEVEL),
+            icon: "textures/blocks/furnace_front_off.png",
+            title: "Upgrade Iron Forge",
+            body: IRON_FORGE_BODY,
+            subMenus: [
+                {
+                    type: "action",
+                    getDisplay: generateTeamSecondGetDisplay("Iron Forge",
+                        teamInfo => IRON_FORGE_TO_NEXT_LEVEL_COSTS[teamInfo.ironForgeLevel],
+                        teamInfo => teamInfo.ironForgeLevel != MAX_IRON_FORGE_LEVEL),
+                    icon: "textures/blocks/furnace_front_off.png",
+                    action: {
+                        type: ActionType.UpgradeIronForge
+                    }
                 }
-            },
+            ]
+        }, {
+            type: "entry",
+            getDisplay: generateTeamFirstGetDisplay("Maniac Miner", teamInfo => teamInfo.hasteLevel != MAX_HASTE_LEVEL),
             icon: "textures/items/gold_pickaxe.png",
             title: "Maniac Miner",
             body: MANIAC_MINER_BODY,
             subMenus: [
                 {
                     type: "action",
-                    getDisplay(_, currentTokens, teamInfo) {
-                        if (teamInfo.hasteLevel == MAX_HASTE_LEVEL) {
-                            return `§hManiac Miner ${TIER_STRING[MAX_HASTE_LEVEL]}`;
-                        }
-                        let color: string;
-                        const cost = HASTE_TO_NEXT_LEVEL_COSTS[teamInfo.hasteLevel];
-                        if (isTokenSatisfying(currentTokens, cost)) {
-                            color = "§a§l";
-                        } else {
-                            color = "§4";
-                        }
-                        return `${color}Maniac Miner ${TIER_STRING[teamInfo.hasteLevel + 1]}\n${tokenToString(cost)}`;
-                    },
+                    getDisplay: generateTeamSecondGetDisplay("Maniac Miner",
+                        teamInfo => HASTE_TO_NEXT_LEVEL_COSTS[teamInfo.hasteLevel],
+                        teamInfo => teamInfo.hasteLevel != MAX_HASTE_LEVEL),
                     icon: "textures/items/gold_pickaxe.png",
                     action: {
                         type: ActionType.UpgradeHaste
@@ -719,32 +755,15 @@ const generateTeamShopData: () => Menu = () => ({
             ]
         }, {
             type: "entry",
-            getDisplay(_, __, teamInfo) {
-                if (teamInfo.healPoolEnabled) {
-                    return "§hHeal Pool";
-                } else {
-                    return "Heal Pool";
-                }
-            },
+            getDisplay: generateTeamFirstGetDisplay("Heal Pool", teamInfo => !teamInfo.healPoolEnabled),
             icon: "textures/blocks/beacon.png",
             title: "Heal Pool",
             body: HEAL_POOL_BODY,
             subMenus: [
                 {
                     type: "action",
-                    getDisplay(_, currentTokens, teamInfo) {
-                        if (teamInfo.healPoolEnabled) {
-                            return `§hHeal Pool`;
-                        }
-                        let color: string;
-                        const cost = HEAL_POOL_COST;
-                        if (isTokenSatisfying(currentTokens, cost)) {
-                            color = "§a§l";
-                        } else {
-                            color = "§4";
-                        }
-                        return `${color}Heal Pool ${TIER_STRING[teamInfo.hasteLevel + 1]}\n${tokenToString(cost)}`;
-                    },
+                    getDisplay: generateTeamSecondGetDisplay("Heal Pool", () => HEAL_POOL_COST,
+                        teamInfo => !teamInfo.healPoolEnabled),
                     icon: "textures/blocks/beacon.png",
                     action: {
                         type: ActionType.BuyHealPool,
@@ -1161,10 +1180,44 @@ function performAction(action: Action, playerInfo: PlayerGameInformation, teamIn
         consumeToken(container, cost);
         teamInfo.hasSharpness = true;
         const t = TEAM_CONSTANTS[teamInfo.type];
-        game.teamBroadcast(teamInfo.type, TEAM_PURCHASE_MESSAGE, t.colorPrefix, player.name, `Sharpened Sword`);
+        game.teamBroadcast(teamInfo.type, TEAM_PURCHASE_MESSAGE, t.colorPrefix, player.name, "Sharpened Sword");
         result = true;
     } else if (action.type == ActionType.BuyHealPool) {
-        ;
+        if (teamInfo.healPoolEnabled) {
+            result = false;
+            break execute;
+        }
+        const cost = HEAL_POOL_COST;
+        if (!isTokenSatisfying(tokens, cost)) {
+            // Failed to buy, insufficient tokens
+            result = false;
+            break execute;
+        }
+        consumeToken(container, cost);
+        teamInfo.healPoolEnabled = true;
+        const t = TEAM_CONSTANTS[teamInfo.type];
+        game.teamBroadcast(teamInfo.type, TEAM_PURCHASE_MESSAGE, t.colorPrefix, player.name, "Heal Pool");
+        result = true;
+    } else if (action.type == ActionType.BuyTrap) {
+        if (isTrapBought(action.trapType, teamInfo)) {
+            result = false;
+            break execute;
+        }
+        if (teamInfo.traps.length == MAX_TRAP_COUNT) {
+            result = false;
+            break execute;
+        }
+        const cost = action.cost;
+        if (!isTokenSatisfying(tokens, cost)) {
+            // Failed to buy, insufficient tokens
+            result = false;
+            break execute;
+        }
+        consumeToken(container, cost);
+        teamInfo.traps.push(action.trapType);
+        const t = TEAM_CONSTANTS[teamInfo.type];
+        game.teamBroadcast(teamInfo.type, TEAM_PURCHASE_MESSAGE, t.colorPrefix, player.name, TRAP_CONSTANT[action.trapType].name);
+        result = true;
     }
 
     if (result) {
