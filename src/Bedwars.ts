@@ -1,6 +1,6 @@
 import { Vector3Utils as v3 } from '@minecraft/math';
 import * as mc from '@minecraft/server';
-import { itemEqual, Area, sleep, vectorAdd, vectorWithinArea, containerIterator, capitalize, getPlayerByName, consumeMainHandItem, containerSlotIterator, makeItem } from './utility.js';
+import { itemEqual, Area, sleep, vectorAdd, vectorWithinArea, containerIterator, capitalize, getPlayerByName, consumeMainHandItem, makeItem, shuffle, randomInt, setGameMode } from './utility.js';
 import { setupGameTest } from './GameTest.js';
 import { MinecraftBlockTypes, MinecraftEffectTypes, MinecraftEnchantmentTypes, MinecraftEntityTypes, MinecraftItemTypes } from '@minecraft/vanilla-data';
 
@@ -123,8 +123,8 @@ const RESPAWN_MESSAGE = "§eYou have respawned!";
 const BED_DESTROYED_TITLE = "§cBED DESTROYED!";
 const VICTORY_TITLE = "§6§lVICTORY!";
 const BED_DESTROYED_SUBTITLE = "You will no longer respawn!";
-const TEAM_BED_DESTROYED_MESSAGE = "\n§lBED DESTRUCTION > §r%s%s Bed §7was destroyed by %s%s§7!\n";
-const TEAM_ELIMINATION_MESSAGE = "\n§lTEAM ELIMINATED > §r%s%s §chas been eliminated!\n"
+const TEAM_BED_DESTROYED_MESSAGE = "\n§lBED DESTRUCTION > §r%s%s Bed §7was destroyed by %s%s§7!\n ";
+const TEAM_ELIMINATION_MESSAGE = "\n§lTEAM ELIMINATED > §r%s%s §chas been eliminated!\n ";
 const FINAL_KILL_MESSAGE = "%(victimColor)s%(victim)s §7was killed by %(killerColor)s%(killer)s§7. §b§lFINAL KILL!";
 const BREAKING_BLOCK_INVALID_MESSAGE = "§cYou cannot break blocks that are not placed by players.";
 const KILL_NOTIFICATION = "KILL: %s%s";
@@ -725,8 +725,8 @@ const mapSteamPunk: MapInformation = {
             protectedArea: [{ x: 95, y: 73, z: 53 }, { x: 102, y: 77, z: 60 }],
             teamGenerator: {
                 type: GeneratorType.IronGold,
-                spawnLocation: { x: 98.5, y: 72.5, z: 64.5 },
-                location: { x: 97, y: 72, z: 63 },
+                spawnLocation: { x: 98.5, y: 72.5, z: 62.5 },
+                location: { x: 97, y: 72, z: 61 },
                 defaultInterval: IRONGOLD_GENERATOR_INTERVAL,
                 defaultCapacity: 64
             },
@@ -841,55 +841,55 @@ const mapSteamPunk: MapInformation = {
     extraGenerators: [
         {
             type: GeneratorType.Diamond,
-            spawnLocation: { x: 85.5, y: 73, z: 0.5 },
+            spawnLocation: { x: 85.5, y: 74, z: 0.5 },
             location: { x: 85, y: 73, z: 0 },
             defaultInterval: DIAMOND_GENERATOR_INTERVAL,
             defaultCapacity: 32
         }, {
             type: GeneratorType.Diamond,
-            spawnLocation: { x: 0.5, y: 73, z: 85.5 },
+            spawnLocation: { x: 0.5, y: 74, z: 85.5 },
             location: { x: 0, y: 73, z: 85 },
             defaultInterval: DIAMOND_GENERATOR_INTERVAL,
             defaultCapacity: 32
         }, {
             type: GeneratorType.Diamond,
-            spawnLocation: { x: -84.5, y: 73, z: 0.5 },
+            spawnLocation: { x: -84.5, y: 74, z: 0.5 },
             location: { x: -85, y: 73, z: 0 },
             defaultInterval: DIAMOND_GENERATOR_INTERVAL,
             defaultCapacity: 32
         }, {
             type: GeneratorType.Diamond,
-            spawnLocation: { x: 0, y: 73, z: -84.5 },
+            spawnLocation: { x: 0.5, y: 74, z: -84.5 },
             location: { x: 0, y: 73, z: -85 },
             defaultInterval: DIAMOND_GENERATOR_INTERVAL,
             defaultCapacity: 32
         }, {
             type: GeneratorType.Emerald,
-            spawnLocation: { x: 24.5, y: 73, z: 24.5 },
+            spawnLocation: { x: 24.5, y: 74, z: 24.5 },
             location: { x: 24, y: 73, z: 24 },
-            defaultInterval: DIAMOND_GENERATOR_INTERVAL,
+            defaultInterval: EMERLAD_GENERATOR_INTERVAL,
             defaultCapacity: 32
         }, {
             type: GeneratorType.Emerald,
-            spawnLocation: { x: -23.5, y: 73, z: 24.5 },
+            spawnLocation: { x: -23.5, y: 74, z: 24.5 },
             location: { x: -24, y: 73, z: 24 },
-            defaultInterval: DIAMOND_GENERATOR_INTERVAL,
+            defaultInterval: EMERLAD_GENERATOR_INTERVAL,
             defaultCapacity: 32
         }, {
             type: GeneratorType.Emerald,
-            spawnLocation: { x: 24.5, y: 73, z: -23.5 },
+            spawnLocation: { x: 24.5, y: 74, z: -23.5 },
             location: { x: 24, y: 73, z: -24 },
-            defaultInterval: DIAMOND_GENERATOR_INTERVAL,
+            defaultInterval: EMERLAD_GENERATOR_INTERVAL,
             defaultCapacity: 32
         }, {
             type: GeneratorType.Emerald,
-            spawnLocation: { x: 2 - 3.5, y: 73, z: -23.5 },
+            spawnLocation: { x: -23.5, y: 74, z: -23.5 },
             location: { x: -24, y: 73, z: -24 },
-            defaultInterval: DIAMOND_GENERATOR_INTERVAL,
+            defaultInterval: EMERLAD_GENERATOR_INTERVAL,
             defaultCapacity: 32
         }
     ]
-};;
+};
 
 export enum PlayerState {
     Alive/* = "alive"*/,
@@ -1060,7 +1060,7 @@ export class BedWarsGame {
     }
 
     setPlayer(player: mc.Player, teamType: TeamType) {
-        if (!this.map.teams.find(t => t.type == teamType)) throw new Error("No such team");
+        if (this.map.teams.find(t => t.type == teamType) == undefined) throw new Error("No such team");
 
         const playerInfo = this.players.get(player.name);
         if (playerInfo) {
@@ -1109,21 +1109,21 @@ export class BedWarsGame {
             this.dimension.getBlock(v3.add(teamChestLocation, this.originPos))?.getComponent("inventory")?.container?.clearAll();
 
             const bedLocation = mapBedLocation.map(v => v3.add(this.originPos, v));
-            const directionVector = v3.subtract(bedLocation[0], bedLocation[1]);
+            const directionVector = v3.subtract(bedLocation[1], bedLocation[0]);
             let direction: number;
             if (directionVector.x == 1) {
                 direction = 3; // east
             } else if (directionVector.x == -1) {
                 direction = 1; // west
             } else if (directionVector.z == 1) {
-                direction = 2; // north
-            } else { // directionVector.z == -1
                 direction = 0; // south
+            } else { // directionVector.z == -1
+                direction = 2; // north
             }
             const permutation = mc.BlockPermutation.resolve(MinecraftBlockTypes.Bed, {
                 direction
             });
-            this.dimension.fillBlocks(bedLocation[0], bedLocation[0], permutation);
+            this.dimension.fillBlocks(bedLocation[1], bedLocation[1], permutation);
         }
 
         const mapArea = this.map.size.map(v => v3.add(this.originPos, v)) as Area;
@@ -1181,7 +1181,7 @@ export class BedWarsGame {
         const spawnPoint = v3.add(teamInfo.playerSpawn, this.originPos);
         const player = playerInfo.player;
         player.teleport(spawnPoint, { facingLocation: v3.add(spawnPoint, teamInfo.playerSpawnViewDirection) });
-        player.runCommand("gamemode survival");
+        setGameMode(player, mc.GameMode.survival);
         player.getComponent("minecraft:health")!.resetToMaxValue();
         player.runCommand("effect @s clear");
         player.addEffect(MinecraftEffectTypes.Saturation, 1000000, {
@@ -1347,11 +1347,11 @@ export class BedWarsGame {
             teamPlayerInfo.player.onScreenDisplay.setTitle("§cTRAP ACTIVATED!", {
                 subtitle: isAlarmTrap ? `${TEAM_CONSTANTS[playerInfo.team].colorPrefix}${player.name} §7has entered your base!` : undefined,
                 fadeInDuration: 10,
-                stayDuration: 50,
-                fadeOutDuration: 10
+                stayDuration: 60,
+                fadeOutDuration: 20
             });
             teamPlayerInfo.player.playSound("mob.wither.spawn");
-            player.sendMessage(`§e${TRAP_CONSTANT[trapType].name} §7has activated!`);
+            teamPlayerInfo.player.sendMessage(`§7${TRAP_CONSTANT[trapType].name} §chas been activated!`);
         }
         player.playSound("mob.wither.spawn");
         player.sendMessage(`§7You have activated §e${TRAP_CONSTANT[trapType].name}!`);
@@ -1421,6 +1421,9 @@ export class BedWarsGame {
                 const { name, colorPrefix } = TEAM_CONSTANTS[teamType];
                 this.broadcast(TEAM_ELIMINATION_MESSAGE,
                     colorPrefix, capitalize(name));
+                const teamMapInfo = this.map.teams.find(t=>t.type==teamType)!;
+                const bedLocation = teamMapInfo.bedLocation.map(v => v3.add(v, this.originPos));
+                this.dimension.fillBlocks(bedLocation[0], bedLocation[1], MinecraftBlockTypes.Air);
             }
         }
 
@@ -1485,7 +1488,7 @@ export class BedWarsGame {
                 if (!player) continue;
                 // the player comes online
                 playerInfo.player = player;
-                player.runCommand("gamemode spectator");
+                setGameMode(player, mc.GameMode.spectator);
                 player.teleport(playerInfo.deathLocation, { rotation: playerInfo.deathRotaion });
                 playerInfo.deathTime = mc.system.currentTick;
 
@@ -1526,7 +1529,7 @@ export class BedWarsGame {
             }
 
             if (playerInfo.player.dimension != this.dimension) {
-                player.runCommand("gamemode spectator");
+                setGameMode(player, mc.GameMode.spectator);
                 this.onPlayerDieOrOffline(playerInfo, playerInfo.lastHurtBy);
                 const team = this.map.teams.find(t => t.type == playerInfo.team)!;
                 playerInfo.player.teleport(v3.add(team.playerSpawn, this.originPos), {
@@ -1551,7 +1554,7 @@ export class BedWarsGame {
 
             if (playerInfo.state == PlayerState.dead &&
                 v3.distance(v3.add(this.originPos, this.map.fallbackRespawnPoint), player.location) <= 1) {
-                player.runCommand("gamemode spectator");
+                setGameMode(player, mc.GameMode.spectator);
                 player.teleport(playerInfo.deathLocation, { rotation: playerInfo.deathRotaion });
                 const isTeamBedAlive = this.teams.get(playerInfo.team)!.state == TeamState.BedAlive;
                 player.onScreenDisplay.setTitle(DEATH_TITLE, {
@@ -1587,7 +1590,7 @@ export class BedWarsGame {
                 }
             } else if (playerInfo.state == PlayerState.Alive) {
                 if (player.location.y <= this.originPos.y + this.map.voidY) { // The player falls to the void
-                    player.runCommand("gamemode spectator");
+                    setGameMode(player, mc.GameMode.spectator);
                     this.onPlayerDieOrOffline(playerInfo, playerInfo.lastHurtBy);
 
                     const isTeamBedAlive = this.teams.get(playerInfo.team)!.state == TeamState.BedAlive;
@@ -1605,7 +1608,7 @@ export class BedWarsGame {
                     player.dimension.spawnEntity(MinecraftEntityTypes.LightningBolt, player.location);
                     continue;
                 }
-                player.onScreenDisplay.setActionBar(String(TEAM_CONSTANTS[playerInfo.teamAreaEntered!]?.name));
+                // player.onScreenDisplay.setActionBar(String(TEAM_CONSTANTS[playerInfo.teamAreaEntered!]?.name));
                 const equipment = player.getComponent("equippable")!;
                 [mc.EquipmentSlot.Head, mc.EquipmentSlot.Chest, mc.EquipmentSlot.Legs, mc.EquipmentSlot.Feet, mc.EquipmentSlot.Mainhand].forEach(slotName => {
                     const item = equipment.getEquipment(slotName);
@@ -1701,8 +1704,10 @@ export class BedWarsGame {
                         continue;
                     } else {
                         if (playerInfo.teamAreaEntered == teamInfo.type) continue;
-                        // the player activates a team's trap
                         playerInfo.teamAreaEntered = teamInfo.type;
+                        if(teamInfo.state == TeamState.Dead) continue;
+
+                        // the player activates a team's trap
                         this.activateTrap(playerInfo, teamInfo);
                     }
 
@@ -2077,6 +2082,7 @@ export class BedWarsGame {
             if (!destroyedTeam) {
                 break TeamBedDestroyed;
             }
+            if (this.teams.get(destroyedTeam.type)!.state != TeamState.BedAlive) break TeamBedDestroyed;
             event.cancel = true;
 
             if (!destroyerInfo) return;
@@ -2087,7 +2093,6 @@ export class BedWarsGame {
             event.dimension.fillBlocks(v3.add(destroyedTeam.bedLocation[0], this.originPos),
                 v3.add(destroyedTeam.bedLocation[1], this.originPos), "minecraft:air");
 
-            if (this.teams.get(destroyedTeam.type)!.state == TeamState.Dead) return;
             if (destroyerInfo.armorDisabled) {
                 destroyerInfo.armorDisabled = false;
                 destroyerInfo.armorToEnablingTicks = 0;
@@ -2393,9 +2398,17 @@ mc.world.beforeEvents.chatSend.subscribe(async event => {
         container.addItem(makeItem(DIAMOND_ITEM_STACK, 64));
         container.addItem(makeItem(EMERALD_ITEM_STACK, 64));
         return;
+    } else if(event.message == "DEBUG STICK") {
+        await sleep(0);
+        const container = event.sender.getComponent("inventory")!.container!
+        const i = new mc.ItemStack(MinecraftItemTypes.Stick);
+        i.nameTag = "Debug Stick";
+        container.addItem(i);
+        return;
     } else {
         return;
     }
+    shuffle(teams);
 
     event.cancel = true;
     await sleep(0); // get out of read-only mode
@@ -2419,7 +2432,7 @@ mc.world.beforeEvents.chatSend.subscribe(async event => {
     let teamPlayerCount: number[] = [];
     for (let i = 0; i < teams.length; ++i) teamPlayerCount.push(0);
 
-    let teamIndex = Math.ceil(Math.random() * (teams.length + 1));
+    let teamIndex = randomInt(0, teams.length - 1);
     for (const p of [...realPlayers, ...fakePlayers]) {
         game.setPlayer(p, teams[teamIndex]);
         ++teamPlayerCount[teamIndex];

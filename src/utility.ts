@@ -34,10 +34,16 @@ export function realTypeof(value: any) {
 }
 
 export function getGameMode(player: mc.Player): mc.GameMode {
+    if(player.getGameMode) return player.getGameMode();
     for (let gameMode of Object.values(mc.GameMode)) {
         if (player.matches({ gameMode: gameMode })) return gameMode;
     }
     throw new Error("Player's gamemode doesn't match");
+}
+
+export function setGameMode(player: mc.Player, gameMode: mc.GameMode) {
+    if(player.setGameMode) return player.setGameMode(gameMode);
+    player.runCommand(`gamemode ${gameMode}`);
 }
 
 export function capitalize(str: string) {
@@ -222,4 +228,20 @@ export function sleep(ticks: number): Promise<void> {
     if (ticks)
         return new Promise(resolve => mc.system.runTimeout(resolve, ticks));
     return new Promise(resolve => mc.system.run(resolve));
+}
+
+/**
+ * @returns An integer of range [a, b]
+ */
+export function randomInt(a: number, b: number) {
+    return Math.floor(Math.random() * (b-a+1)) + a;
+}
+
+export function shuffle(array: any[]) {
+    for(let i = array.length - 1; i >= 1; --i) {
+        let swapIndex = randomInt(0, i);
+        let temp = array[swapIndex];
+        array[swapIndex] = array[i];
+        array[i] = temp;
+    }
 }

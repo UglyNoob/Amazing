@@ -1164,7 +1164,7 @@ function performAction(action: Action, playerInfo: PlayerGameInformation, teamIn
         ++teamInfo.hasteLevel;
         game.applyTeamHasteLevel(teamInfo.type);
         const t = TEAM_CONSTANTS[teamInfo.type];
-        game.teamBroadcast(teamInfo.type, TEAM_PURCHASE_MESSAGE, t.colorPrefix, player.name, `Maniac Miner level ${teamInfo.protectionLevel}`);
+        game.teamBroadcast(teamInfo.type, TEAM_PURCHASE_MESSAGE, t.colorPrefix, player.name, `Maniac Miner level ${teamInfo.hasteLevel}`);
         result = true;
     } else if (action.type == ActionType.BuySharpness) {
         if (teamInfo.hasSharpness) {
