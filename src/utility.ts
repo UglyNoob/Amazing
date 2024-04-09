@@ -1,7 +1,7 @@
 import * as mc from '@minecraft/server';
 import * as ui from '@minecraft/server-ui';
 
-export type Area = [mc.Vector3, mc.Vector3]
+export type Area = [mc.Vector3, mc.Vector3];
 
 /**
  * Compares types, lores and name tags.
@@ -34,7 +34,7 @@ export function realTypeof(value: any) {
 }
 
 export function getGameMode(player: mc.Player): mc.GameMode {
-    if(player.getGameMode) return player.getGameMode();
+    if (player.getGameMode) return player.getGameMode();
     for (let gameMode of Object.values(mc.GameMode)) {
         if (player.matches({ gameMode: gameMode })) return gameMode;
     }
@@ -42,8 +42,8 @@ export function getGameMode(player: mc.Player): mc.GameMode {
 }
 
 export function setGameMode(player: mc.Player, gameMode: mc.GameMode) {
-    if(player.setGameMode) return player.setGameMode(gameMode);
-    player.runCommand(`gamemode ${gameMode}`);
+    if (player.setGameMode) return player.setGameMode(gameMode);
+    player.runCommand(`gamemode ${ gameMode }`);
 }
 
 export function capitalize(str: string) {
@@ -62,8 +62,8 @@ export function showObjectToPlayer(player: mc.Player, object: any) {
         let data = new ui.ActionFormData();
         let type = realTypeof(object);
         if (type !== 'object' && type !== 'function') {
-            data.title(`Primitive ${type}`);
-            data.body(`§b${object}`);
+            data.title(`Primitive ${ type }`);
+            data.body(`§b${ object }`);
             data.button("§m§lBack");
             let response = await data.show(player);
             return response.canceled;
@@ -77,7 +77,7 @@ export function showObjectToPlayer(player: mc.Player, object: any) {
         let hasBackButton = !!derived;
         hasBackButton && data.button("§m§lBack→");
 
-        let bodyText = `§pContent of §n${objectName}§p:`;
+        let bodyText = `§pContent of §n${ objectName }§p:`;
         let childObjects = [];
         let childFunctions: Function[] = [];
         let childFunctionNames: string[] = [];
@@ -88,14 +88,14 @@ export function showObjectToPlayer(player: mc.Player, object: any) {
                 childFunctionNames.push(key);
                 childFunctions.push(value);
             } else if (valueType != "object") { // handle primitives
-                bodyText = bodyText.concat(`\n§6Property §e${key}§6 as §a${valueType}§6: §b${value}`);
+                bodyText = bodyText.concat(`\n§6Property §e${ key }§6 as §a${ valueType }§6: §b${ value }`);
             } else { // handle objects
                 childObjects.push(value);
-                data.button(`§n${getObjectName(value)} §e${key}`);
+                data.button(`§n${ getObjectName(value) } §e${ key }`);
             }
         }
         for (let name of childFunctionNames) {
-            data.button(`§sFunction §e${name}`);
+            data.button(`§sFunction §e${ name }`);
         }
         data.body(bodyText);
 
@@ -234,14 +234,25 @@ export function sleep(ticks: number): Promise<void> {
  * @returns An integer of range [a, b]
  */
 export function randomInt(a: number, b: number) {
-    return Math.floor(Math.random() * (b-a+1)) + a;
+    return Math.floor(Math.random() * (b - a + 1)) + a;
 }
 
 export function shuffle(array: any[]) {
-    for(let i = array.length - 1; i >= 1; --i) {
+    for (let i = array.length - 1; i >= 1; --i) {
         let swapIndex = randomInt(0, i);
         let temp = array[swapIndex];
         array[swapIndex] = array[i];
         array[i] = temp;
     }
+}
+
+export function analyzeTime(ms: number) {
+    ms -= ms % 1000;
+    ms /= 1000; // number is double in js
+    const seconds = ms % 60;
+    const minutes = (ms - seconds) / 60;
+    return {
+        minutes,
+        seconds
+    };
 }

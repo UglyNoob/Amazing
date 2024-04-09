@@ -1,6 +1,6 @@
 import { Vector3Utils as v3 } from '@minecraft/math';
 import * as mc from '@minecraft/server';
-import { itemEqual, Area, sleep, vectorAdd, vectorWithinArea, containerIterator, capitalize, getPlayerByName, consumeMainHandItem, makeItem, shuffle, randomInt, setGameMode } from './utility.js';
+import { itemEqual, Area, sleep, vectorAdd, vectorWithinArea, containerIterator, capitalize, getPlayerByName, consumeMainHandItem, makeItem, shuffle, randomInt, setGameMode, analyzeTime } from './utility.js';
 import { setupGameTest } from './GameTest.js';
 import { MinecraftBlockTypes, MinecraftEffectTypes, MinecraftEnchantmentTypes, MinecraftEntityTypes, MinecraftItemTypes } from '@minecraft/vanilla-data';
 
@@ -21,13 +21,6 @@ export const DIAMOND_ITEM_STACK = new mc.ItemStack(MinecraftItemTypes.Diamond);
 DIAMOND_ITEM_STACK.nameTag = "Diamond Token";
 export const EMERALD_ITEM_STACK = new mc.ItemStack(MinecraftItemTypes.Emerald);
 EMERALD_ITEM_STACK.nameTag = "Emerald Token";
-
-const PROTECTED_AREA_IRONGOLD: Area = [{ x: 0, y: 0, z: 0 }, { x: 3, y: 3, z: 3 }];
-const PROTECTED_AREA_DIAMOND: Area = [{ x: 0, y: 0, z: 0 }, { x: 1, y: 3, z: 1 }];
-const PROTECTED_AREA_EMERALD: Area = [{ x: 0, y: 0, z: 0 }, { x: 1, y: 3, z: 1 }];
-const PRODUCING_AREA_IRONGOLD: Area = [{ x: 0, y: 0, z: 0 }, { x: 3, y: 1, z: 3 }];
-const PRODUCING_AREA_DIAMOND: Area = [{ x: 0, y: 1, z: 0 }, { x: 1, y: 2, z: 1 }];
-const PRODUCING_AREA_EMERALD: Area = [{ x: 0, y: 1, z: 0 }, { x: 1, y: 2, z: 1 }];
 
 export const BRIDGE_EGG_ITEM = (() => {
     const i = new mc.ItemStack(MinecraftItemTypes.Egg);
@@ -116,7 +109,7 @@ function isSpeedPotionItem(item: mc.ItemStack) {
 
 const DEATH_TITLE = "§cYOU DIED!";
 const DEATH_SUBTITLE = "§eYou will respawn in §c%d §eseconds!";
-const SPECTATE_TITLE = "SPECTATING!"
+const SPECTATE_TITLE = "SPECTATING!";
 const SPECTATE_SUBTITLE = "Your bed has been destroyed";
 const RESPAWN_TITLE = "§aRESPAWNED!";
 const RESPAWN_MESSAGE = "§eYou have respawned!";
@@ -149,6 +142,27 @@ enum GeneratorType {
     Diamond,
     Emerald
 }
+const GENERATOR_CONSTANTS: Record<GeneratorType, {
+    capacity: number;
+    protectedArea: Area;
+    producingArea: Area;
+}> = Object.create(null);
+
+GENERATOR_CONSTANTS[GeneratorType.IronGold] = {
+    capacity: 64,
+    protectedArea: [{ x: 0, y: 0, z: 0 }, { x: 3, y: 3, z: 3 }],
+    producingArea: [{ x: 0, y: 0, z: 0 }, { x: 3, y: 1, z: 3 }]
+};
+GENERATOR_CONSTANTS[GeneratorType.Diamond] = {
+    capacity: 64,
+    protectedArea: [{ x: 0, y: 0, z: 0 }, { x: 1, y: 3, z: 1 }],
+    producingArea: [{ x: 0, y: 1, z: 0 }, { x: 1, y: 2, z: 1 }]
+};
+GENERATOR_CONSTANTS[GeneratorType.Emerald] = {
+    capacity: 64,
+    protectedArea: [{ x: 0, y: 0, z: 0 }, { x: 1, y: 3, z: 1 }],
+    producingArea: [{ x: 0, y: 1, z: 0 }, { x: 1, y: 2, z: 1 }]
+};
 enum TeamType {
     Red,
     Blue,
@@ -158,40 +172,6 @@ enum TeamType {
     Gray,
     Cyan,
     White
-}
-interface GeneratorInformation {
-    type: GeneratorType;
-    spawnLocation: mc.Vector3;
-    location: mc.Vector3; // the bottom-north-west location
-    defaultInterval: number;
-    defaultCapacity: number; // 0 means no limit
-}
-interface TeamInformation {
-    type: TeamType;
-    itemShopLocation: mc.Vector3;
-    teamShopLocation: mc.Vector3;
-    teamGenerator: GeneratorInformation;
-    /**
-     * The first element should be the base,
-     * the second element should be the head
-     */
-    bedLocation: [mc.Vector3, mc.Vector3];
-    teamChestLocation: mc.Vector3;
-    playerSpawn: mc.Vector3;
-    playerSpawnViewDirection: mc.Vector3;
-    protectedArea?: Area;
-    islandArea: Area;
-}
-interface MapInformation {
-    teams: TeamInformation[];
-    voidY: number;
-    extraGenerators: GeneratorInformation[];
-    size: Area;
-    /**
-     * Used to detect respawned player
-     */
-    fallbackRespawnPoint: mc.Vector3;
-    teamExtraEmeraldGenInterval: number;
 }
 export const TEAM_CONSTANTS: Record<TeamType, {
     name: string;
@@ -222,7 +202,7 @@ export const TEAM_CONSTANTS: Record<TeamType, {
         leatherChestplate: setupItem(MinecraftItemTypes.LeatherChestplate, TeamType.Blue),
         leatherLeggings: setupItem(MinecraftItemTypes.LeatherLeggings, TeamType.Blue),
         leatherBoots: setupItem(MinecraftItemTypes.LeatherBoots, TeamType.Blue)
-    }
+    };
     TEAM_CONSTANTS[TeamType.Green] = {
         name: "green",
         colorPrefix: "§a",
@@ -232,7 +212,7 @@ export const TEAM_CONSTANTS: Record<TeamType, {
         leatherChestplate: setupItem(MinecraftItemTypes.LeatherChestplate, TeamType.Green),
         leatherLeggings: setupItem(MinecraftItemTypes.LeatherLeggings, TeamType.Green),
         leatherBoots: setupItem(MinecraftItemTypes.LeatherBoots, TeamType.Green)
-    }
+    };
     TEAM_CONSTANTS[TeamType.Red] = {
         name: "red",
         colorPrefix: "§c",
@@ -242,7 +222,7 @@ export const TEAM_CONSTANTS: Record<TeamType, {
         leatherChestplate: setupItem(MinecraftItemTypes.LeatherChestplate, TeamType.Red),
         leatherLeggings: setupItem(MinecraftItemTypes.LeatherLeggings, TeamType.Red),
         leatherBoots: setupItem(MinecraftItemTypes.LeatherBoots, TeamType.Red)
-    }
+    };
     TEAM_CONSTANTS[TeamType.Yellow] = {
         name: "yellow",
         colorPrefix: "§g",
@@ -252,7 +232,7 @@ export const TEAM_CONSTANTS: Record<TeamType, {
         leatherChestplate: setupItem(MinecraftItemTypes.LeatherChestplate, TeamType.Yellow),
         leatherLeggings: setupItem(MinecraftItemTypes.LeatherLeggings, TeamType.Yellow),
         leatherBoots: setupItem(MinecraftItemTypes.LeatherBoots, TeamType.Yellow)
-    }
+    };
     TEAM_CONSTANTS[TeamType.Pink] = {
         name: "pink",
         colorPrefix: "§d",
@@ -262,7 +242,7 @@ export const TEAM_CONSTANTS: Record<TeamType, {
         leatherChestplate: setupItem(MinecraftItemTypes.LeatherChestplate, TeamType.Pink),
         leatherLeggings: setupItem(MinecraftItemTypes.LeatherLeggings, TeamType.Pink),
         leatherBoots: setupItem(MinecraftItemTypes.LeatherBoots, TeamType.Pink)
-    }
+    };
     TEAM_CONSTANTS[TeamType.Gray] = {
         name: "gray",
         colorPrefix: "§8",
@@ -272,7 +252,7 @@ export const TEAM_CONSTANTS: Record<TeamType, {
         leatherChestplate: setupItem(MinecraftItemTypes.LeatherChestplate, TeamType.Gray),
         leatherLeggings: setupItem(MinecraftItemTypes.LeatherLeggings, TeamType.Gray),
         leatherBoots: setupItem(MinecraftItemTypes.LeatherBoots, TeamType.Gray)
-    }
+    };
     TEAM_CONSTANTS[TeamType.Cyan] = {
         name: "cyan",
         colorPrefix: "§3",
@@ -282,7 +262,7 @@ export const TEAM_CONSTANTS: Record<TeamType, {
         leatherChestplate: setupItem(MinecraftItemTypes.LeatherChestplate, TeamType.Cyan),
         leatherLeggings: setupItem(MinecraftItemTypes.LeatherLeggings, TeamType.Cyan),
         leatherBoots: setupItem(MinecraftItemTypes.LeatherBoots, TeamType.Cyan)
-    }
+    };
     TEAM_CONSTANTS[TeamType.White] = {
         name: "white",
         colorPrefix: "§f",
@@ -292,7 +272,41 @@ export const TEAM_CONSTANTS: Record<TeamType, {
         leatherChestplate: setupItem(MinecraftItemTypes.LeatherChestplate, TeamType.White),
         leatherLeggings: setupItem(MinecraftItemTypes.LeatherLeggings, TeamType.White),
         leatherBoots: setupItem(MinecraftItemTypes.LeatherBoots, TeamType.White)
-    }
+    };
+}
+interface GeneratorInformation {
+    type: GeneratorType;
+    spawnLocation: mc.Vector3;
+    location: mc.Vector3; // the bottom-north-west location
+    initialInterval: number;
+    indicatorLocation?: mc.Vector3[];
+}
+interface TeamInformation {
+    type: TeamType;
+    itemShopLocation: mc.Vector3;
+    teamShopLocation: mc.Vector3;
+    teamGenerator: GeneratorInformation;
+    /**
+     * The first element should be the base,
+     * the second element should be the head
+     */
+    bedLocation: [mc.Vector3, mc.Vector3];
+    teamChestLocation: mc.Vector3;
+    playerSpawn: mc.Vector3;
+    playerSpawnViewDirection: mc.Vector3;
+    protectedArea?: Area;
+    islandArea: Area;
+}
+interface MapInformation {
+    teams: TeamInformation[];
+    voidY: number;
+    extraGenerators: GeneratorInformation[];
+    size: Area;
+    /**
+     * Used to detect respawned player
+     */
+    fallbackRespawnPoint: mc.Vector3;
+    teamExtraEmeraldGenInterval: number;
 }
 
 export interface SwordLevel {
@@ -530,29 +544,29 @@ export enum TrapType {
     MinerFatigue
 }
 
-export const TRAP_CONSTANT: Record<TrapType, {
+export const TRAP_CONSTANTS: Record<TrapType, {
     name: string;
     description: string;
     iconPath: string;
 }> = Object.create(null);
 
 {
-    TRAP_CONSTANT[TrapType.NegativeEffect] = {
+    TRAP_CONSTANTS[TrapType.NegativeEffect] = {
         name: "It's a Trap!",
         description: "§7Inflicts Blindness and Slowness for 8 seconds.",
         iconPath: "textures/blocks/trip_wire_source.png"
     };
-    TRAP_CONSTANT[TrapType.Defensive] = {
+    TRAP_CONSTANTS[TrapType.Defensive] = {
         name: "Counter-Offensive Trap",
         description: "§7Grants Speed II and Jump Boost II for 15 seconds to allied players near your base.",
         iconPath: "textures/items/feather.png"
     };
-    TRAP_CONSTANT[TrapType.Alarm] = {
+    TRAP_CONSTANTS[TrapType.Alarm] = {
         name: "Alarm Trap",
         description: "§7Reveals invisible players as well as their name and team.",
         iconPath: "textures/blocks/redstone_torch_on.png"
     };
-    TRAP_CONSTANT[TrapType.MinerFatigue] = {
+    TRAP_CONSTANTS[TrapType.MinerFatigue] = {
         name: "Miner Fatigue Trap",
         description: "§7Inflict Mining Fatigue for 10 seconds.",
         iconPath: "textures/items/gold_pickaxe.png"
@@ -576,8 +590,7 @@ const testMap: MapInformation = {
                 type: GeneratorType.IronGold,
                 spawnLocation: { x: 1.5, y: 1.5, z: 2.5 },
                 location: { x: 0, y: 1, z: 1 },
-                defaultInterval: IRONGOLD_GENERATOR_INTERVAL,
-                defaultCapacity: 64
+                initialInterval: IRONGOLD_GENERATOR_INTERVAL
             },
             bedLocation: [{ x: 4, y: 1, z: 2 }, { x: 5, y: 1, z: 2 }],
             playerSpawn: { x: 3.5, y: 1, z: 2.5 },
@@ -593,8 +606,7 @@ const testMap: MapInformation = {
                 type: GeneratorType.IronGold,
                 spawnLocation: { x: 19.5, y: 1.5, z: 2.5 },
                 location: { x: 18, y: 1, z: 1 },
-                defaultInterval: IRONGOLD_GENERATOR_INTERVAL,
-                defaultCapacity: 64
+                initialInterval: IRONGOLD_GENERATOR_INTERVAL
             },
             bedLocation: [{ x: 16, y: 1, z: 2 }, { x: 15, y: 1, z: 2 }],
             playerSpawn: { x: 17.5, y: 1, z: 2.5 },
@@ -606,20 +618,17 @@ const testMap: MapInformation = {
             type: GeneratorType.Diamond,
             spawnLocation: { x: 10.5, y: 1, z: 0.5 },
             location: { x: 10, y: 0, z: 0 },
-            defaultInterval: DIAMOND_GENERATOR_INTERVAL,
-            defaultCapacity: 32
+            initialInterval: DIAMOND_GENERATOR_INTERVAL
         }, {
             type: GeneratorType.Diamond,
             spawnLocation: { x: 10.5, y: 1, z: 4.5 },
             location: { x: 10, y: 0, z: 4 },
-            defaultInterval: DIAMOND_GENERATOR_INTERVAL,
-            defaultCapacity: 32
+            initialInterval: DIAMOND_GENERATOR_INTERVAL
         }, {
             type: GeneratorType.Emerald,
             spawnLocation: { x: 10.5, y: 1, z: 2.5 },
             location: { x: 10, y: 0, z: 2 },
-            defaultInterval: EMERLAD_GENERATOR_INTERVAL,
-            defaultCapacity: 32
+            initialInterval: EMERLAD_GENERATOR_INTERVAL
         }
     ]
 };
@@ -639,8 +648,7 @@ const testMap2: MapInformation = {
                 type: GeneratorType.IronGold,
                 spawnLocation: { x: 98.5 + 104, y: 78.5 - 54, z: 0.5 + 65 },
                 location: { x: 97 + 104, y: 78 - 54, z: -1 + 65 },
-                defaultInterval: IRONGOLD_GENERATOR_INTERVAL,
-                defaultCapacity: 64
+                initialInterval: IRONGOLD_GENERATOR_INTERVAL
             },
             bedLocation: [{ x: 79 + 104, y: 77 - 54, z: 0 + 65 }, { x: 80 + 104, y: 77 - 54, z: 0 + 65 }],
             playerSpawn: { x: 94.5 + 104, y: 79 - 54, z: 0.5 + 65 },
@@ -656,8 +664,7 @@ const testMap2: MapInformation = {
                 type: GeneratorType.IronGold,
                 spawnLocation: { x: -97.5 + 104, y: 78.5 - 54, z: 0.5 + 65 },
                 location: { x: -99 + 104, y: 78 - 54, z: -1 + 65 },
-                defaultInterval: IRONGOLD_GENERATOR_INTERVAL,
-                defaultCapacity: 64
+                initialInterval: IRONGOLD_GENERATOR_INTERVAL
             },
             bedLocation: [{ x: -79 + 104, y: 77 - 54, z: 0 + 65 }, { x: -80 + 104, y: 77 - 54, z: 0 + 65 }],
             playerSpawn: { x: -93.5 + 104, y: 79 - 54, z: 0.5 + 65 },
@@ -670,26 +677,22 @@ const testMap2: MapInformation = {
             type: GeneratorType.Diamond,
             spawnLocation: { x: 0.5 + 104, y: 78 - 54, z: -51.5 + 65 },
             location: { x: 0 + 104, y: 77 - 54, z: -52 + 65 },
-            defaultInterval: DIAMOND_GENERATOR_INTERVAL,
-            defaultCapacity: 32
+            initialInterval: DIAMOND_GENERATOR_INTERVAL
         }, {
             type: GeneratorType.Diamond,
             spawnLocation: { x: 0.5 + 104, y: 78 - 54, z: 52.5 + 65 },
             location: { x: 0 + 104, y: 77 - 54, z: 52 + 65 },
-            defaultInterval: DIAMOND_GENERATOR_INTERVAL,
-            defaultCapacity: 32
+            initialInterval: DIAMOND_GENERATOR_INTERVAL
         }, {
             type: GeneratorType.Emerald,
             spawnLocation: { x: -20.5 + 104, y: 77 - 54, z: -20.5 + 65 },
             location: { x: -21 + 104, y: 76 - 54, z: -21 + 65 },
-            defaultInterval: EMERLAD_GENERATOR_INTERVAL,
-            defaultCapacity: 32
+            initialInterval: EMERLAD_GENERATOR_INTERVAL
         }, {
             type: GeneratorType.Emerald,
             spawnLocation: { x: 21.5 + 104, y: 77 - 54, z: 21.5 + 65 },
             location: { x: 21 + 104, y: 76 - 54, z: 21 + 65 },
-            defaultInterval: EMERLAD_GENERATOR_INTERVAL,
-            defaultCapacity: 32
+            initialInterval: EMERLAD_GENERATOR_INTERVAL
         }
     ]
 };
@@ -710,8 +713,7 @@ const mapSteamPunk: MapInformation = {
                 type: GeneratorType.IronGold,
                 spawnLocation: { x: 98.5, y: 72.5, z: -61.5 },
                 location: { x: 97, y: 72, z: -63 },
-                defaultInterval: IRONGOLD_GENERATOR_INTERVAL,
-                defaultCapacity: 64
+                initialInterval: IRONGOLD_GENERATOR_INTERVAL
             },
             bedLocation: [{ x: 98, y: 73, z: -47 }, { x: 98, y: 73, z: -46 }],
             playerSpawn: { x: 98.5, y: 73, z: -55.5 },
@@ -727,8 +729,7 @@ const mapSteamPunk: MapInformation = {
                 type: GeneratorType.IronGold,
                 spawnLocation: { x: 98.5, y: 72.5, z: 62.5 },
                 location: { x: 97, y: 72, z: 61 },
-                defaultInterval: IRONGOLD_GENERATOR_INTERVAL,
-                defaultCapacity: 64
+                initialInterval: IRONGOLD_GENERATOR_INTERVAL
             },
             bedLocation: [{ x: 98, y: 73, z: 47 }, { x: 98, y: 73, z: 46 }],
             playerSpawn: { x: 98.5, y: 73, z: 56.5 },
@@ -744,8 +745,7 @@ const mapSteamPunk: MapInformation = {
                 type: GeneratorType.IronGold,
                 spawnLocation: { x: 62.5, y: 72.5, z: 98.5 },
                 location: { x: 61, y: 72, z: 97 },
-                defaultInterval: IRONGOLD_GENERATOR_INTERVAL,
-                defaultCapacity: 64
+                initialInterval: IRONGOLD_GENERATOR_INTERVAL
             },
             bedLocation: [{ x: 47, y: 73, z: 98 }, { x: 46, y: 73, z: 98 }],
             playerSpawn: { x: 56, y: 73, z: 98 },
@@ -761,8 +761,7 @@ const mapSteamPunk: MapInformation = {
                 type: GeneratorType.IronGold,
                 spawnLocation: { x: -61.5, y: 72.5, z: 98.5 },
                 location: { x: -63, y: 72, z: 97 },
-                defaultInterval: IRONGOLD_GENERATOR_INTERVAL,
-                defaultCapacity: 64
+                initialInterval: IRONGOLD_GENERATOR_INTERVAL
             },
             bedLocation: [{ x: -47, y: 73, z: 98 }, { x: -46, y: 73, z: 98 }],
             playerSpawn: { x: -55.5, y: 73, z: 98.5 },
@@ -778,8 +777,7 @@ const mapSteamPunk: MapInformation = {
                 type: GeneratorType.IronGold,
                 spawnLocation: { x: -97.5, y: 72.5, z: 62.5 },
                 location: { x: -99, y: 72, z: 61 },
-                defaultInterval: IRONGOLD_GENERATOR_INTERVAL,
-                defaultCapacity: 64
+                initialInterval: IRONGOLD_GENERATOR_INTERVAL
             },
             bedLocation: [{ x: -98, y: 73, z: 47 }, { x: -98, y: 73, z: 46 }],
             playerSpawn: { x: -98, y: 73, z: 56 },
@@ -795,8 +793,7 @@ const mapSteamPunk: MapInformation = {
                 type: GeneratorType.IronGold,
                 spawnLocation: { x: -97.5, y: 72.5, z: -61.5 },
                 location: { x: -99, y: 72, z: -63 },
-                defaultInterval: IRONGOLD_GENERATOR_INTERVAL,
-                defaultCapacity: 64
+                initialInterval: IRONGOLD_GENERATOR_INTERVAL
             },
             bedLocation: [{ x: -98, y: 73, z: -47 }, { x: -98, y: 73, z: -46 }],
             playerSpawn: { x: -97.5, y: 73, z: -55.5 },
@@ -812,8 +809,7 @@ const mapSteamPunk: MapInformation = {
                 type: GeneratorType.IronGold,
                 spawnLocation: { x: -61.5, y: 72.5, z: -97.5 },
                 location: { x: -63, y: 72, z: -99 },
-                defaultInterval: IRONGOLD_GENERATOR_INTERVAL,
-                defaultCapacity: 64
+                initialInterval: IRONGOLD_GENERATOR_INTERVAL
             },
             bedLocation: [{ x: -47, y: 73, z: -98 }, { x: -46, y: 73, z: -98 }],
             playerSpawn: { x: -55.5, y: 73, z: -97.5 },
@@ -829,8 +825,7 @@ const mapSteamPunk: MapInformation = {
                 type: GeneratorType.IronGold,
                 spawnLocation: { x: 62.5, y: 72.5, z: -97.5 },
                 location: { x: 61, y: 72, z: -99 },
-                defaultInterval: IRONGOLD_GENERATOR_INTERVAL,
-                defaultCapacity: 64
+                initialInterval: IRONGOLD_GENERATOR_INTERVAL
             },
             bedLocation: [{ x: 47, y: 73, z: -98 }, { x: 46, y: 73, z: -98 }],
             playerSpawn: { x: 56.5, y: 73, z: -97.5 },
@@ -843,50 +838,50 @@ const mapSteamPunk: MapInformation = {
             type: GeneratorType.Diamond,
             spawnLocation: { x: 85.5, y: 74, z: 0.5 },
             location: { x: 85, y: 73, z: 0 },
-            defaultInterval: DIAMOND_GENERATOR_INTERVAL,
-            defaultCapacity: 32
+            initialInterval: DIAMOND_GENERATOR_INTERVAL,
+            indicatorLocation: [{ x: 85, y: 77, z: 0 }]
         }, {
             type: GeneratorType.Diamond,
             spawnLocation: { x: 0.5, y: 74, z: 85.5 },
             location: { x: 0, y: 73, z: 85 },
-            defaultInterval: DIAMOND_GENERATOR_INTERVAL,
-            defaultCapacity: 32
+            initialInterval: DIAMOND_GENERATOR_INTERVAL,
+            indicatorLocation: [{ x: 0, y: 77, z: 85 }]
         }, {
             type: GeneratorType.Diamond,
             spawnLocation: { x: -84.5, y: 74, z: 0.5 },
             location: { x: -85, y: 73, z: 0 },
-            defaultInterval: DIAMOND_GENERATOR_INTERVAL,
-            defaultCapacity: 32
+            initialInterval: DIAMOND_GENERATOR_INTERVAL,
+            indicatorLocation: [{ x: -85, y: 77, z: 0 }]
         }, {
             type: GeneratorType.Diamond,
             spawnLocation: { x: 0.5, y: 74, z: -84.5 },
             location: { x: 0, y: 73, z: -85 },
-            defaultInterval: DIAMOND_GENERATOR_INTERVAL,
-            defaultCapacity: 32
+            initialInterval: DIAMOND_GENERATOR_INTERVAL,
+            indicatorLocation: [{ x: 0, y: 77, z: -85 }]
         }, {
             type: GeneratorType.Emerald,
             spawnLocation: { x: 24.5, y: 74, z: 24.5 },
             location: { x: 24, y: 73, z: 24 },
-            defaultInterval: EMERLAD_GENERATOR_INTERVAL,
-            defaultCapacity: 32
+            initialInterval: EMERLAD_GENERATOR_INTERVAL,
+            indicatorLocation: [{ x: 24, y: 77, z: 24 }]
         }, {
             type: GeneratorType.Emerald,
             spawnLocation: { x: -23.5, y: 74, z: 24.5 },
             location: { x: -24, y: 73, z: 24 },
-            defaultInterval: EMERLAD_GENERATOR_INTERVAL,
-            defaultCapacity: 32
+            initialInterval: EMERLAD_GENERATOR_INTERVAL,
+            indicatorLocation: [{ x: -24, y: 77, z: 24 }]
         }, {
             type: GeneratorType.Emerald,
             spawnLocation: { x: 24.5, y: 74, z: -23.5 },
             location: { x: 24, y: 73, z: -24 },
-            defaultInterval: EMERLAD_GENERATOR_INTERVAL,
-            defaultCapacity: 32
+            initialInterval: EMERLAD_GENERATOR_INTERVAL,
+            indicatorLocation: [{ x: 24, y: 77, z: -24 }]
         }, {
             type: GeneratorType.Emerald,
             spawnLocation: { x: -23.5, y: 74, z: -23.5 },
             location: { x: -24, y: 73, z: -24 },
-            defaultInterval: EMERLAD_GENERATOR_INTERVAL,
-            defaultCapacity: 32
+            initialInterval: EMERLAD_GENERATOR_INTERVAL,
+            indicatorLocation: [{ x: -24, y: 77, z: -24 }]
         }
     ]
 };
@@ -914,8 +909,8 @@ type GeneratorGameInformation = {
     spawnLocation: mc.Vector3;
     location: mc.Vector3;
     type: GeneratorType;
-    capacity: number;
     interval: number;
+    indicatorLocation?: mc.Vector3[];
     remainingCooldown: number;
     tokensGeneratedCount: number;
 } & ({
@@ -926,7 +921,7 @@ type GeneratorGameInformation = {
     extraEmeraldRemainingCooldown: number;
 } | {
     belongToTeam: false;
-})
+});
 
 export interface PlayerGameInformation {
     name: string;
@@ -1002,10 +997,10 @@ export class BedWarsGame {
     private startTime: number;
 
     constructor({ map, originLocation, dimension, scoreboardObjective }: {
-        map: MapInformation,
-        originLocation: mc.Vector3,
-        dimension: mc.Dimension,
-        scoreboardObjective: mc.ScoreboardObjective
+        map: MapInformation;
+        originLocation: mc.Vector3;
+        dimension: mc.Dimension;
+        scoreboardObjective: mc.ScoreboardObjective;
     }) {
         this.map = map;
         this.originPos = originLocation;
@@ -1034,10 +1029,10 @@ export class BedWarsGame {
                 spawnLocation: genInfo.spawnLocation,
                 location: genInfo.location,
                 type: genInfo.type,
-                interval: genInfo.defaultInterval,
-                capacity: genInfo.defaultCapacity,
+                interval: genInfo.initialInterval,
                 remainingCooldown: 0,
                 tokensGeneratedCount: 0,
+                indicatorLocation: genInfo.indicatorLocation,
                 belongToTeam: true,
                 team: teamInfo.type,
                 spawnExtraEmerald: false,
@@ -1050,10 +1045,10 @@ export class BedWarsGame {
                 spawnLocation: genInfo.spawnLocation,
                 location: genInfo.location,
                 type: genInfo.type,
-                interval: genInfo.defaultInterval,
-                capacity: genInfo.defaultCapacity,
+                interval: genInfo.initialInterval,
                 remainingCooldown: 0,
                 tokensGeneratedCount: 0,
+                indicatorLocation: genInfo.indicatorLocation,
                 belongToTeam: false
             });
         }
@@ -1144,7 +1139,7 @@ export class BedWarsGame {
         for (const [teamType, { state }] of this.teams) {
             ++index;
             const t = TEAM_CONSTANTS[teamType];
-            let result = `${t.colorPrefix}${t.name.charAt(0).toUpperCase()} §r${capitalize(t.name)}: `;
+            let result = `${ t.colorPrefix }${ t.name.charAt(0).toUpperCase() } §r${ capitalize(t.name) }: `;
             switch (state) {
                 case TeamState.BedAlive:
                     // result += "§a✔";
@@ -1160,19 +1155,19 @@ export class BedWarsGame {
                         if (playerInfo.team != teamType) continue;
                         if (this.isPlayerPlaying(playerInfo)) ++aliveCount;
                     }
-                    result += `§a${aliveCount}`;
+                    result += `§a${ aliveCount }`;
             }
             this.scoreObj.setScore(result, index);
         }
         ++index;
         this.scoreObj.setScore(" ", index);
         ++index;
-        const date = new Date((mc.system.currentTick - this.startTime) * 50);
-        let seconds = date.getSeconds().toString();
-        if (seconds.length == 1) seconds = "0" + seconds;
-        let minutes = date.getMinutes().toString();
-        if (minutes.length == 1) minutes = "0" + minutes;
-        this.scoreObj.setScore(`§a${minutes}:${seconds}`, index);
+        const { minutes, seconds } = analyzeTime((mc.system.currentTick - this.startTime) * 50);
+        let secondsStr = seconds.toString();
+        if (secondsStr.length == 1) secondsStr = "0" + secondsStr;
+        let minutesStr = minutes.toString();
+        if (minutesStr.length == 1) minutesStr = "0" + minutesStr;
+        this.scoreObj.setScore(`§a${ minutesStr }:${ secondsStr }`, index);
     }
 
     private respawnPlayer(playerInfo: PlayerGameInformation) {
@@ -1199,7 +1194,7 @@ export class BedWarsGame {
             });
         }
         player.extinguishFire();
-        player.nameTag = `${TEAM_CONSTANTS[playerInfo.team].colorPrefix}${playerInfo.name}`;
+        player.nameTag = `${ TEAM_CONSTANTS[playerInfo.team].colorPrefix }${ playerInfo.name }`;
         playerInfo.armorDisabled = false;
         playerInfo.armorToEnablingTicks = 0;
         playerInfo.bridgeEggCooldown = 0;
@@ -1345,16 +1340,16 @@ export class BedWarsGame {
             }
 
             teamPlayerInfo.player.onScreenDisplay.setTitle("§cTRAP ACTIVATED!", {
-                subtitle: isAlarmTrap ? `${TEAM_CONSTANTS[playerInfo.team].colorPrefix}${player.name} §7has entered your base!` : undefined,
+                subtitle: isAlarmTrap ? `${ TEAM_CONSTANTS[playerInfo.team].colorPrefix }${ player.name } §7has entered your base!` : undefined,
                 fadeInDuration: 10,
                 stayDuration: 60,
                 fadeOutDuration: 20
             });
             teamPlayerInfo.player.playSound("mob.wither.spawn");
-            teamPlayerInfo.player.sendMessage(`§7${TRAP_CONSTANT[trapType].name} §chas been activated!`);
+            teamPlayerInfo.player.sendMessage(`§7${ TRAP_CONSTANTS[trapType].name } §chas been activated!`);
         }
         player.playSound("mob.wither.spawn");
-        player.sendMessage(`§7You have activated §e${TRAP_CONSTANT[trapType].name}!`);
+        player.sendMessage(`§7You have activated §e${ TRAP_CONSTANTS[trapType].name }!`);
     }
     /**
      * Adjust team generator based on its iron forge level
@@ -1367,26 +1362,26 @@ export class BedWarsGame {
         switch (teamInfo.ironForgeLevel) {
             case 0:
                 teamGenInfo.spawnExtraEmerald = false;
-                teamGenInfo.interval = teamGenMapInfo.defaultCapacity;
+                teamGenInfo.interval = teamGenMapInfo.initialInterval;
                 break;
             case 1:
                 teamGenInfo.spawnExtraEmerald = false;
-                teamGenInfo.interval = Math.ceil(teamGenMapInfo.defaultInterval / 1.5);
+                teamGenInfo.interval = Math.ceil(teamGenMapInfo.initialInterval / 1.5);
                 break;
             case 2:
                 teamGenInfo.spawnExtraEmerald = false;
-                teamGenInfo.interval = Math.ceil(teamGenMapInfo.defaultInterval / 2);
+                teamGenInfo.interval = Math.ceil(teamGenMapInfo.initialInterval / 2);
                 break;
             case 3:
                 teamGenInfo.spawnExtraEmerald = true;
                 teamGenInfo.extraEmeraldInterval = this.map.teamExtraEmeraldGenInterval;
                 teamGenInfo.extraEmeraldRemainingCooldown = teamGenInfo.extraEmeraldInterval;
-                teamGenInfo.interval = Math.ceil(teamGenMapInfo.defaultInterval / 2);
+                teamGenInfo.interval = Math.ceil(teamGenMapInfo.initialInterval / 2);
             case 4:
                 teamGenInfo.spawnExtraEmerald = true;
                 teamGenInfo.extraEmeraldInterval = this.map.teamExtraEmeraldGenInterval;
                 teamGenInfo.extraEmeraldRemainingCooldown = teamGenInfo.extraEmeraldInterval;
-                teamGenInfo.interval = Math.ceil(teamGenMapInfo.defaultInterval / 3);
+                teamGenInfo.interval = Math.ceil(teamGenMapInfo.initialInterval / 3);
                 break;
         }
     }
@@ -1421,7 +1416,7 @@ export class BedWarsGame {
                 const { name, colorPrefix } = TEAM_CONSTANTS[teamType];
                 this.broadcast(TEAM_ELIMINATION_MESSAGE,
                     colorPrefix, capitalize(name));
-                const teamMapInfo = this.map.teams.find(t=>t.type==teamType)!;
+                const teamMapInfo = this.map.teams.find(t => t.type == teamType)!;
                 const bedLocation = teamMapInfo.bedLocation.map(v => v3.add(v, this.originPos));
                 this.dimension.fillBlocks(bedLocation[0], bedLocation[1], MinecraftBlockTypes.Air);
             }
@@ -1705,7 +1700,7 @@ export class BedWarsGame {
                     } else {
                         if (playerInfo.teamAreaEntered == teamInfo.type) continue;
                         playerInfo.teamAreaEntered = teamInfo.type;
-                        if(teamInfo.state == TeamState.Dead) continue;
+                        if (teamInfo.state == TeamState.Dead) continue;
 
                         // the player activates a team's trap
                         this.activateTrap(playerInfo, teamInfo);
@@ -1718,6 +1713,16 @@ export class BedWarsGame {
             }
         }
         for (const gen of this.generators) {
+            if (gen.indicatorLocation && gen.remainingCooldown % 20 == 0) {
+                for (const loc of gen.indicatorLocation) {
+                    const sign = this.dimension.getBlock(loc)?.getComponent("sign");
+                    if (!sign) {
+                        throw new Error(`Generator indicator does not exist at ${ v3.toString(loc) }.`);
+                    }
+                    sign.setWaxed(true);
+                    [mc.SignSide.Front, mc.SignSide.Back].forEach(signSide => sign.setText(`§eSpawns in §c${ gen.remainingCooldown / 20 } §eseconds`, signSide));
+                }
+            }
             if (gen.remainingCooldown > 0) {
                 --gen.remainingCooldown;
                 continue;
@@ -1727,46 +1732,32 @@ export class BedWarsGame {
             const spawnLocation = v3.add(gen.spawnLocation, this.originPos);
 
             // Detect if it reaches capacity
-            if (gen.capacity != 0) {
-                let producingArea: Area;
-                let original_producing_area: Area;
+            let { producingArea, capacity } = GENERATOR_CONSTANTS[gen.type];
+            producingArea = producingArea.map(
+                vec => vectorAdd(vec, gen.location, this.originPos)) as Area;
+            let existingTokens = 0;
+            for (const entity of this.dimension.getEntities({ type: "minecraft:item" })) {
+                if (!vectorWithinArea(entity.location, producingArea)) continue;
+                const itemStack = entity.getComponent("minecraft:item")!.itemStack;
                 switch (gen.type) {
                     case GeneratorType.IronGold:
-                        original_producing_area = PRODUCING_AREA_IRONGOLD;
-                        break;
+                        if (itemEqual(itemStack, IRON_ITEM_STACK) || itemEqual(itemStack, GOLD_ITEM_STACK)) {
+                            existingTokens += itemStack.amount;
+                        }
+                        continue;
                     case GeneratorType.Diamond:
-                        original_producing_area = PRODUCING_AREA_DIAMOND;
-                        break;
+                        if (itemEqual(itemStack, DIAMOND_ITEM_STACK)) {
+                            existingTokens += itemStack.amount;
+                        }
+                        continue;
                     case GeneratorType.Emerald:
-                        original_producing_area = PRODUCING_AREA_EMERALD;
-                        break;
+                        if (itemEqual(itemStack, EMERALD_ITEM_STACK)) {
+                            existingTokens += itemStack.amount;
+                        }
+                        continue;
                 }
-                producingArea = original_producing_area.map(
-                    vec => vectorAdd(vec, gen.location, this.originPos)) as Area;
-                let existingTokens = 0;
-                for (const entity of this.dimension.getEntities({ type: "minecraft:item" })) {
-                    if (!vectorWithinArea(entity.location, producingArea)) continue;
-                    const itemStack = entity.getComponent("minecraft:item")!.itemStack;
-                    switch (gen.type) {
-                        case GeneratorType.IronGold:
-                            if (itemEqual(itemStack, IRON_ITEM_STACK) || itemEqual(itemStack, GOLD_ITEM_STACK)) {
-                                existingTokens += itemStack.amount;
-                            }
-                            continue;
-                        case GeneratorType.Diamond:
-                            if (itemEqual(itemStack, DIAMOND_ITEM_STACK)) {
-                                existingTokens += itemStack.amount;
-                            }
-                            continue;
-                        case GeneratorType.Emerald:
-                            if (itemEqual(itemStack, EMERALD_ITEM_STACK)) {
-                                existingTokens += itemStack.amount;
-                            }
-                            continue;
-                    }
-                }
-                if (existingTokens >= gen.capacity) continue;
             }
+            if (existingTokens >= capacity) continue;
 
             ++gen.tokensGeneratedCount;
 
@@ -2136,20 +2127,7 @@ export class BedWarsGame {
     private isBlockLocationPlayerPlacable(location: mc.Vector3) {
         if (location.y < this.map.voidY + this.originPos.y) return false;
         for (const gen of this.generators) {
-            let protectedArea: Area;
-            let original_protected_area: Area;
-            switch (gen.type) {
-                case GeneratorType.IronGold:
-                    original_protected_area = PROTECTED_AREA_IRONGOLD;
-                    break;
-                case GeneratorType.Diamond:
-                    original_protected_area = PROTECTED_AREA_DIAMOND;
-                    break;
-                case GeneratorType.Emerald:
-                    original_protected_area = PROTECTED_AREA_EMERALD;
-                    break;
-            }
-            protectedArea = original_protected_area.map(
+            const protectedArea = GENERATOR_CONSTANTS[gen.type].protectedArea.map(
                 vec => vectorAdd(vec, gen.location, this.originPos)) as Area;
             if (vectorWithinArea(location, protectedArea)) {
                 return false;
@@ -2184,6 +2162,7 @@ export class BedWarsGame {
             event.cancel = true;
             await sleep(0);
             playerInfo.player.getComponent("equippable")!.getEquipmentSlot(mc.EquipmentSlot.Mainhand).setItem();
+            return;
         }
         // disallow the player to place blocks in protected area
         if (!this.isBlockLocationPlayerPlacable(event.block.location)) {
@@ -2303,7 +2282,7 @@ export class BedWarsGame {
         if (!senderInfo) return;
 
         event.cancel = true;
-        mc.world.sendMessage(`<${sender.nameTag}§r> ${event.message}`);
+        mc.world.sendMessage(`<${ sender.nameTag }§r> ${ event.message }`);
     }
 };
 
@@ -2392,15 +2371,15 @@ mc.world.beforeEvents.chatSend.subscribe(async event => {
         teams = [TeamType.Red, TeamType.Blue, TeamType.Cyan, TeamType.Gray, TeamType.Green, TeamType.Pink, TeamType.White, TeamType.Yellow];
     } else if (event.message == "SPECIAL CODE") {
         await sleep(0);
-        const container = event.sender.getComponent("inventory")!.container!
+        const container = event.sender.getComponent("inventory")!.container!;
         container.addItem(makeItem(IRON_ITEM_STACK, 64));
         container.addItem(makeItem(GOLD_ITEM_STACK, 64));
         container.addItem(makeItem(DIAMOND_ITEM_STACK, 64));
         container.addItem(makeItem(EMERALD_ITEM_STACK, 64));
         return;
-    } else if(event.message == "DEBUG STICK") {
+    } else if (event.message == "DEBUG STICK") {
         await sleep(0);
-        const container = event.sender.getComponent("inventory")!.container!
+        const container = event.sender.getComponent("inventory")!.container!;
         const i = new mc.ItemStack(MinecraftItemTypes.Stick);
         i.nameTag = "Debug Stick";
         container.addItem(i);

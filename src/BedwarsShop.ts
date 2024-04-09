@@ -29,12 +29,12 @@ import {
     TEAM_PURCHASE_MESSAGE,
     MAX_PROTECTION_LEVEL,
     MAX_HASTE_LEVEL,
-    TRAP_CONSTANT,
+    TRAP_CONSTANTS,
     TrapType,
     MAX_TRAP_COUNT
 } from "./Bedwars.js";
 import { ActionFormData } from "@minecraft/server-ui";
-import { containerIterator, containerSlotIterator, itemEqual, stackFirstContainerAdd } from './utility.js'
+import { containerIterator, containerSlotIterator, itemEqual, stackFirstContainerAdd } from './utility.js';
 import { Vector3Utils as v3 } from "@minecraft/math";
 import { MinecraftEnchantmentTypes, MinecraftItemTypes } from "@minecraft/vanilla-data";
 import { PLATFORM_ITEM } from "./RescuePlatform.js";
@@ -129,9 +129,9 @@ type isUnion<T, K = T> = T extends any ? (Exclude<K, T> extends T ? false : true
 type FieldOrFunction<PropName extends string, ValueType> = isUnion<PropName> extends true ? never : {
     [prop in PropName]: ValueType;
 } | {
-    [prop in PropName as `get${Capitalize<prop>}`]:
-    (playerInfo: PlayerGameInformation, currentTokens: TokenValue, teamInfo: TeamGameInformation, game: BedWarsGame) => ValueType;
-}
+        [prop in PropName as `get${ Capitalize<prop> }`]:
+        (playerInfo: PlayerGameInformation, currentTokens: TokenValue, teamInfo: TeamGameInformation, game: BedWarsGame) => ValueType;
+    };
 
 type Menu = FieldOrFunction<"display", string> & FieldOrFunction<"icon", string> &
     (
@@ -163,9 +163,9 @@ function generateBuyOneItemMenu(
                 color = "§4";
             }
             if (item.amount == 1) {
-                return `${color}${name}\n${tokenToString(cost)}`;
+                return `${ color }${ name }\n${ tokenToString(cost) }`;
             } else {
-                return `${color}${name} * ${item.amount}\n${tokenToString(cost)}`;
+                return `${ color }${ name } * ${ item.amount }\n${ tokenToString(cost) }`;
             }
         },
         getAction
@@ -183,7 +183,7 @@ function generateSecondMenuGetBody(defaultText: string) {
                 return "Failed to perform action.";
             }
         }
-    }
+    };
 }
 function generateBuySwordMenu(toLevel: SwordLevel, cost: TokenValue): Menu {
     return {
@@ -198,7 +198,7 @@ function generateBuySwordMenu(toLevel: SwordLevel, cost: TokenValue): Menu {
             } else {
                 color = "§4";
             }
-            return `${color}${toLevel.name}\n${tokenToString(cost)}`;
+            return `${ color }${ toLevel.name }\n${ tokenToString(cost) }`;
         },
         icon: toLevel.icon,
         action: {
@@ -221,7 +221,7 @@ function generateBuyArmorMenu(toLevel: ArmorLevel, cost: TokenValue): Menu {
             } else {
                 color = "§4";
             }
-            return `${color}${toLevel.name}\n${tokenToString(cost)}`;
+            return `${ color }${ toLevel.name }\n${ tokenToString(cost) }`;
         },
         icon: toLevel.icon,
         action: {
@@ -370,7 +370,7 @@ const generateItemShopData: () => Menu = () => ({
                         } else {
                             color = "§4";
                         }
-                        return `${color}Shears\n${tokenToString(cost)}`;
+                        return `${ color }Shears\n${ tokenToString(cost) }`;
                     },
                     icon: "textures/items/shears.png",
                     action: {
@@ -383,7 +383,7 @@ const generateItemShopData: () => Menu = () => ({
                         let toLevel: PickaxeLevel;
                         if (playerInfo.pickaxeLevel) {
                             if (!hasNextPickaxeLevel(playerInfo.pickaxeLevel)) {
-                                return "§hYour pickaxe is\nof the max level."
+                                return "§hYour pickaxe is\nof the max level.";
                             }
                             toLevel = PICKAXE_LEVELS[playerInfo.pickaxeLevel.level + 1];
                         } else {
@@ -397,7 +397,7 @@ const generateItemShopData: () => Menu = () => ({
                         } else {
                             color = "§4";
                         }
-                        return `${color}${toLevel.name}\n${tokenToString(cost)}`;
+                        return `${ color }${ toLevel.name }\n${ tokenToString(cost) }`;
                     },
                     getIcon(playerInfo) {
                         let toLevel: PickaxeLevel;
@@ -421,7 +421,7 @@ const generateItemShopData: () => Menu = () => ({
                         let toLevel: AxeLevel;
                         if (playerInfo.axeLevel) {
                             if (!hasNextAxeLevel(playerInfo.axeLevel)) {
-                                return "§hYour axe is\nof the max level."
+                                return "§hYour axe is\nof the max level.";
                             }
                             toLevel = AXE_LEVELS[playerInfo.axeLevel.level + 1];
                         } else {
@@ -435,7 +435,7 @@ const generateItemShopData: () => Menu = () => ({
                         } else {
                             color = "§4";
                         }
-                        return `${color}${toLevel.name}\n${tokenToString(cost)}`;
+                        return `${ color }${ toLevel.name }\n${ tokenToString(cost) }`;
                     },
                     getIcon(playerInfo) {
                         let toLevel: AxeLevel;
@@ -600,13 +600,14 @@ function generateTeamFirstGetDisplay(text: string, available: (teamInfo: TeamGam
         if (available(teamInfo)) {
             color = "";
         }
-        return `${color}${text}`;
+        return `${ color }${ text }`;
     };
 }
-function generateTeamSecondGetDisplay(name: string, getCost: (teamInfo: TeamGameInformation) => TokenValue, available: (teamInfo: TeamGameInformation) => boolean) {
+function generateTeamSecondGetDisplay(getName: (teamInfo: TeamGameInformation) => string, getCost: (teamInfo: TeamGameInformation) => TokenValue, available: (teamInfo: TeamGameInformation) => boolean) {
     return (_: any, currentTokens: TokenValue, teamInfo: TeamGameInformation) => {
+        const name = getName(teamInfo);
         if (!available(teamInfo)) {
-            return `§h${name}`;
+            return `§h${ name }`;
         }
         let color: string;
         const cost = getCost(teamInfo);
@@ -615,24 +616,24 @@ function generateTeamSecondGetDisplay(name: string, getCost: (teamInfo: TeamGame
         } else {
             color = "§4";
         }
-        return `${color}${name}\n${tokenToString(cost)}`;
+        return `${ color }${ name }\n${ tokenToString(cost) }`;
     };
 }
 
 function generateTrapMenu(trapType: TrapType): Menu {
     return {
         type: "entry",
-        getDisplay: generateTeamFirstGetDisplay(TRAP_CONSTANT[trapType].name,
+        getDisplay: generateTeamFirstGetDisplay(TRAP_CONSTANTS[trapType].name,
             teamInfo => !isTrapBought(trapType, teamInfo)),
-        icon: TRAP_CONSTANT[trapType].iconPath,
-        title: TRAP_CONSTANT[trapType].name,
-        body: TRAP_CONSTANT[trapType].description,
+        icon: TRAP_CONSTANTS[trapType].iconPath,
+        title: TRAP_CONSTANTS[trapType].name,
+        body: TRAP_CONSTANTS[trapType].description,
         subMenus: [
             {
                 type: "action",
-                getDisplay: generateTeamSecondGetDisplay(TRAP_CONSTANT[trapType].name,
+                getDisplay: generateTeamSecondGetDisplay(() => TRAP_CONSTANTS[trapType].name,
                     calculateTrapCost, teamInfo => !isTrapBought(trapType, teamInfo) && teamInfo.traps.length != MAX_TRAP_COUNT),
-                icon: TRAP_CONSTANT[trapType].iconPath,
+                icon: TRAP_CONSTANTS[trapType].iconPath,
                 getAction: (_, __, teamInfo) => ({
                     type: ActionType.BuyTrap,
                     cost: calculateTrapCost(teamInfo),
@@ -641,6 +642,9 @@ function generateTrapMenu(trapType: TrapType): Menu {
             }
         ]
     };
+}
+function addOneWithMaximum(num: number, maximum: number) {
+    return num < maximum ? num + 1 : maximum;
 }
 
 let teamShopData: Menu | null = null;
@@ -654,9 +658,9 @@ const generateTeamShopData: () => Menu = () => ({
         {
             type: "entry",
             display: "Traps",
-            icon: TRAP_CONSTANT[TrapType.NegativeEffect].iconPath,
-            getBody: (_, __, teamInfo) => `Buy some traps for your team!${teamInfo.traps.length == MAX_TRAP_COUNT ?
-                "\nYour team's traps have reached the maximum!" : ""}`,
+            icon: TRAP_CONSTANTS[TrapType.NegativeEffect].iconPath,
+            getBody: (_, __, teamInfo) => `Buy some traps for your team!${ teamInfo.traps.length == MAX_TRAP_COUNT ?
+                "\nYour team's traps have reached the maximum!" : "" }`,
             title: "Traps Shop",
             subMenus: [
                 generateTrapMenu(TrapType.NegativeEffect),
@@ -672,8 +676,8 @@ const generateTeamShopData: () => Menu = () => ({
                         const words = ["first", "second", "third"];
                         for (let index = 0; index < MAX_TRAP_COUNT; ++index) {
                             const fixedIndex = index + 1;
-                            const trapName = TRAP_CONSTANT[teamInfo.traps[index]]?.name ?? "§cNo Trap";
-                            result += `§7Trap #${fixedIndex}: §a${trapName}§7, activates when the ${words[index]} enemy walks into your base\n`;
+                            const trapName = TRAP_CONSTANTS[teamInfo.traps[index]]?.name ?? "§cNo Trap";
+                            result += `§7Trap #${ fixedIndex }: §a${ trapName }§7, activates when the ${ words[index] } enemy walks into your base\n`;
                         }
                         return result;
                     },
@@ -690,7 +694,7 @@ const generateTeamShopData: () => Menu = () => ({
             subMenus: [
                 {
                     type: "action",
-                    getDisplay: generateTeamSecondGetDisplay("Sharpened Sword", () => SHARPENED_SWORD_COST,
+                    getDisplay: generateTeamSecondGetDisplay(() => "Sharpened Sword", () => SHARPENED_SWORD_COST,
                         teamInfo => !teamInfo.hasSharpness),
                     icon: "textures/items/diamond_sword.png",
                     action: {
@@ -708,7 +712,8 @@ const generateTeamShopData: () => Menu = () => ({
             subMenus: [
                 {
                     type: "action",
-                    getDisplay: generateTeamSecondGetDisplay("Reinforced Armor",
+                    getDisplay: generateTeamSecondGetDisplay(
+                        teamInfo => `Reinforced Armor ${ TIER_STRING[addOneWithMaximum(teamInfo.protectionLevel, MAX_PROTECTION_LEVEL)] }`,
                         teamInfo => PROTECTION_TO_NEXT_LEVEL_COSTS[teamInfo.protectionLevel],
                         teamInfo => teamInfo.protectionLevel != MAX_PROTECTION_LEVEL),
                     icon: "textures/items/diamond_boots.png",
@@ -726,7 +731,8 @@ const generateTeamShopData: () => Menu = () => ({
             subMenus: [
                 {
                     type: "action",
-                    getDisplay: generateTeamSecondGetDisplay("Iron Forge",
+                    getDisplay: generateTeamSecondGetDisplay(
+                        teamInfo => `Iron Forge ${ TIER_STRING[addOneWithMaximum(teamInfo.ironForgeLevel, MAX_IRON_FORGE_LEVEL)] }`,
                         teamInfo => IRON_FORGE_TO_NEXT_LEVEL_COSTS[teamInfo.ironForgeLevel],
                         teamInfo => teamInfo.ironForgeLevel != MAX_IRON_FORGE_LEVEL),
                     icon: "textures/blocks/furnace_front_off.png",
@@ -744,7 +750,8 @@ const generateTeamShopData: () => Menu = () => ({
             subMenus: [
                 {
                     type: "action",
-                    getDisplay: generateTeamSecondGetDisplay("Maniac Miner",
+                    getDisplay: generateTeamSecondGetDisplay(
+                        teamInfo => `Maniac Miner ${ TIER_STRING[addOneWithMaximum(teamInfo.hasteLevel, MAX_HASTE_LEVEL)] }`,
                         teamInfo => HASTE_TO_NEXT_LEVEL_COSTS[teamInfo.hasteLevel],
                         teamInfo => teamInfo.hasteLevel != MAX_HASTE_LEVEL),
                     icon: "textures/items/gold_pickaxe.png",
@@ -762,7 +769,9 @@ const generateTeamShopData: () => Menu = () => ({
             subMenus: [
                 {
                     type: "action",
-                    getDisplay: generateTeamSecondGetDisplay("Heal Pool", () => HEAL_POOL_COST,
+                    getDisplay: generateTeamSecondGetDisplay(
+                        () => "Heal Pool",
+                        () => HEAL_POOL_COST,
                         teamInfo => !teamInfo.healPoolEnabled),
                     icon: "textures/blocks/beacon.png",
                     action: {
@@ -804,16 +813,16 @@ function isTokenSatisfying(a: TokenValue, b: TokenValue) {
 function tokenToString(t: TokenValue) {
     let result = "";
     if (t.ironAmount) {
-        result += `${t.ironAmount} Irons `;
+        result += `${ t.ironAmount } Irons `;
     }
     if (t.goldAmount) {
-        result += `${t.goldAmount} Golds `;
+        result += `${ t.goldAmount } Golds `;
     }
     if (t.diamondAmount) {
-        result += `${t.diamondAmount} Diamonds `;
+        result += `${ t.diamondAmount } Diamonds `;
     }
     if (t.emeraldAmount) {
-        result += `${t.emeraldAmount} Emeralds `;
+        result += `${ t.emeraldAmount } Emeralds `;
     }
     if (result.length > 0)
         result = result.slice(0, result.length - 1);
@@ -893,17 +902,17 @@ async function showMenuForPlayer(menu: Menu, playerInfo: PlayerGameInformation, 
 
         // Extract information
         if ("title" in menu) {
-            title = menu.title
+            title = menu.title;
         } else {
             title = menu.getTitle(playerInfo, currentTokens, teamInfo, game);
         }
         if ("body" in menu) {
-            body = menu.body
+            body = menu.body;
         } else {
             body = menu.getBody(playerInfo, currentTokens, teamInfo, game);
         }
         if ("subMenus" in menu) {
-            subMenus = menu.subMenus
+            subMenus = menu.subMenus;
         } else {
             subMenus = menu.getSubMenus(playerInfo, currentTokens, teamInfo, game);
         }
@@ -961,7 +970,7 @@ async function showMenuForPlayer(menu: Menu, playerInfo: PlayerGameInformation, 
 function performAction(action: Action, playerInfo: PlayerGameInformation, teamInfo: TeamGameInformation, game: BedWarsGame) {
     let result = false;
     const player = playerInfo.player;
-    const container = player.getComponent("minecraft:inventory")!.container!
+    const container = player.getComponent("minecraft:inventory")!.container!;
 
     const tokens = calculateTokens(container);
     execute: if (action.type == ActionType.BuyNormalItem) {
@@ -1004,7 +1013,7 @@ function performAction(action: Action, playerInfo: PlayerGameInformation, teamIn
         if (!foundSword) {
             container.addItem(action.toLevel.item);
         }
-        player.sendMessage(sprintf(PURCHASE_MESSAGE, action.toLevel.name))
+        player.sendMessage(sprintf(PURCHASE_MESSAGE, action.toLevel.name));
         playerInfo.swordLevel = action.toLevel;
         result = true;
     } else if (action.type == ActionType.BuyShear) {
@@ -1075,7 +1084,7 @@ function performAction(action: Action, playerInfo: PlayerGameInformation, teamIn
         } else {
             container.addItem(toLevel.item);
         }
-        player.sendMessage(sprintf(PURCHASE_MESSAGE, toLevel.name))
+        player.sendMessage(sprintf(PURCHASE_MESSAGE, toLevel.name));
         playerInfo.pickaxeLevel = toLevel;
         result = true;
     } else if (action.type == ActionType.UpgradeAxe) {
@@ -1113,7 +1122,7 @@ function performAction(action: Action, playerInfo: PlayerGameInformation, teamIn
         } else {
             container.addItem(toLevel.item);
         }
-        player.sendMessage(sprintf(PURCHASE_MESSAGE, toLevel.name))
+        player.sendMessage(sprintf(PURCHASE_MESSAGE, toLevel.name));
         playerInfo.axeLevel = toLevel;
         result = true;
     } else if (action.type == ActionType.UpgradeIronForge) {
@@ -1131,7 +1140,7 @@ function performAction(action: Action, playerInfo: PlayerGameInformation, teamIn
         ++teamInfo.ironForgeLevel;
         game.applyTeamIronForge(teamInfo.type);
         const t = TEAM_CONSTANTS[teamInfo.type];
-        game.teamBroadcast(teamInfo.type, TEAM_PURCHASE_MESSAGE, t.colorPrefix, player.name, `Iron Forge level ${teamInfo.ironForgeLevel}`);
+        game.teamBroadcast(teamInfo.type, TEAM_PURCHASE_MESSAGE, t.colorPrefix, player.name, `Iron Forge level ${ teamInfo.ironForgeLevel }`);
         result = true;
     } else if (action.type == ActionType.UpgradeProtection) {
         if (teamInfo.protectionLevel >= MAX_PROTECTION_LEVEL) {
@@ -1147,7 +1156,7 @@ function performAction(action: Action, playerInfo: PlayerGameInformation, teamIn
         consumeToken(container, cost);
         ++teamInfo.protectionLevel;
         const t = TEAM_CONSTANTS[teamInfo.type];
-        game.teamBroadcast(teamInfo.type, TEAM_PURCHASE_MESSAGE, t.colorPrefix, player.name, `Reinforced Armor level ${teamInfo.protectionLevel}`);
+        game.teamBroadcast(teamInfo.type, TEAM_PURCHASE_MESSAGE, t.colorPrefix, player.name, `Reinforced Armor level ${ teamInfo.protectionLevel }`);
         result = true;
     } else if (action.type == ActionType.UpgradeHaste) {
         if (teamInfo.hasteLevel >= MAX_HASTE_LEVEL) {
@@ -1164,7 +1173,7 @@ function performAction(action: Action, playerInfo: PlayerGameInformation, teamIn
         ++teamInfo.hasteLevel;
         game.applyTeamHasteLevel(teamInfo.type);
         const t = TEAM_CONSTANTS[teamInfo.type];
-        game.teamBroadcast(teamInfo.type, TEAM_PURCHASE_MESSAGE, t.colorPrefix, player.name, `Maniac Miner level ${teamInfo.hasteLevel}`);
+        game.teamBroadcast(teamInfo.type, TEAM_PURCHASE_MESSAGE, t.colorPrefix, player.name, `Maniac Miner level ${ teamInfo.hasteLevel }`);
         result = true;
     } else if (action.type == ActionType.BuySharpness) {
         if (teamInfo.hasSharpness) {
@@ -1216,7 +1225,7 @@ function performAction(action: Action, playerInfo: PlayerGameInformation, teamIn
         consumeToken(container, cost);
         teamInfo.traps.push(action.trapType);
         const t = TEAM_CONSTANTS[teamInfo.type];
-        game.teamBroadcast(teamInfo.type, TEAM_PURCHASE_MESSAGE, t.colorPrefix, player.name, TRAP_CONSTANT[action.trapType].name);
+        game.teamBroadcast(teamInfo.type, TEAM_PURCHASE_MESSAGE, t.colorPrefix, player.name, TRAP_CONSTANTS[action.trapType].name);
         result = true;
     }
 
