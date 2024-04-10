@@ -47,6 +47,7 @@ export const FIRE_BALL_ITEM = (() => {
 const SPAWN_LOCATION_SYMBOL = Symbol('spawn location');
 const FIRE_BALL_COOLDOWN = 20; // in ticks
 const FIRE_BALL_MAX_TRAVEL_DISTANCE = 200; // in blocks
+const FIREBALL_GAMEID_PROP = "BEDWARSID";
 
 function isFireBallItem(item: mc.ItemStack) {
     return item.getLore()[1] == FIRE_BALL_ITEM.getLore()[1];
@@ -105,7 +106,6 @@ function isSpeedPotionItem(item: mc.ItemStack) {
     return loreA.length == loreB.length &&
         loreA[1] == loreB[1];
 }
-
 
 const DEATH_TITLE = "§cYOU DIED!";
 const DEATH_SUBTITLE = "§eYou will respawn in §c%d §eseconds!";
@@ -279,7 +279,7 @@ interface GeneratorInformation {
     spawnLocation: mc.Vector3;
     location: mc.Vector3; // the bottom-north-west location
     initialInterval: number;
-    indicatorLocation?: mc.Vector3[];
+    indicatorLocations?: mc.Vector3[];
 }
 interface TeamInformation {
     type: TeamType;
@@ -839,49 +839,49 @@ const mapSteamPunk: MapInformation = {
             spawnLocation: { x: 85.5, y: 74, z: 0.5 },
             location: { x: 85, y: 73, z: 0 },
             initialInterval: DIAMOND_GENERATOR_INTERVAL,
-            indicatorLocation: [{ x: 85, y: 77, z: 0 }]
+            indicatorLocations: [{ x: 85, y: 77, z: 0 }]
         }, {
             type: GeneratorType.Diamond,
             spawnLocation: { x: 0.5, y: 74, z: 85.5 },
             location: { x: 0, y: 73, z: 85 },
             initialInterval: DIAMOND_GENERATOR_INTERVAL,
-            indicatorLocation: [{ x: 0, y: 77, z: 85 }]
+            indicatorLocations: [{ x: 0, y: 77, z: 85 }]
         }, {
             type: GeneratorType.Diamond,
             spawnLocation: { x: -84.5, y: 74, z: 0.5 },
             location: { x: -85, y: 73, z: 0 },
             initialInterval: DIAMOND_GENERATOR_INTERVAL,
-            indicatorLocation: [{ x: -85, y: 77, z: 0 }]
+            indicatorLocations: [{ x: -85, y: 77, z: 0 }]
         }, {
             type: GeneratorType.Diamond,
             spawnLocation: { x: 0.5, y: 74, z: -84.5 },
             location: { x: 0, y: 73, z: -85 },
             initialInterval: DIAMOND_GENERATOR_INTERVAL,
-            indicatorLocation: [{ x: 0, y: 77, z: -85 }]
+            indicatorLocations: [{ x: 0, y: 77, z: -85 }]
         }, {
             type: GeneratorType.Emerald,
             spawnLocation: { x: 24.5, y: 74, z: 24.5 },
             location: { x: 24, y: 73, z: 24 },
             initialInterval: EMERLAD_GENERATOR_INTERVAL,
-            indicatorLocation: [{ x: 24, y: 77, z: 24 }]
+            indicatorLocations: [{ x: 24, y: 77, z: 24 }]
         }, {
             type: GeneratorType.Emerald,
             spawnLocation: { x: -23.5, y: 74, z: 24.5 },
             location: { x: -24, y: 73, z: 24 },
             initialInterval: EMERLAD_GENERATOR_INTERVAL,
-            indicatorLocation: [{ x: -24, y: 77, z: 24 }]
+            indicatorLocations: [{ x: -24, y: 77, z: 24 }]
         }, {
             type: GeneratorType.Emerald,
             spawnLocation: { x: 24.5, y: 74, z: -23.5 },
             location: { x: 24, y: 73, z: -24 },
             initialInterval: EMERLAD_GENERATOR_INTERVAL,
-            indicatorLocation: [{ x: 24, y: 77, z: -24 }]
+            indicatorLocations: [{ x: 24, y: 77, z: -24 }]
         }, {
             type: GeneratorType.Emerald,
             spawnLocation: { x: -23.5, y: 74, z: -23.5 },
             location: { x: -24, y: 73, z: -24 },
             initialInterval: EMERLAD_GENERATOR_INTERVAL,
-            indicatorLocation: [{ x: -24, y: 77, z: -24 }]
+            indicatorLocations: [{ x: -24, y: 77, z: -24 }]
         }
     ]
 };
@@ -910,7 +910,7 @@ type GeneratorGameInformation = {
     location: mc.Vector3;
     type: GeneratorType;
     interval: number;
-    indicatorLocation?: mc.Vector3[];
+    indicatorLocations?: mc.Vector3[];
     remainingCooldown: number;
     tokensGeneratedCount: number;
 } & ({
@@ -995,6 +995,7 @@ export class BedWarsGame {
     private generators: GeneratorGameInformation[];
     private scoreObj: mc.ScoreboardObjective;
     private startTime: number;
+    private id: number;
 
     constructor({ map, originLocation, dimension, scoreboardObjective }: {
         map: MapInformation;
@@ -1010,6 +1011,7 @@ export class BedWarsGame {
         this.startTime = 0;
         this.scoreObj = scoreboardObjective;
         this.teams = new Map();
+        this.id = Math.random();
         for (const team of this.map.teams) {
             this.teams.set(team.type, {
                 type: team.type,
@@ -1032,7 +1034,7 @@ export class BedWarsGame {
                 interval: genInfo.initialInterval,
                 remainingCooldown: 0,
                 tokensGeneratedCount: 0,
-                indicatorLocation: genInfo.indicatorLocation,
+                indicatorLocations: genInfo.indicatorLocations?.map(v => v3.add(v, this.originPos)),
                 belongToTeam: true,
                 team: teamInfo.type,
                 spawnExtraEmerald: false,
@@ -1048,14 +1050,14 @@ export class BedWarsGame {
                 interval: genInfo.initialInterval,
                 remainingCooldown: 0,
                 tokensGeneratedCount: 0,
-                indicatorLocation: genInfo.indicatorLocation,
+                indicatorLocations: genInfo.indicatorLocations?.map(v => v3.add(v, this.originPos)),
                 belongToTeam: false
             });
         }
     }
 
     setPlayer(player: mc.Player, teamType: TeamType) {
-        if (this.map.teams.find(t => t.type == teamType) == undefined) throw new Error("No such team");
+        if (this.map.teams.find(t => t.type == teamType) == undefined) throw new Error(`No such team(${ teamType }).`);
 
         const playerInfo = this.players.get(player.name);
         if (playerInfo) {
@@ -1143,11 +1145,11 @@ export class BedWarsGame {
             switch (state) {
                 case TeamState.BedAlive:
                     // result += "§a✔";
-                    result += "§aV"; // Mojangles will be broke by unicode characters
+                    result += "§aV"; // Mojangles will be broken by unicode characters
                     break;
                 case TeamState.Dead:
                     // result += "§c✘";
-                    result += "§cX"; // Mojangles will be broke by unicode characters
+                    result += "§cX"; // Mojangles will be broken by unicode characters
                     break;
                 case TeamState.BedDestoryed:
                     let aliveCount = 0;
@@ -1713,8 +1715,8 @@ export class BedWarsGame {
             }
         }
         for (const gen of this.generators) {
-            if (gen.indicatorLocation && gen.remainingCooldown % 20 == 0) {
-                for (const loc of gen.indicatorLocation) {
+            if (gen.indicatorLocations && gen.remainingCooldown % 20 == 0) {
+                for (const loc of gen.indicatorLocations) {
                     const sign = this.dimension.getBlock(loc)?.getComponent("sign");
                     if (!sign) {
                         throw new Error(`Generator indicator does not exist at ${ v3.toString(loc) }.`);
@@ -1823,7 +1825,13 @@ export class BedWarsGame {
         }
         for (const fireBall of this.dimension.getEntities({
             type: "minecraft:fireball"
-        }).filter(e => e[SPAWN_LOCATION_SYMBOL])) {
+        })) {
+            const id = fireBall.getDynamicProperty(FIREBALL_GAMEID_PROP);
+            if (!id) continue;
+            if (id != this.id) {
+                fireBall.kill();
+                continue;
+            }
             const location = fireBall[SPAWN_LOCATION_SYMBOL]!;
             if (v3.distance(fireBall.location, location) >= FIRE_BALL_MAX_TRAVEL_DISTANCE) {
                 fireBall.kill();
@@ -2078,6 +2086,7 @@ export class BedWarsGame {
 
             if (!destroyerInfo) return;
             if (destroyedTeam.type == destroyerInfo.team) return;
+            this.teams.get(destroyedTeam.type)!.state = TeamState.BedDestoryed;
             await sleep(0);
 
             /* Clear the bed */
@@ -2110,7 +2119,6 @@ export class BedWarsGame {
                     t.colorPrefix, capitalize(t.name),
                     TEAM_CONSTANTS[destroyerInfo.team].colorPrefix, destroyerInfo.name));
             }
-            this.teams.get(destroyedTeam.type)!.state = TeamState.BedDestoryed;
             this.checkTeamPlayers();
             return;
         }
@@ -2226,6 +2234,7 @@ export class BedWarsGame {
             fireBall.getComponent("projectile")!.owner = playerInfo.player;
             fireBall.applyImpulse(v3.normalize(playerInfo.player.getViewDirection()));
             fireBall[SPAWN_LOCATION_SYMBOL] = fireBall.location;
+            fireBall.setDynamicProperty(FIREBALL_GAMEID_PROP, this.id);
 
             consumeMainHandItem(playerInfo.player);
             playerInfo.fireBallCooldown = FIRE_BALL_COOLDOWN;
