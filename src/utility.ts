@@ -65,7 +65,7 @@ export function showObjectToPlayer(player: mc.Player, object: any) {
     /**
      * @returns {Promise<Boolean>} returning true means that the player cancelled.
      */
-    async function _showObjectToPlayer(player: mc.Player, object: any, derived: any): Promise<boolean> {
+    async function _showObjectToPlayer(player: mc.Player, object: any, deriving: any): Promise<boolean> {
         const data = new ui.ActionFormData();
         if (isPrimitive(object)) {
             data.title(`Primitive ${ realTypeof(object) }`);
@@ -83,16 +83,16 @@ export function showObjectToPlayer(player: mc.Player, object: any) {
         data.title(objectName);
 
         data.button("§1See Prototype");
-        const hasBackButton = !!derived;
+        const hasBackButton = !!deriving;
         hasBackButton && data.button("§m§lBack→");
-        hasCallButton && data.button("Call with No Argument");
+        hasCallButton && data.button("§sCall with No Argument");
 
         let bodyText = `§pContent of §n${ objectName }§p:`;
         const childObjects = [];
         const childFunctions: Function[] = [];
         const childFunctionNames: string[] = [];
         for (let key of Object.getOwnPropertyNames(object)) {
-            const value = Reflect.get(object, key, derived ?? object);
+            const value = Reflect.get(object, key, deriving ?? object);
             if (isPrimitive(value)) {
                 bodyText += `\n§6Property §e${ key }§6 as §a${ typeof value }§6: §b${ value }\n`;
             } else if (typeof value == "function") {
@@ -131,14 +131,14 @@ export function showObjectToPlayer(player: mc.Player, object: any) {
                 fixedIndex = selection - offset;
             }
             if (specialButton == "Proto") { // Show the prototype
-                let result = await _showObjectToPlayer(player, Object.getPrototypeOf(object), derived ?? object);
+                let result = await _showObjectToPlayer(player, Object.getPrototypeOf(object), deriving ?? object);
                 if (result) return true;
             } else if (specialButton == "Back") { // Go back
                 return false;
             } else if (specialButton == "Call") {
                 let value: any;
                 try {
-                    value = object();
+                    value = object.call(deriving);
                 } catch (e) {
                     if (e instanceof Error) {
                         value = `§c${ e.name }: ${ e.message }\n${ e?.stack }`;
@@ -149,12 +149,13 @@ export function showObjectToPlayer(player: mc.Player, object: any) {
                 const result = await _showObjectToPlayer(player, value, value);
                 if (result) return true;
             } else { // Child objects and functions
+                let child: object;
                 if (fixedIndex >= childObjects.length) { // Child function
-                    const child = childFunctions[fixedIndex - childObjects.length];
-                    const result = await _showObjectToPlayer(player, child.prototype, child.prototype);
+                    child = childFunctions[fixedIndex - childObjects.length];
+                    const result = await _showObjectToPlayer(player, child, deriving ?? object);
                     if (result) return true;
                 } else { // Child object
-                    const child = childObjects[fixedIndex];
+                    child = childObjects[fixedIndex];
                     const result = await _showObjectToPlayer(player, child, child);
                     if (result) return true;
                 }

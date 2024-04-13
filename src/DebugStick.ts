@@ -28,6 +28,9 @@ mc.system.runInterval(() => {
         } else if (player[DEBUG_MODE_COOLDOWN_SYM] > 0) {
             --player[DEBUG_MODE_COOLDOWN_SYM];
         }
+        if(player[PLAYER_DEBUG_MODE_SYM]) {
+            player.onScreenDisplay.setActionBar("§6§lDEBUG MODE");
+        }
     }
 });
 
@@ -97,7 +100,9 @@ mc.world.beforeEvents.playerInteractWithBlock.subscribe(async event => {
 
     await util.sleep(0);
     const obj = event.block.permutation.getAllStates();
-    obj.location = mcMath.Vector3Utils.toString(event.block.location);
+    obj.location = mcMath.Vector3Utils.toString(event.block.location, {
+        decimals: 0
+    });
     util.showObjectToPlayer(player, obj);
 });
 
