@@ -1540,7 +1540,7 @@ export class BedWarsGame {
         // Simulated players AI
         for (const playerInfo of this.players.values()) {
             const teamAreaEntered = playerInfo.teamAreaEntered;
-            if (teamAreaEntered) {
+            if (teamAreaEntered != undefined) {
                 const players = teamIslandPlayers.get(teamAreaEntered);
                 if (players) {
                     players.push(playerInfo);
@@ -1580,6 +1580,9 @@ export class BedWarsGame {
             // fakePlayer.lookAtEntity(fakePlayer.attackTarget.player);
             if (mc.system.currentTick % 20 == 0) {
                 fakePlayer.navigateToEntity(fakePlayer.attackTarget.player);
+            }
+            if(v3.distance(fakePlayer.location, fakePlayer.attackTarget.player.location) < 3) {
+                fakePlayer.stopMoving();
             }
         }
     }
