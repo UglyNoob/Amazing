@@ -2175,7 +2175,7 @@ mc.world.beforeEvents.chatSend.subscribe(async event => {
         ++teamPlayerCount[teamIndex];
         teamIndex = switchTeam(teamIndex);
     }
-    const maxPlayer = Math.max(1, ...teamPlayerCount);
+    const maxPlayer = Math.max(2, ...teamPlayerCount);
     for (teamIndex = 0; teamIndex < teams.length; ++teamIndex) {
         for (let i = 0; i < maxPlayer - teamPlayerCount[teamIndex]; ++i) {
             const p = globalThis.test.spawnSimulatedPlayer(event.sender.location as any, "a");
