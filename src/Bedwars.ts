@@ -137,6 +137,7 @@ declare module '@minecraft/server' {
 declare module '@minecraft/server-gametest' {
     interface SimulatedPlayer {
         attackTarget?: PlayerGameInformation;
+        previousOnGround: boolean;
     }
 }
 
@@ -1536,28 +1537,28 @@ export class BedWarsGame {
             }
         }
 
-        const teamIslandPlayers: Map<TeamType, PlayerGameInformation[]> = new Map();
         // Simulated players AI
+        const teamIslandEnemies: Map<TeamType, PlayerGameInformation[]> = new Map();
         for (const playerInfo of this.players.values()) {
             const teamAreaEntered = playerInfo.teamAreaEntered;
-            if (teamAreaEntered != undefined) {
-                const players = teamIslandPlayers.get(teamAreaEntered);
+            if (teamAreaEntered != undefined && teamAreaEntered != playerInfo.team) {
+                const players = teamIslandEnemies.get(teamAreaEntered);
                 if (players) {
                     players.push(playerInfo);
                 } else {
-                    teamIslandPlayers.set(teamAreaEntered, [playerInfo]);
+                    teamIslandEnemies.set(teamAreaEntered, [playerInfo]);
                 }
             }
         }
         for (const fakePlayerInfo of this.players.values()) {
             if (!(fakePlayerInfo.player instanceof SimulatedPlayer)) continue;
             const fakePlayer = fakePlayerInfo.player;
-            const victims = teamIslandPlayers.get(fakePlayerInfo.team)?.sort((a, b) =>
+            const victims = teamIslandEnemies.get(fakePlayerInfo.team)?.sort((a, b) =>
                 v3.distance(a.player.location, fakePlayer.location) - v3.distance(b.player.location, fakePlayer.location)
             );
-            victims?.shift();
             if (!victims || victims.length == 0) {
                 fakePlayer.attackTarget = undefined;
+                fakePlayer.previousOnGround = fakePlayer.isOnGround;
                 continue;
             }
             if (fakePlayer.attackTarget) {
@@ -1573,17 +1574,17 @@ export class BedWarsGame {
                 fakePlayer.attackTarget = victims[0];
             }
 
-            if (mc.system.currentTick % 2 == 0) {
+            if(!fakePlayer.previousOnGround && fakePlayer.isOnGround || mc.system.currentTick % 15 == 0) {
                 fakePlayer.lookAtEntity(fakePlayer.attackTarget.player);
-                fakePlayer.attack();
-            }
-            // fakePlayer.lookAtEntity(fakePlayer.attackTarget.player);
-            if (mc.system.currentTick % 20 == 0) {
                 fakePlayer.navigateToEntity(fakePlayer.attackTarget.player);
             }
-            if(v3.distance(fakePlayer.location, fakePlayer.attackTarget.player.location) < 2.8) {
+            if(v3.distance(fakePlayer.location, fakePlayer.attackTarget.player.location) < 2.95) {
                 fakePlayer.stopMoving();
+                if(mc.system.currentTick % randomInt(4, 6) == 0) {
+                    fakePlayer.attack();
+                }
             }
+            fakePlayer.previousOnGround = fakePlayer.isOnGround;
         }
     }
 
