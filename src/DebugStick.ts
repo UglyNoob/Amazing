@@ -28,7 +28,7 @@ mc.system.runInterval(() => {
         } else if (player[DEBUG_MODE_COOLDOWN_SYM] > 0) {
             --player[DEBUG_MODE_COOLDOWN_SYM];
         }
-        if(player[PLAYER_DEBUG_MODE_SYM]) {
+        if (player[PLAYER_DEBUG_MODE_SYM]) {
             player.onScreenDisplay.setActionBar("§6§lDEBUG MODE");
         }
     }
@@ -74,10 +74,10 @@ mc.world.beforeEvents.itemUse.subscribe(async event => {
                 changedName += '_';
             }
         }
-        code += `let ${ changedName } = ___players[${ index }]\n`;
+        code += `let ${changedName} = ___players[${index}]\n`;
         ++index;
     }
-    code += `return ${ response.formValues![1] }`;
+    code += `return ${response.formValues![1]}`;
     try {
         let result = new Function('mc', 'ui', 'util', 'mcMath', 'me', code)(
             mc, ui, util, mcMath, event.source
@@ -85,7 +85,7 @@ mc.world.beforeEvents.itemUse.subscribe(async event => {
         util.showObjectToPlayer(event.source, result);
     } catch (e) {
         if (e instanceof Error) {
-            event.source.sendMessage(`§c${ e.name }: ${ e.message }\n${ e?.stack }`);
+            event.source.sendMessage(`§c${e.name}: ${e.message}\n${e?.stack}`);
         }
     }
 });
@@ -115,4 +115,5 @@ mc.world.beforeEvents.playerInteractWithEntity.subscribe(async event => {
     player[DEBUG_MODE_COOLDOWN_SYM] = DEBUG_COOLDOWN;
 
     await util.sleep(0);
+    util.showObjectToPlayer(player, event.target);
 });

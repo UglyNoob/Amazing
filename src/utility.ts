@@ -43,7 +43,7 @@ export function getGameMode(player: mc.Player): mc.GameMode {
 
 export function setGameMode(player: mc.Player, gameMode: mc.GameMode) {
     if (player.setGameMode) return player.setGameMode(gameMode);
-    player.runCommand(`gamemode ${ gameMode }`);
+    player.runCommand(`gamemode ${gameMode}`);
 }
 
 export function capitalize(str: string) {
@@ -68,8 +68,8 @@ export function showObjectToPlayer(player: mc.Player, object: any) {
     async function _showObjectToPlayer(player: mc.Player, object: any, deriving: any): Promise<boolean> {
         const data = new ui.ActionFormData();
         if (isPrimitive(object)) {
-            data.title(`Primitive ${ realTypeof(object) }`);
-            data.body(`§b${ object }`);
+            data.title(`Primitive ${realTypeof(object)}`);
+            data.body(`§b${object}`);
             data.button("§m§lBack");
             let response = await data.show(player);
             return response.canceled;
@@ -87,24 +87,24 @@ export function showObjectToPlayer(player: mc.Player, object: any) {
         hasBackButton && data.button("§m§lBack→");
         hasCallButton && data.button("§sCall with No Argument");
 
-        let bodyText = `§pContent of §n${ objectName }§p:`;
+        let bodyText = `§pContent of §n${objectName}§p:`;
         const childObjects = [];
         const childFunctions: Function[] = [];
         const childFunctionNames: string[] = [];
         for (let key of Object.getOwnPropertyNames(object)) {
             const value = Reflect.get(object, key, deriving ?? object);
             if (isPrimitive(value)) {
-                bodyText += `\n§6Property §e${ key }§6 as §a${ typeof value }§6: §b${ value }\n`;
+                bodyText += `\n§6Property §e${key}§6 as §a${typeof value}§6: §b${value}\n`;
             } else if (typeof value == "function") {
                 childFunctionNames.push(key);
                 childFunctions.push(value);
             } else { // handle non-function object
                 childObjects.push(value);
-                data.button(`§n${ getObjectName(value) } §e${ key }`);
+                data.button(`§n${getObjectName(value)} §e${key}`);
             }
         }
         for (let name of childFunctionNames) {
-            data.button(`§sFunction §e${ name }`);
+            data.button(`§sFunction §e${name}`);
         }
         data.body(bodyText);
 
@@ -141,7 +141,7 @@ export function showObjectToPlayer(player: mc.Player, object: any) {
                     value = object.call(deriving);
                 } catch (e) {
                     if (e instanceof Error) {
-                        value = `§c${ e.name }: ${ e.message }\n${ e?.stack }`;
+                        value = `§c${e.name}: ${e.message}\n${e?.stack}`;
                     } else {
                         value = e;
                     }
@@ -185,6 +185,9 @@ export function vectorAdd(...vecs: mc.Vector3[]): mc.Vector3 {
         result.z += vec.z;
     }
     return result;
+}
+export function vectorSize(vec: mc.Vector3) {
+    return Math.sqrt(vec.x * vec.x + vec.y * vec.y + vec.z * vec.z);
 }
 
 export function makeItem(item: mc.ItemStack, newAmount: number): mc.ItemStack;
