@@ -1581,7 +1581,7 @@ export class BedWarsGame {
             if (mc.system.currentTick % 20 == 0) {
                 fakePlayer.navigateToEntity(fakePlayer.attackTarget.player);
             }
-            if(v3.distance(fakePlayer.location, fakePlayer.attackTarget.player.location) < 3) {
+            if(v3.distance(fakePlayer.location, fakePlayer.attackTarget.player.location) < 2.5) {
                 fakePlayer.stopMoving();
             }
         }
