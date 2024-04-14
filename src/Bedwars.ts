@@ -707,7 +707,7 @@ const mapSteamPunk: MapInformation = {
             type: TeamType.Green,
             itemShopLocation: { x: 105, y: 74, z: -57 },
             teamShopLocation: { x: 91, y: 74, z: -57 },
-            islandArea: [{ x: 82, y: 59, z: -67 }, { x: 110, y: 102, z: -40 }],
+            islandArea: [{ x: 82, y: 59, z: -67 }, { x: 111, y: 102, z: -39 }],
             protectedArea: [{ x: 95, y: 73, z: -59 }, { x: 102, y: 77, z: -52 }],
             teamGenerator: {
                 type: GeneratorType.IronGold,
@@ -723,7 +723,7 @@ const mapSteamPunk: MapInformation = {
             type: TeamType.Yellow,
             itemShopLocation: { x: 91, y: 74, z: 57 },
             teamShopLocation: { x: 105, y: 74, z: 57 },
-            islandArea: [{ x: 86, y: 59, z: 40 }, { x: 114, y: 102, z: 67 }],
+            islandArea: [{ x: 86, y: 59, z: 40 }, { x: 115, y: 102, z: 68 }],
             protectedArea: [{ x: 95, y: 73, z: 53 }, { x: 102, y: 77, z: 60 }],
             teamGenerator: {
                 type: GeneratorType.IronGold,
@@ -739,7 +739,7 @@ const mapSteamPunk: MapInformation = {
             type: TeamType.Cyan,
             itemShopLocation: { x: 57, y: 74, z: 105 },
             teamShopLocation: { x: 57, y: 74, z: 91 },
-            islandArea: [{ x: 40, y: 59, z: 82 }, { x: 67, y: 102, z: 110 }],
+            islandArea: [{ x: 40, y: 59, z: 82 }, { x: 68, y: 102, z: 111 }],
             protectedArea: [{ x: 53, y: 73, z: 95 }, { x: 60, y: 77, z: 102 }],
             teamGenerator: {
                 type: GeneratorType.IronGold,
@@ -755,7 +755,7 @@ const mapSteamPunk: MapInformation = {
             type: TeamType.White,
             itemShopLocation: { x: -57, y: 74, z: 91 },
             teamShopLocation: { x: -57, y: 74, z: 105 },
-            islandArea: [{ x: -67, y: 59, z: 86 }, { x: -40, y: 102, z: 114 }],
+            islandArea: [{ x: -67, y: 59, z: 86 }, { x: -39, y: 102, z: 115 }],
             protectedArea: [{ x: -59, y: 73, z: 95 }, { x: -53, y: 77, z: 101 }],
             teamGenerator: {
                 type: GeneratorType.IronGold,
@@ -771,7 +771,7 @@ const mapSteamPunk: MapInformation = {
             type: TeamType.Pink,
             itemShopLocation: { x: -105, y: 74, z: 57 },
             teamShopLocation: { x: -91, y: 74, z: 57 },
-            islandArea: [{ x: -110, y: 59, z: 40 }, { x: -82, y: 102, z: 67 }],
+            islandArea: [{ x: -110, y: 59, z: 40 }, { x: -81, y: 102, z: 68 }],
             protectedArea: [{ x: -101, y: 73, z: 53 }, { x: -94, y: 77, z: 60 }],
             teamGenerator: {
                 type: GeneratorType.IronGold,
@@ -787,7 +787,7 @@ const mapSteamPunk: MapInformation = {
             type: TeamType.Gray,
             itemShopLocation: { x: -91, y: 74, z: -57 },
             teamShopLocation: { x: -105, y: 74, z: -57 },
-            islandArea: [{ x: -114, y: 59, z: -67 }, { x: -86, y: 102, z: -40 }],
+            islandArea: [{ x: -114, y: 59, z: -67 }, { x: -85, y: 102, z: -39 }],
             protectedArea: [{ x: -101, y: 73, z: -59 }, { x: -94, y: 77, z: -52 }],
             teamGenerator: {
                 type: GeneratorType.IronGold,
@@ -798,12 +798,12 @@ const mapSteamPunk: MapInformation = {
             bedLocation: [{ x: -98, y: 73, z: -47 }, { x: -98, y: 73, z: -46 }],
             playerSpawn: { x: -97.5, y: 73, z: -55.5 },
             playerSpawnViewDirection: { x: 0, y: 0, z: 1 },
-            teamChestLocation: { x: 0, y: 73, z: 0 },
+            teamChestLocation: { x: -94, y: 73, z: -52 },
         }, {
             type: TeamType.Red,
             itemShopLocation: { x: -57, y: 74, z: -105 },
             teamShopLocation: { x: -57, y: 74, z: -91 },
-            islandArea: [{ x: -67, y: 59, z: -110 }, { x: -40, y: 102, z: -82 }],
+            islandArea: [{ x: -67, y: 59, z: -110 }, { x: -39, y: 102, z: -81 }],
             protectedArea: [{ x: -59, y: 73, z: -101 }, { x: -52, y: 77, z: -94 }],
             teamGenerator: {
                 type: GeneratorType.IronGold,
@@ -819,7 +819,7 @@ const mapSteamPunk: MapInformation = {
             type: TeamType.Blue,
             itemShopLocation: { x: 57, y: 74, z: -91 },
             teamShopLocation: { x: 57, y: 74, z: -105 },
-            islandArea: [{ x: 40, y: 59, z: -114 }, { x: 67, y: 102, z: -86 }],
+            islandArea: [{ x: 40, y: 59, z: -114 }, { x: 68, y: 102, z: -85 }],
             protectedArea: [{ x: 53, y: 73, z: -101 }, { x: 60, y: 77, z: -94 }],
             teamGenerator: {
                 type: GeneratorType.IronGold,
@@ -1296,7 +1296,7 @@ export class BedWarsGame {
                 if(teamChestContainer) {
                     teamChestContainer.clearAll();
                 } else {
-                    throw new Error(`Team chest of team ${TEAM_CONSTANTS[teamType].name} does not exist at ${teamChestLocation}`);
+                    throw new Error(`Team chest of team ${TEAM_CONSTANTS[teamType].name} does not exist at ${v3.toString(teamChestLocation)}`);
                 }
             }
 
@@ -1801,7 +1801,7 @@ export class BedWarsGame {
                     player.dimension.spawnEntity(MinecraftEntityTypes.LightningBolt, player.location);
                     continue;
                 }
-                player.onScreenDisplay.setActionBar(String(TEAM_CONSTANTS[playerInfo.teamAreaEntered!]?.name)); // DEBUG
+                // player.onScreenDisplay.setActionBar(String(TEAM_CONSTANTS[playerInfo.teamAreaEntered!]?.name)); // DEBUG
                 const equipment = player.getComponent("equippable")!;
                 [mc.EquipmentSlot.Head, mc.EquipmentSlot.Chest, mc.EquipmentSlot.Legs, mc.EquipmentSlot.Feet, mc.EquipmentSlot.Mainhand].forEach(slotName => {
                     const item = equipment.getEquipment(slotName);
