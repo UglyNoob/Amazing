@@ -1573,7 +1573,7 @@ export class BedWarsGame {
                 fakePlayer.attackTarget = victims[0];
             }
 
-            if (mc.system.currentTick % 5 == 0) {
+            if (mc.system.currentTick % 2 == 0) {
                 fakePlayer.lookAtEntity(fakePlayer.attackTarget.player);
                 fakePlayer.attack();
             }
@@ -1581,7 +1581,7 @@ export class BedWarsGame {
             if (mc.system.currentTick % 20 == 0) {
                 fakePlayer.navigateToEntity(fakePlayer.attackTarget.player);
             }
-            if(v3.distance(fakePlayer.location, fakePlayer.attackTarget.player.location) < 2.5) {
+            if(v3.distance(fakePlayer.location, fakePlayer.attackTarget.player.location) < 2.8) {
                 fakePlayer.stopMoving();
             }
         }
