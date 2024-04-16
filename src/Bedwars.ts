@@ -8,7 +8,8 @@ import { sprintf, vsprintf } from 'sprintf-js';
 import { openShop, openTeamShop, TokenValue } from './BedwarsShop.js';
 import { isLocationPartOfAnyPlatforms } from './RescuePlatform.js';
 import { SimulatedPlayer } from '@minecraft/server-gametest';
-import { testMap, mapGarden, mapSteamPunk, mapWaterfall } from './BedwarsMaps.js';
+import { testMap, mapGarden, mapSteamPunk, mapWaterfall, mapEastwood } from './BedwarsMaps.js';
+import { ActionFormData, ActionFormResponse, FormCancelationReason } from '@minecraft/server-ui';
 
 const RESPAWN_TIME = 100; // in ticks
 export const IRON_ITEM_STACK = new mc.ItemStack(MinecraftItemTypes.IronIngot);
@@ -748,7 +749,7 @@ export class BedWarsGame {
     }
 
     setPlayer(player: mc.Player, teamType: TeamType) {
-        if (this.map.teams.find(t => t.type == teamType) == undefined) throw new Error(`No such team(${TEAM_CONSTANTS[teamType].name}).`);
+        if (this.map.teams.find(t => t.type == teamType) == undefined) throw new Error(`No such team(${ TEAM_CONSTANTS[teamType].name }).`);
 
         const playerInfo = this.players.get(player.name);
         if (playerInfo) {
@@ -799,7 +800,7 @@ export class BedWarsGame {
                 if (teamChestContainer) {
                     teamChestContainer.clearAll();
                 } else {
-                    throw new Error(`Team chest of team ${TEAM_CONSTANTS[teamType].name} does not exist at ${v3.toString(teamChestLocation)}`);
+                    throw new Error(`Team chest of team ${ TEAM_CONSTANTS[teamType].name } does not exist at ${ v3.toString(teamChestLocation) }`);
                 }
             }
 
@@ -840,7 +841,7 @@ export class BedWarsGame {
         for (const [teamType, { state }] of this.teams) {
             ++index;
             const t = TEAM_CONSTANTS[teamType];
-            let result = `${t.colorPrefix}${t.name.charAt(0).toUpperCase()} §r${capitalize(t.name)}: `;
+            let result = `${ t.colorPrefix }${ t.name.charAt(0).toUpperCase() } §r${ capitalize(t.name) }: `;
             switch (state) {
                 case TeamState.BedAlive:
                     // result += "§a✔";
@@ -856,7 +857,7 @@ export class BedWarsGame {
                         if (playerInfo.team != teamType) continue;
                         if (this.isPlayerPlaying(playerInfo)) ++aliveCount;
                     }
-                    result += `§a${aliveCount}`;
+                    result += `§a${ aliveCount }`;
             }
             this.scoreObj.setScore(result, index);
         }
@@ -868,7 +869,7 @@ export class BedWarsGame {
         if (secondsStr.length == 1) secondsStr = "0" + secondsStr;
         let minutesStr = minutes.toString();
         if (minutesStr.length == 1) minutesStr = "0" + minutesStr;
-        this.scoreObj.setScore(`§a${minutesStr}:${secondsStr}`, index);
+        this.scoreObj.setScore(`§a${ minutesStr }:${ secondsStr }`, index);
     }
 
     private respawnPlayer(playerInfo: PlayerGameInformation) {
@@ -895,7 +896,7 @@ export class BedWarsGame {
             });
         }
         player.extinguishFire();
-        player.nameTag = `${TEAM_CONSTANTS[playerInfo.team].colorPrefix}${playerInfo.name}`;
+        player.nameTag = `${ TEAM_CONSTANTS[playerInfo.team].colorPrefix }${ playerInfo.name }`;
         playerInfo.armorDisabled = false;
         playerInfo.armorToEnablingTicks = 0;
         playerInfo.bridgeEggCooldown = 0;
@@ -1041,16 +1042,16 @@ export class BedWarsGame {
             }
 
             teamPlayerInfo.player.onScreenDisplay.setTitle("§cTRAP ACTIVATED!", {
-                subtitle: isAlarmTrap ? `${TEAM_CONSTANTS[playerInfo.team].colorPrefix}${player.name} §7has entered your base!` : undefined,
+                subtitle: isAlarmTrap ? `${ TEAM_CONSTANTS[playerInfo.team].colorPrefix }${ player.name } §7has entered your base!` : undefined,
                 fadeInDuration: 10,
                 stayDuration: 60,
                 fadeOutDuration: 20
             });
             teamPlayerInfo.player.playSound("mob.wither.spawn");
-            teamPlayerInfo.player.sendMessage(`§7${TRAP_CONSTANTS[trapType].name} §chas been activated!`);
+            teamPlayerInfo.player.sendMessage(`§7${ TRAP_CONSTANTS[trapType].name } §chas been activated!`);
         }
         player.playSound("mob.wither.spawn");
-        player.sendMessage(`§7You have activated §e${TRAP_CONSTANTS[trapType].name}!`);
+        player.sendMessage(`§7You have activated §e${ TRAP_CONSTANTS[trapType].name }!`);
     }
     /**
      * Adjust team generator based on its iron forge level
@@ -1418,10 +1419,10 @@ export class BedWarsGame {
                 for (const loc of gen.indicatorLocations) {
                     const sign = this.dimension.getBlock(loc)?.getComponent("sign");
                     if (!sign) {
-                        throw new Error(`Generator indicator does not exist at ${v3.toString(loc)}.`);
+                        throw new Error(`Generator indicator does not exist at ${ v3.toString(loc) }.`);
                     }
                     sign.setWaxed(true);
-                    [mc.SignSide.Front, mc.SignSide.Back].forEach(signSide => sign.setText(`§eSpawns in §c${gen.remainingCooldown / 20} §eseconds`, signSide));
+                    [mc.SignSide.Front, mc.SignSide.Back].forEach(signSide => sign.setText(`§eSpawns in §c${ gen.remainingCooldown / 20 } §eseconds`, signSide));
                 }
             }
             if (gen.remainingCooldown > 0) {
@@ -1574,13 +1575,13 @@ export class BedWarsGame {
                 fakePlayer.attackTarget = victims[0];
             }
 
-            if(!fakePlayer.previousOnGround && fakePlayer.isOnGround || mc.system.currentTick % 15 == 0) {
+            if (!fakePlayer.previousOnGround && fakePlayer.isOnGround || mc.system.currentTick % 15 == 0) {
                 fakePlayer.lookAtEntity(fakePlayer.attackTarget.player);
                 fakePlayer.navigateToEntity(fakePlayer.attackTarget.player);
             }
-            if(v3.distance(fakePlayer.location, fakePlayer.attackTarget.player.location) < 2.95) {
+            if (v3.distance(fakePlayer.location, fakePlayer.attackTarget.player.location) < 2.95) {
                 fakePlayer.stopMoving();
-                if(mc.system.currentTick % randomInt(4, 6) == 0) {
+                if (mc.system.currentTick % randomInt(4, 6) == 0) {
                     fakePlayer.attack();
                 }
             }
@@ -2029,9 +2030,7 @@ export class BedWarsGame {
     afterWeatherChange(event: mc.WeatherChangeAfterEvent) {
         if (this.state != GameState.started) return;
         if (mc.world.getDimension(event.dimension) != this.dimension) return;
-        if (event.newWeather == mc.WeatherType.Thunder) {
-            this.dimension.setWeather(mc.WeatherType.Rain);
-        }
+        this.dimension.setWeather(mc.WeatherType.Clear);
     }
 
     beforeChatSend(event: mc.ChatSendBeforeEvent) {
@@ -2041,7 +2040,7 @@ export class BedWarsGame {
         if (!senderInfo) return;
 
         event.cancel = true;
-        mc.world.sendMessage(`<${sender.nameTag}§r> ${event.message}`);
+        mc.world.sendMessage(`<${ sender.nameTag }§r> ${ event.message }`);
     }
 };
 
@@ -2115,18 +2114,32 @@ mc.world.beforeEvents.chatSend.subscribe(async event => {
     }
     let map: MapInformation;
     let originLocation: mc.Vector3;
+    const maps: [MapInformation, mc.Vector3][] = [];
     if (event.message == "start") {
-        map = testMap;
-        originLocation = { x: -17, y: 5, z: 32 };
-    } else if (event.message == "start2") {
-        map = mapGarden;
-        originLocation = { x: -104, y: 54, z: -65 };
-    } else if (event.message == "start3") {
-        map = mapSteamPunk;
-        originLocation = { x: 0, y: 0, z: 0 };
-    } else if (event.message == "start4") {
-        map = mapWaterfall;
-        originLocation = { x: 0, y: 0, z: 0 };
+        if (!event.sender.isOp()) return;
+        const form = new ActionFormData();
+        form.body("Choose the map you are in.");
+        form.button("test map");
+        maps.push([testMap, { x: -17, y: 5, z: 32 }]);
+        form.button("Garden");
+        maps.push([mapGarden, { x: -104, y: 54, z: -65 }]);
+        form.button("Steampunk");
+        maps.push([mapSteamPunk, { x: 0, y: 0, z: 0 }]);
+        form.button("Waterfall");
+        maps.push([mapWaterfall, { x: 0, y: 0, z: 0 }]);
+        form.button("Eastwood");
+        maps.push([mapEastwood, { x: 0, y: 0, z: 0 }]);
+        let response: ActionFormResponse;
+        await sleep(0);
+
+        event.sender.sendMessage("Please close the chat menu to see the bedwars wizard.");
+        while (true) {
+            response = await form.show(event.sender);
+            if (response.cancelationReason != FormCancelationReason.UserBusy) break;
+            await sleep(5);
+        }
+        if (response.canceled) return;
+        [map, originLocation] = maps[response.selection!];
     } else if (event.message == "SPECIAL CODE") {
         await sleep(0);
         const container = event.sender.getComponent("inventory")!.container!;
