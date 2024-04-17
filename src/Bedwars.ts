@@ -10,6 +10,7 @@ import { isLocationPartOfAnyPlatforms } from './RescuePlatform.js';
 import { SimulatedPlayer } from '@minecraft/server-gametest';
 import { testMap, mapGarden, mapSteamPunk, mapWaterfall, mapEastwood } from './BedwarsMaps.js';
 import { ActionFormData, ActionFormResponse, FormCancelationReason } from '@minecraft/server-ui';
+import { isItemSumoStick, sumoStickCooldownSym } from './SumoStick.js';
 
 const RESPAWN_TIME = 100; // in ticks
 export const IRON_ITEM_STACK = new mc.ItemStack(MinecraftItemTypes.IronIngot);
@@ -1558,25 +1559,28 @@ export class BedWarsGame {
                 v3.distance(a.player.location, fakePlayer.location) - v3.distance(b.player.location, fakePlayer.location)
             );
             if (!victims || victims.length == 0) {
-                fakePlayer.attackTarget = undefined;
-                fakePlayer.previousOnGround = fakePlayer.isOnGround;
-                continue;
-            }
-            if (fakePlayer.attackTarget) {
-                if (fakePlayer.attackTarget.teamAreaEntered == fakePlayerInfo.team) {
+                if (fakePlayer.attackTarget &&
+                    (v3.distance(fakePlayer.location, fakePlayer.attackTarget.player.location) >= 5 ||
+                        fakePlayer.attackTarget.state != PlayerState.Alive)) {
+                    fakePlayer.attackTarget = undefined;
+                    fakePlayer.previousOnGround = fakePlayer.isOnGround;
+                    continue;
+                }
+            } else {
+                if (fakePlayer.attackTarget) {
                     if (v3.distance(fakePlayer.location, victims[0].player.location) < 3) {
                         fakePlayer.attackTarget = victims[0];
                     }
-                } else {
-                    fakePlayer.attackTarget = undefined;
+                }
+                if (!fakePlayer.attackTarget) {
+                    fakePlayer.attackTarget = victims[0];
                 }
             }
-            if (!fakePlayer.attackTarget) {
-                fakePlayer.attackTarget = victims[0];
-            }
 
-            if (!fakePlayer.previousOnGround && fakePlayer.isOnGround || mc.system.currentTick % 15 == 0) {
-                fakePlayer.lookAtEntity(fakePlayer.attackTarget.player);
+            if (!fakePlayer.attackTarget) continue;
+            if (!fakePlayer.previousOnGround && fakePlayer.isOnGround || mc.system.currentTick % randomInt(10, 20) == 0) {
+                const location = Object.assign({}, fakePlayer.attackTarget.player.getHeadLocation());
+                fakePlayer.lookAtLocation(test.relativeLocation(location));
                 fakePlayer.navigateToEntity(fakePlayer.attackTarget.player);
             }
             if (v3.distance(fakePlayer.location, fakePlayer.attackTarget.player.location) < 2.95) {
@@ -1923,11 +1927,22 @@ export class BedWarsGame {
             playerInfo.player.getComponent("equippable")!.getEquipmentSlot(mc.EquipmentSlot.Mainhand).setItem();
             return;
         }
-        // disallow the player to place blocks in protected area
+        // disallow the player to place block in protected area
         if (!this.isBlockLocationPlayerPlacable(event.block.location)) {
             event.cancel = true;
             playerInfo.player.sendMessage(PLACING_BLOCK_ILLAGEL_MESSAGE);
             return;
+        }
+        // disallow the player to place block near cactus
+        {
+            for (const block of [event.block.west(), event.block.east(), event.block.north(), event.block.south()]) {
+                if (!block) continue;
+                // Maybe I need to look up the record
+                if (block.typeId == MinecraftBlockTypes.Cactus) {
+                    event.cancel = true;
+                    return;
+                }
+            }
         }
         // Allow the player to place block
         playerInfo.placement.push(event.block.location);
@@ -1989,6 +2004,11 @@ export class BedWarsGame {
 
             consumeMainHandItem(playerInfo.player);
             playerInfo.fireBallCooldown = FIRE_BALL_COOLDOWN;
+        } else if (isItemSumoStick(event.itemStack)) {
+            if (playerInfo.player[sumoStickCooldownSym] > 0) return;
+
+            await sleep(0);
+            consumeMainHandItem(playerInfo.player);
         }
     }
     beforeItemUseOn(event: mc.ItemUseOnBeforeEvent) {

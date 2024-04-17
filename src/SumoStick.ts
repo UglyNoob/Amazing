@@ -8,14 +8,10 @@ import {
 } from '@minecraft/vanilla-data';
 import { getGameMode } from './utility.js';
 
-function log(s: any) {
-    mc.world.sendMessage(String(s)); // FOR DEBUG USE
-}
-
-const THE_STICK_ITEM = (() => {
+export const SUMO_STICK_ITEM = (() => {
     const item = new mc.ItemStack(MinecraftItemTypes.Stick, 1);
     item.nameTag = "§r§fSumo Stick";
-    item.setLore(["", "§r§bThe stick of §g§oNETHERITE§r§b."]);
+    item.setLore(["", "§r§bPush everyone"]);
     return item;
 })();
 
@@ -24,10 +20,10 @@ const CONVERT_DISTANCE = 0.35; // in blocks
 const POWER_COOLDOWN = 50; // in ticks
 const POWER_EFFECTS_RAMGE = 5; // in blocks
 const POWER_SLOWNESS_EFFECT_DURATION = 15; // in ticks
-const powerCooldownSymbol = Symbol("powerCooldown");
+export const sumoStickCooldownSym = Symbol("powerCooldown");
 declare module '@minecraft/server' {
     interface Player {
-        [powerCooldownSymbol]: number
+        [sumoStickCooldownSym]: number;
     }
 }
 
@@ -46,8 +42,8 @@ const POWER_TARGET_EXCLUDES = [
     MinecraftEntityTypes.XpOrb
 ].map(type => "minecraft:" + type);
 
-function isItemSumoStick(item: mc.ItemStack) {
-    return item.getLore()[1] == THE_STICK_ITEM.getLore()[1];
+export function isItemSumoStick(item: mc.ItemStack) {
+    return item.getLore()[1] == SUMO_STICK_ITEM.getLore()[1];
 }
 
 function performPower(player: mc.Player) {
@@ -60,7 +56,7 @@ function performPower(player: mc.Player) {
     for (let entity of entities) {
         let success = false;
         try {
-            let vector = new Vector3Builder({
+            const vector = new Vector3Builder({
                 x: entity.location.x - player.location.x,
                 y: entity.location.y - player.location.y + 0.4,
                 z: entity.location.z - player.location.z
@@ -97,10 +93,10 @@ mc.world.beforeEvents.itemUse.subscribe((event) => {
     if (!isItemSumoStick(event.itemStack)) return;
     mc.system.run(() => {
         const player = event.source;
-        const cooldown = player[powerCooldownSymbol];
+        const cooldown = player[sumoStickCooldownSym];
         if (cooldown === undefined) return;
         if (cooldown != 0) {
-            player.onScreenDisplay.setActionBar(`§1§lEmerging... ${(cooldown / 20).toFixed(1)}s`);
+            player.onScreenDisplay.setActionBar(`§1§lEmerging... ${ (cooldown / 20).toFixed(1) }s`);
             return;
         }
 
@@ -112,10 +108,10 @@ mc.world.beforeEvents.itemUse.subscribe((event) => {
             stayDuration: 5,
             fadeInDuration: 0,
             fadeOutDuration: 10,
-            subtitle: "§c§lYou have released the power!"
+            subtitle: "§c§lPower released!"
         });
 
-        player[powerCooldownSymbol] = POWER_COOLDOWN;
+        player[sumoStickCooldownSym] = POWER_COOLDOWN;
     });
 });
 
@@ -125,19 +121,19 @@ mc.system.runInterval(() => {
         if (getGameMode(player) == mc.GameMode.spectator) continue;
         dimensions.add(player.dimension);
 
-        if (player[powerCooldownSymbol] === undefined) {
-            player[powerCooldownSymbol] = 0;
+        if (player[sumoStickCooldownSym] === undefined) {
+            player[sumoStickCooldownSym] = 0;
         }
-        if (player[powerCooldownSymbol] > 0) --player[powerCooldownSymbol];
+        if (player[sumoStickCooldownSym] > 0) --player[sumoStickCooldownSym];
 
         if (mc.system.currentTick % 4 == 0) {
             const inventory = player.getComponent("minecraft:inventory")!.container!;
             const selectedItem = inventory.getItem(player.selectedSlot);
             if (selectedItem && isItemSumoStick(selectedItem)) {
-                if (player[powerCooldownSymbol] == 0)
+                if (player[sumoStickCooldownSym] == 0)
                     player.onScreenDisplay.setActionBar("§l§eSumo Stick §bis ready");
                 else
-                    player.onScreenDisplay.setActionBar(`§1§lEmerging... ${(player[powerCooldownSymbol] / 20).toFixed(1)}s`);
+                    player.onScreenDisplay.setActionBar(`§1§lEmerging... ${ (player[sumoStickCooldownSym] / 20).toFixed(1) }s`);
             }
         }
     }
@@ -153,13 +149,13 @@ mc.system.runInterval(() => {
                 maxDistance: CONVERT_DISTANCE
             }).filter(entity => {
                 const itemStack = entity.getComponent("minecraft:item")!.itemStack;
-                return itemStack.typeId == THE_STICK_ITEM.typeId &&
+                return itemStack.typeId == SUMO_STICK_ITEM.typeId &&
                     !isItemSumoStick(itemStack);
             });
             if (itemEntitiesToConvert.length == 0) continue;
             for (const itemEntityToConvert of itemEntitiesToConvert) {
                 const itemToConvert = itemEntityToConvert.getComponent("minecraft:item")!.itemStack;
-                const convertedItemStack = THE_STICK_ITEM.clone();
+                const convertedItemStack = SUMO_STICK_ITEM.clone();
                 let convertAmount = Math.min(convertItem.amount, itemToConvert.amount);
                 convertedItemStack.amount = convertAmount;
 

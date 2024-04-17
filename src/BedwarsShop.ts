@@ -39,6 +39,7 @@ import { Vector3Utils as v3 } from "@minecraft/math";
 import { MinecraftEnchantmentTypes, MinecraftItemTypes } from "@minecraft/vanilla-data";
 import { PLATFORM_ITEM } from "./RescuePlatform.js";
 import { sprintf } from "sprintf-js";
+import { SUMO_STICK_ITEM } from "./SumoStick.js";
 
 export interface TokenValue {
     ironAmount: number;
@@ -337,7 +338,13 @@ const generateItemShopData: () => Menu = () => ({
             subMenus: [
                 generateBuySwordMenu(SWORD_LEVELS[1], { ironAmount: 10, goldAmount: 0, diamondAmount: 0, emeraldAmount: 0 }),
                 generateBuySwordMenu(SWORD_LEVELS[2], { ironAmount: 0, goldAmount: 7, diamondAmount: 0, emeraldAmount: 0 }),
-                generateBuySwordMenu(SWORD_LEVELS[3], { ironAmount: 0, goldAmount: 0, diamondAmount: 0, emeraldAmount: 4 })
+                generateBuySwordMenu(SWORD_LEVELS[3], { ironAmount: 0, goldAmount: 0, diamondAmount: 0, emeraldAmount: 4 }),
+                generateBuyOneItemMenu("Sumo Stick", () => ({
+                    type: ActionType.BuyNormalItem,
+                    itemName: "Sumo Stick",
+                    cost: { ironAmount: 0, goldAmount: 0, emeraldAmount: 3, diamondAmount: 0 },
+                    item: SUMO_STICK_ITEM
+                }), () => "textures/items/stick.png")
             ]
         }, {
             type: "entry",
