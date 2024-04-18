@@ -3,68 +3,13 @@ import { GeneratorType, MapInformation, TeamType } from "./Bedwars.js";
 const IRONGOLD_GENERATOR_INTERVAL = 60;
 const DIAMOND_GENERATOR_INTERVAL = 900;
 const EMERLAD_GENERATOR_INTERVAL = 1200;
+/*
+ * Convention:
+ * playableArea should be the map's area extending 50 blocks
+ * */
 
-export const testMap: MapInformation = {
-    size: [{ x: 0, y: 0, z: 0 }, { x: 21, y: 3, z: 5 }],
-    fallbackRespawnPoint: { x: 0, y: 50, z: 0 },
-    voidY: -48,
-    teamExtraEmeraldGenInterval: EMERLAD_GENERATOR_INTERVAL,
-    teams: [
-        {
-            type: TeamType.Red,
-            itemShopLocation: { x: 6, y: 2, z: 4 },
-            teamShopLocation: { x: 6, y: 2, z: 4 }, // TODO
-            teamChestLocation: { x: 5, y: 1, z: 4 },
-            islandArea: [{ x: 0, y: 0, z: 0 }, { x: 0, y: 0, z: 0 }], // TODO
-            protectedArea: [{ x: 0, y: 0, z: 0 }, { x: 0, y: 0, z: 0 }], // TODO
-            teamGenerator: {
-                type: GeneratorType.IronGold,
-                spawnLocation: { x: 1.5, y: 1.5, z: 2.5 },
-                location: { x: 0, y: 1, z: 1 },
-                initialInterval: IRONGOLD_GENERATOR_INTERVAL
-            },
-            bedLocation: [{ x: 4, y: 1, z: 2 }, { x: 5, y: 1, z: 2 }],
-            playerSpawn: { x: 3.5, y: 1, z: 2.5 },
-            playerSpawnViewDirection: { x: 1, y: 0, z: 0 }
-        }, {
-            type: TeamType.Blue,
-            itemShopLocation: { x: 14, y: 2, z: 0 },
-            teamShopLocation: { x: 6, y: 2, z: 4 }, // TODO
-            teamChestLocation: { x: 15, y: 1, z: 0 },
-            islandArea: [{ x: 0, y: 0, z: 0 }, { x: 0, y: 0, z: 0 }], // TODO
-            protectedArea: [{ x: 0, y: 0, z: 0 }, { x: 0, y: 0, z: 0 }], // TODO
-            teamGenerator: {
-                type: GeneratorType.IronGold,
-                spawnLocation: { x: 19.5, y: 1.5, z: 2.5 },
-                location: { x: 18, y: 1, z: 1 },
-                initialInterval: IRONGOLD_GENERATOR_INTERVAL
-            },
-            bedLocation: [{ x: 16, y: 1, z: 2 }, { x: 15, y: 1, z: 2 }],
-            playerSpawn: { x: 17.5, y: 1, z: 2.5 },
-            playerSpawnViewDirection: { x: -1, y: 0, z: 0 }
-        }
-    ],
-    extraGenerators: [
-        {
-            type: GeneratorType.Diamond,
-            spawnLocation: { x: 10.5, y: 1, z: 0.5 },
-            location: { x: 10, y: 0, z: 0 },
-            initialInterval: DIAMOND_GENERATOR_INTERVAL
-        }, {
-            type: GeneratorType.Diamond,
-            spawnLocation: { x: 10.5, y: 1, z: 4.5 },
-            location: { x: 10, y: 0, z: 4 },
-            initialInterval: DIAMOND_GENERATOR_INTERVAL
-        }, {
-            type: GeneratorType.Emerald,
-            spawnLocation: { x: 10.5, y: 1, z: 2.5 },
-            location: { x: 10, y: 0, z: 2 },
-            initialInterval: EMERLAD_GENERATOR_INTERVAL
-        }
-    ]
-};
 export const mapGarden: MapInformation = {
-    size: [{ x: 0, y: 0, z: 0 }, { x: 208, y: 101, z: 130 }],
+    playableArea: [{ x: 0, y: -64, z: 0 }, { x: 209, y: 101, z: 131 }],
     fallbackRespawnPoint: { x: 0 + 104, y: 149 - 54, z: 0 + 65 },
     voidY: -64,
     teamExtraEmeraldGenInterval: EMERLAD_GENERATOR_INTERVAL,
@@ -129,7 +74,7 @@ export const mapGarden: MapInformation = {
 };
 
 export const mapSteamPunk: MapInformation = {
-    size: [{ x: -111, y: 48, z: -111 }, { x: 111, y: 139, z: 111 }],
+    playableArea: [{ x: -161, y: -16, z: -161 }, { x: 162, y: 139, z: 162 }],
     fallbackRespawnPoint: { x: 0, y: 133, z: 0 },
     voidY: -16,
     teamExtraEmeraldGenInterval: EMERLAD_GENERATOR_INTERVAL,
@@ -317,7 +262,7 @@ export const mapSteamPunk: MapInformation = {
     ]
 };
 export const mapWaterfall: MapInformation = {
-    size: [{ x: -84, y: 45, z: -84 }, { x: 84, y: 101, z: 84 }],
+    playableArea: [{ x: -134, y: -16, z: -134 }, { x: 135, y: 101, z: 135 }],
     fallbackRespawnPoint: { x: 0, y: 118, z: 0 },
     voidY: -16,
     teamExtraEmeraldGenInterval: EMERLAD_GENERATOR_INTERVAL,
@@ -506,7 +451,7 @@ export const mapWaterfall: MapInformation = {
 };
 
 export const mapEastwood: MapInformation = {
-    size: [{ x: -74, y: 45, z: -74 }, { x: 74, y: 100, z: 74 }],
+    playableArea: [{ x: -124, y: -19, z: -124 }, { x: 125, y: 100, z: 125 }],
     fallbackRespawnPoint: { x: 0, y: 118, z: 0 },
     voidY: -19,
     teamExtraEmeraldGenInterval: EMERLAD_GENERATOR_INTERVAL,

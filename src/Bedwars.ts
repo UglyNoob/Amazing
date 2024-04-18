@@ -1,6 +1,6 @@
 import { Vector3Utils as v3 } from '@minecraft/math';
 import * as mc from '@minecraft/server';
-import { itemEqual, Area, sleep, vectorAdd, vectorWithinArea, containerIterator, capitalize, getPlayerByName, consumeMainHandItem, makeItem, shuffle, randomInt, setGameMode, analyzeTime, vectorSize } from './utility.js';
+import { itemEqual, Area, sleep, vectorAdd, vectorWithinArea, containerIterator, capitalize, getPlayerByName, consumeMainHandItem, makeItem, shuffle, randomInt, setGameMode, analyzeTime, vectorCompare, closestLocationOnBlock } from './utility.js';
 import { setupGameTest } from './GameTest.js';
 import { MinecraftBlockTypes, MinecraftEffectTypes, MinecraftEnchantmentTypes, MinecraftEntityTypes, MinecraftItemTypes } from '@minecraft/vanilla-data';
 
@@ -8,7 +8,7 @@ import { sprintf, vsprintf } from 'sprintf-js';
 import { openShop, openTeamShop, TokenValue } from './BedwarsShop.js';
 import { isLocationPartOfAnyPlatforms } from './RescuePlatform.js';
 import { SimulatedPlayer } from '@minecraft/server-gametest';
-import { testMap, mapGarden, mapSteamPunk, mapWaterfall, mapEastwood } from './BedwarsMaps.js';
+import { mapGarden, mapSteamPunk, mapWaterfall, mapEastwood } from './BedwarsMaps.js';
 import { ActionFormData, ActionFormResponse, FormCancelationReason } from '@minecraft/server-ui';
 import { isItemSumoStick, sumoStickCooldownSym } from './SumoStick.js';
 
@@ -46,7 +46,6 @@ export const FIRE_BALL_ITEM = (() => {
  */
 const SPAWN_LOCATION_SYMBOL = Symbol('spawn location');
 const FIRE_BALL_COOLDOWN = 20; // in ticks
-const FIRE_BALL_MAX_TRAVEL_DISTANCE = 200; // in blocks
 const FIREBALL_GAMEID_PROP = "BEDWARSID";
 
 function isFireBallItem(item: mc.ItemStack) {
@@ -133,7 +132,6 @@ export const PURCHASE_MESSAGE = "§aYou purchased §6%s";
 declare module '@minecraft/server' {
     interface Entity {
         [BRIDGE_EGG_OWNER_SYMBOL]?: PlayerGameInformation;
-        [SPAWN_LOCATION_SYMBOL]?: mc.Vector3;
     }
 }
 declare module '@minecraft/server-gametest' {
@@ -184,6 +182,8 @@ export const TEAM_CONSTANTS: Record<TeamType, {
     colorPrefix: string;
     woolName: string;
     woolIconPath: string;
+    glassName: string;
+    glassIconPath: string;
     // hardenedClayName: string;
     // hardenedClayIconPath: string;
     leatherHelmet: mc.ItemStack;
@@ -204,6 +204,8 @@ export const TEAM_CONSTANTS: Record<TeamType, {
         colorPrefix: "§9",
         woolName: MinecraftItemTypes.BlueWool,
         woolIconPath: "textures/blocks/wool_colored_blue.png",
+        glassName: MinecraftBlockTypes.BlueStainedGlass,
+        glassIconPath: "textures/blocks/glass_blue.png",
         leatherHelmet: setupItem(MinecraftItemTypes.LeatherHelmet, TeamType.Blue),
         leatherChestplate: setupItem(MinecraftItemTypes.LeatherChestplate, TeamType.Blue),
         leatherLeggings: setupItem(MinecraftItemTypes.LeatherLeggings, TeamType.Blue),
@@ -214,6 +216,8 @@ export const TEAM_CONSTANTS: Record<TeamType, {
         colorPrefix: "§a",
         woolName: MinecraftItemTypes.GreenWool,
         woolIconPath: "textures/blocks/wool_colored_green.png",
+        glassName: MinecraftBlockTypes.GreenStainedGlass,
+        glassIconPath: "textures/blocks/glass_green.png",
         leatherHelmet: setupItem(MinecraftItemTypes.LeatherHelmet, TeamType.Green),
         leatherChestplate: setupItem(MinecraftItemTypes.LeatherChestplate, TeamType.Green),
         leatherLeggings: setupItem(MinecraftItemTypes.LeatherLeggings, TeamType.Green),
@@ -224,6 +228,8 @@ export const TEAM_CONSTANTS: Record<TeamType, {
         colorPrefix: "§c",
         woolName: MinecraftItemTypes.RedWool,
         woolIconPath: "textures/blocks/wool_colored_red.png",
+        glassName: MinecraftBlockTypes.RedStainedGlass,
+        glassIconPath: "textures/blocks/glass_red.png",
         leatherHelmet: setupItem(MinecraftItemTypes.LeatherHelmet, TeamType.Red),
         leatherChestplate: setupItem(MinecraftItemTypes.LeatherChestplate, TeamType.Red),
         leatherLeggings: setupItem(MinecraftItemTypes.LeatherLeggings, TeamType.Red),
@@ -234,6 +240,8 @@ export const TEAM_CONSTANTS: Record<TeamType, {
         colorPrefix: "§g",
         woolName: MinecraftItemTypes.YellowWool,
         woolIconPath: "textures/blocks/wool_colored_yellow.png",
+        glassName: MinecraftBlockTypes.YellowStainedGlass,
+        glassIconPath: "textures/blocks/glass_yellow.png",
         leatherHelmet: setupItem(MinecraftItemTypes.LeatherHelmet, TeamType.Yellow),
         leatherChestplate: setupItem(MinecraftItemTypes.LeatherChestplate, TeamType.Yellow),
         leatherLeggings: setupItem(MinecraftItemTypes.LeatherLeggings, TeamType.Yellow),
@@ -244,6 +252,8 @@ export const TEAM_CONSTANTS: Record<TeamType, {
         colorPrefix: "§d",
         woolName: MinecraftItemTypes.PinkWool,
         woolIconPath: "textures/blocks/wool_colored_pink.png",
+        glassName: MinecraftBlockTypes.PinkStainedGlass,
+        glassIconPath: "textures/blocks/glass_pink.png",
         leatherHelmet: setupItem(MinecraftItemTypes.LeatherHelmet, TeamType.Pink),
         leatherChestplate: setupItem(MinecraftItemTypes.LeatherChestplate, TeamType.Pink),
         leatherLeggings: setupItem(MinecraftItemTypes.LeatherLeggings, TeamType.Pink),
@@ -254,6 +264,8 @@ export const TEAM_CONSTANTS: Record<TeamType, {
         colorPrefix: "§8",
         woolName: MinecraftItemTypes.GrayWool,
         woolIconPath: "textures/blocks/wool_colored_gray.png",
+        glassName: MinecraftBlockTypes.GrayStainedGlass,
+        glassIconPath: "textures/blocks/glass_gray.png",
         leatherHelmet: setupItem(MinecraftItemTypes.LeatherHelmet, TeamType.Gray),
         leatherChestplate: setupItem(MinecraftItemTypes.LeatherChestplate, TeamType.Gray),
         leatherLeggings: setupItem(MinecraftItemTypes.LeatherLeggings, TeamType.Gray),
@@ -264,6 +276,8 @@ export const TEAM_CONSTANTS: Record<TeamType, {
         colorPrefix: "§3",
         woolName: MinecraftItemTypes.CyanWool,
         woolIconPath: "textures/blocks/wool_colored_cyan.png",
+        glassName: MinecraftBlockTypes.CyanStainedGlass,
+        glassIconPath: "textures/blocks/glass_cyan.png",
         leatherHelmet: setupItem(MinecraftItemTypes.LeatherHelmet, TeamType.Cyan),
         leatherChestplate: setupItem(MinecraftItemTypes.LeatherChestplate, TeamType.Cyan),
         leatherLeggings: setupItem(MinecraftItemTypes.LeatherLeggings, TeamType.Cyan),
@@ -274,6 +288,8 @@ export const TEAM_CONSTANTS: Record<TeamType, {
         colorPrefix: "§f",
         woolName: MinecraftItemTypes.WhiteWool,
         woolIconPath: "textures/blocks/wool_colored_white.png",
+        glassName: MinecraftBlockTypes.WhiteStainedGlass,
+        glassIconPath: "textures/blocks/glass_white.png",
         leatherHelmet: setupItem(MinecraftItemTypes.LeatherHelmet, TeamType.White),
         leatherChestplate: setupItem(MinecraftItemTypes.LeatherChestplate, TeamType.White),
         leatherLeggings: setupItem(MinecraftItemTypes.LeatherLeggings, TeamType.White),
@@ -307,7 +323,7 @@ export interface MapInformation {
     teams: TeamInformation[];
     voidY: number;
     extraGenerators: GeneratorInformation[];
-    size: Area;
+    playableArea: Area;
     /**
      * Used to detect respawned player
      */
@@ -727,7 +743,7 @@ export class BedWarsGame {
                 interval: genInfo.initialInterval,
                 remainingCooldown: 0,
                 tokensGeneratedCount: 0,
-                indicatorLocations: genInfo.indicatorLocations?.map(v => v3.add(v, this.originPos)),
+                indicatorLocations: genInfo.indicatorLocations && this.fixOrigin(genInfo.indicatorLocations),
                 belongToTeam: true,
                 team: teamInfo.type,
                 spawnExtraEmerald: false,
@@ -743,7 +759,7 @@ export class BedWarsGame {
                 interval: genInfo.initialInterval,
                 remainingCooldown: 0,
                 tokensGeneratedCount: 0,
-                indicatorLocations: genInfo.indicatorLocations?.map(v => v3.add(v, this.originPos)),
+                indicatorLocations: genInfo.indicatorLocations && this.fixOrigin(genInfo.indicatorLocations),
                 belongToTeam: false
             });
         }
@@ -797,7 +813,7 @@ export class BedWarsGame {
         }
         for (const { teamChestLocation, bedLocation: mapBedLocation, type: teamType } of this.map.teams) {
             { // Clear the team chest
-                const teamChestContainer = this.dimension.getBlock(v3.add(teamChestLocation, this.originPos))?.getComponent("inventory")?.container;
+                const teamChestContainer = this.dimension.getBlock(this.fixOrigin(teamChestLocation))?.getComponent("inventory")?.container;
                 if (teamChestContainer) {
                     teamChestContainer.clearAll();
                 } else {
@@ -806,7 +822,7 @@ export class BedWarsGame {
             }
 
             // Place the bed
-            const bedLocation = mapBedLocation.map(v => v3.add(this.originPos, v));
+            const bedLocation = this.fixOrigin(mapBedLocation);
             const directionVector = v3.subtract(bedLocation[1], bedLocation[0]);
             let direction: number;
             if (directionVector.x == 1) {
@@ -824,7 +840,7 @@ export class BedWarsGame {
             this.dimension.fillBlocks(bedLocation[1], bedLocation[1], permutation);
         }
 
-        const mapArea = this.map.size.map(v => v3.add(this.originPos, v)) as Area;
+        const mapArea = this.fixOrigin(this.map.playableArea);
         this.dimension.getEntities({ type: "minecraft:item" }).forEach(e => {
             if (vectorWithinArea(e.location, mapArea)) e.kill();
         });
@@ -876,7 +892,7 @@ export class BedWarsGame {
     private respawnPlayer(playerInfo: PlayerGameInformation) {
         const teamInfo = this.map.teams.find(ele => ele.type === playerInfo.team)!;
         const teamGameInfo = this.teams.get(playerInfo.team)!;
-        const spawnPoint = v3.add(teamInfo.playerSpawn, this.originPos);
+        const spawnPoint = this.fixOrigin(teamInfo.playerSpawn);
         const player = playerInfo.player;
         player.teleport(spawnPoint, { facingLocation: v3.add(spawnPoint, teamInfo.playerSpawnViewDirection) });
         setGameMode(player, mc.GameMode.survival);
@@ -986,7 +1002,7 @@ export class BedWarsGame {
         }
     }
     private setupSpawnPoint(player: mc.Player) {
-        player.setSpawnPoint(Object.assign({ dimension: player.dimension }, v3.add(this.originPos, this.map.fallbackRespawnPoint)));
+        player.setSpawnPoint(Object.assign({ dimension: player.dimension }, this.fixOrigin(this.map.fallbackRespawnPoint)));
     }
 
     private isPlayerPlaying(playerInfo: PlayerGameInformation) {
@@ -1036,7 +1052,7 @@ export class BedWarsGame {
         const teamMapInfo = this.map.teams.filter(t => t.type == teamInfo.type)[0];
         for (const teamPlayerInfo of this.players.values()) {
             if (teamPlayerInfo.team != teamInfo.type) continue;
-            const islandArea = teamMapInfo.islandArea.map(v => v3.add(v, this.originPos)) as Area;
+            const islandArea = this.fixOrigin(teamMapInfo.islandArea);
             if (isDefensiveTrap && vectorWithinArea(teamPlayerInfo.player.location, islandArea)) {
                 teamPlayerInfo.player.addEffect(MinecraftEffectTypes.Speed, 300, { amplifier: 1 });
                 teamPlayerInfo.player.addEffect(MinecraftEffectTypes.JumpBoost, 300, { amplifier: 1 });
@@ -1120,7 +1136,7 @@ export class BedWarsGame {
                 this.broadcast(TEAM_ELIMINATION_MESSAGE,
                     colorPrefix, capitalize(name));
                 const teamMapInfo = this.map.teams.find(t => t.type == teamType)!;
-                const bedLocation = teamMapInfo.bedLocation.map(v => v3.add(v, this.originPos));
+                const bedLocation = this.fixOrigin(teamMapInfo.bedLocation);
                 this.dimension.fillBlocks(bedLocation[0], bedLocation[1], MinecraftBlockTypes.Air);
             }
         }
@@ -1177,6 +1193,17 @@ export class BedWarsGame {
         }
     }
 
+    private fixOrigin(vector: mc.Vector3): mc.Vector3;
+    private fixOrigin(area: Area): Area;
+    private fixOrigin(vectors: mc.Vector3[]): mc.Vector3[];
+    private fixOrigin(vector: mc.Vector3 | mc.Vector3[]) {
+        if (Array.isArray(vector)) {
+            return vector.map(v => v3.add(this.originPos, v));
+        } else {
+            return v3.add(this.originPos, vector);
+        }
+    }
+
     tickEvent() {
         if (this.state != GameState.started) return;
 
@@ -1230,7 +1257,7 @@ export class BedWarsGame {
                 setGameMode(player, mc.GameMode.spectator);
                 this.onPlayerDieOrOffline(playerInfo, playerInfo.lastHurtBy);
                 const team = this.map.teams.find(t => t.type == playerInfo.team)!;
-                playerInfo.player.teleport(v3.add(team.playerSpawn, this.originPos), {
+                playerInfo.player.teleport(this.fixOrigin(team.playerSpawn), {
                     dimension: this.dimension,
                     facingLocation: vectorAdd(this.originPos, team.playerSpawn, team.playerSpawnViewDirection)
                 });
@@ -1251,7 +1278,7 @@ export class BedWarsGame {
             }
 
             if (playerInfo.state == PlayerState.dead &&
-                v3.distance(v3.add(this.originPos, this.map.fallbackRespawnPoint), player.location) <= 1) {
+                v3.distance(this.fixOrigin(this.map.fallbackRespawnPoint), player.location) <= 1) {
                 setGameMode(player, mc.GameMode.spectator);
                 player.teleport(playerInfo.deathLocation, { rotation: playerInfo.deathRotaion });
                 const isTeamBedAlive = this.teams.get(playerInfo.team)!.state == TeamState.BedAlive;
@@ -1388,7 +1415,7 @@ export class BedWarsGame {
                 let playerWithinTeamArea = false;
                 for (const teamInfo of this.teams.values()) {
                     const teamMapInfo = this.map.teams.filter(t => t.type == teamInfo.type)[0];
-                    const islandArea = teamMapInfo.islandArea.map(v => v3.add(v, this.originPos)) as Area;
+                    const islandArea = this.fixOrigin(teamMapInfo.islandArea);
                     if (!vectorWithinArea(player.location, islandArea)) continue;
                     playerWithinTeamArea = true;
                     if (playerInfo.team == teamInfo.type) {
@@ -1432,7 +1459,7 @@ export class BedWarsGame {
             }
 
             gen.remainingCooldown = gen.interval;
-            const spawnLocation = v3.add(gen.spawnLocation, this.originPos);
+            const spawnLocation = this.fixOrigin(gen.spawnLocation);
 
             // Detect if it reaches capacity
             let { producingArea, capacity } = GENERATOR_CONSTANTS[gen.type];
@@ -1489,7 +1516,7 @@ export class BedWarsGame {
             }
         }
         for (const gen of this.generators) {
-            const spawnLocation = v3.add(gen.spawnLocation, this.originPos);
+            const spawnLocation = this.fixOrigin(gen.spawnLocation);
             if (gen.belongToTeam && gen.spawnExtraEmerald) {
                 if (gen.extraEmeraldRemainingCooldown > 0) {
                     --gen.extraEmeraldRemainingCooldown;
@@ -1505,6 +1532,10 @@ export class BedWarsGame {
         for (const eggEntity of this.dimension.getEntities({ type: "minecraft:egg" })) {
             const ownerInfo = eggEntity[BRIDGE_EGG_OWNER_SYMBOL];
             if (!ownerInfo) continue;
+            if (!vectorWithinArea(eggEntity.location, this.fixOrigin(this.map.playableArea))) {
+                eggEntity.kill();
+                continue;
+            }
             const baseLocation = v3.floor(eggEntity.location);
             baseLocation.y -= 2;
             [
@@ -1533,8 +1564,8 @@ export class BedWarsGame {
                 fireBall.kill();
                 continue;
             }
-            const location = fireBall[SPAWN_LOCATION_SYMBOL]!;
-            if (v3.distance(fireBall.location, location) >= FIRE_BALL_MAX_TRAVEL_DISTANCE) {
+            ;
+            if (!vectorWithinArea(fireBall.location, this.fixOrigin(this.map.playableArea))) {
                 fireBall.kill();
             }
         }
@@ -1606,7 +1637,7 @@ export class BedWarsGame {
         if (victimInfo.state == PlayerState.Offline) {
             victimOffline = true;
             const teamInfo = this.map.teams.find(ele => ele.type === victimInfo.team)!;
-            victimInfo.deathLocation = v3.add(this.originPos, teamInfo.playerSpawn);
+            victimInfo.deathLocation = this.fixOrigin(teamInfo.playerSpawn);
         } else {
             victimInfo.deathLocation = victimInfo.player.location;
             victimInfo.deathRotaion = victimInfo.player.getRotation();
@@ -1652,14 +1683,47 @@ export class BedWarsGame {
         if (this.state != GameState.started) return;
 
         const impactedBlocks = event.getImpactedBlocks();
-        const playerPlacedBlocks = Array.from(impactedBlocks);
-        for (let index = impactedBlocks.length - 1; index >= 0; --index) {
-            const block = impactedBlocks[index];
-            if (block.typeId == MinecraftBlockTypes.EndStone) {
-                playerPlacedBlocks.splice(index, 1);
-            } else if (!this.removeBlockFromRecord(block)) {
-                playerPlacedBlocks.splice(index, 1);
+        const playerPlacedBlocks: mc.Block[] = [];
+        const protectedBlocks: mc.Block[] = [];
+        for (const block of impactedBlocks) {
+            let isProtected = false;
+            if (Object.values(TEAM_CONSTANTS).map(teamInfo => teamInfo.glassName).includes(block.typeId)) {
+                isProtected = true;
+            } else {
+                let existInRecord = false;
+                for (const { placement } of this.players.values()) {
+                    if (placement.has(block.location)) {
+                        existInRecord = true;
+                        break;
+                    }
+                }
+                if (!existInRecord) isProtected = true;
             }
+            if (isProtected) {
+                protectedBlocks.push(block);
+            } else {
+                playerPlacedBlocks.push(block);
+            }
+        }
+        let explosionLocation: mc.Vector3 | undefined = undefined;
+        if (event.source) {
+            if (event.source.typeId == "minecraft:tnt") {
+                explosionLocation = Object.assign({}, event.source.location);
+                explosionLocation.y += 0.5;
+            } else explosionLocation = event.source.location;
+        }
+        for (let index = playerPlacedBlocks.length - 1; index >= 0; --index) {
+            if (explosionLocation) {
+                const raycastBlock = this.dimension.getBlockFromRay(explosionLocation, v3.subtract(closestLocationOnBlock(explosionLocation, playerPlacedBlocks[index].location), explosionLocation), {
+                    includeLiquidBlocks: false,
+                })?.block;
+                if (raycastBlock && protectedBlocks.find(block => v3.equals(block.location, raycastBlock.location))) {
+                    // mc.system.run(() => this.dimension.fillBlocks(raycastBlock.location, raycastBlock.location, MinecraftBlockTypes.Glowstone)); // DEBUG
+                    playerPlacedBlocks.splice(index, 1);
+                    continue;
+                }
+            }
+            this.removeBlockFromRecord(playerPlacedBlocks[index]);
         }
         event.setImpactedBlocks(playerPlacedBlocks);
     }
@@ -1765,7 +1829,7 @@ export class BedWarsGame {
         }
         if (event.block.typeId == MinecraftBlockTypes.Chest) {
             for (const team of this.map.teams) {
-                if (v3.equals(event.block.location, v3.add(team.teamChestLocation, this.originPos))) {
+                if (v3.equals(event.block.location, this.fixOrigin(team.teamChestLocation))) {
                     if (playerInfo.team != team.type) {
                         playerInfo.player.sendMessage(OPEN_ENEMY_CHEST_MESSAGE);
                         event.cancel = true;
@@ -1777,12 +1841,12 @@ export class BedWarsGame {
         }
 
         for (const { itemShopLocation: shopLocation, teamShopLocation } of this.map.teams) {
-            if (v3.equals(v3.add(this.originPos, shopLocation), event.block.location)) {
+            if (v3.equals(this.fixOrigin(shopLocation), event.block.location)) {
                 await sleep(0);
                 const teamInfo = this.teams.get(playerInfo.team)!;
                 openShop(playerInfo, teamInfo, this);
                 return;
-            } else if (v3.equals(v3.add(this.originPos, teamShopLocation), event.block.location)) {
+            } else if (v3.equals(this.fixOrigin(teamShopLocation), event.block.location)) {
                 await sleep(0);
                 const teamInfo = this.teams.get(playerInfo.team)!;
                 openTeamShop(playerInfo, teamInfo, this);
@@ -1794,7 +1858,7 @@ export class BedWarsGame {
         if (this.state != GameState.started) return;
     }
     private removeBlockFromRecord(block: mc.Block) {
-        let result = false;
+        let existsInRecord = false;
         for (const { placement } of this.players.values()) {
             if (!placement.remove(block.location)) continue;
             // the location appears in the tracker.
@@ -1820,10 +1884,25 @@ export class BedWarsGame {
                 placement.remove(location);
             }
 
+            if (block.isSolid) {
+                for (const [attachingBlock, facingDir] of [
+                    [block.north(), 2],
+                    [block.south(), 3],
+                    [block.west(), 4],
+                    [block.east(), 5]
+                ] as const) {
+                    if (!attachingBlock) continue;
+
+                    if (attachingBlock.typeId == MinecraftBlockTypes.Ladder && attachingBlock.permutation.getState("facing_direction") == facingDir) {
+                        this.removeBlockFromRecord(attachingBlock);
+                    }
+                }
+            }
+
             // One record may appear in different instances
-            result = true;
+            existsInRecord = true;
         }
-        return result;
+        return existsInRecord;
     }
     async beforePlayerBreakBlock(event: mc.PlayerBreakBlockBeforeEvent) {
         if (this.state != GameState.started) return;
@@ -1832,7 +1911,7 @@ export class BedWarsGame {
         TeamBedDestroyed: if (event.block.typeId == "minecraft:bed") {
             const destroyedTeam = this.map.teams.find(team =>
                 team.bedLocation.findIndex(pos =>
-                    v3.equals(v3.add(pos, this.originPos), event.block.location)) != -1);
+                    v3.equals(this.fixOrigin(pos), event.block.location)) != -1);
             if (!destroyedTeam) {
                 break TeamBedDestroyed;
             }
@@ -1845,8 +1924,8 @@ export class BedWarsGame {
             await sleep(0);
 
             /* Clear the bed */
-            event.dimension.fillBlocks(v3.add(destroyedTeam.bedLocation[0], this.originPos),
-                v3.add(destroyedTeam.bedLocation[1], this.originPos), "minecraft:air");
+            event.dimension.fillBlocks(this.fixOrigin(destroyedTeam.bedLocation[0]),
+                this.fixOrigin(destroyedTeam.bedLocation[1]), "minecraft:air");
 
             if (destroyerInfo.armorDisabled) {
                 destroyerInfo.armorDisabled = false;
@@ -1898,10 +1977,13 @@ export class BedWarsGame {
         }
         for (const teamMapInfo of this.map.teams) {
             if (!teamMapInfo.protectedArea) continue;
-            const protectedArea = teamMapInfo.protectedArea.map(v => v3.add(v, this.originPos)) as Area;
-            if (vectorWithinArea(location, protectedArea)) {
+            if (vectorWithinArea(location, this.fixOrigin(teamMapInfo.protectedArea))) {
                 return false;
             }
+        }
+        // disallow the player to place block outside playable area
+        if (!vectorWithinArea(location, this.fixOrigin(this.map.playableArea))) {
+            return false;
         }
         return true;
     }
@@ -1930,7 +2012,11 @@ export class BedWarsGame {
         // disallow the player to place block in protected area
         if (!this.isBlockLocationPlayerPlacable(event.block.location)) {
             event.cancel = true;
-            playerInfo.player.sendMessage(PLACING_BLOCK_ILLAGEL_MESSAGE);
+            if (!vectorWithinArea(event.block.location, this.fixOrigin(this.map.playableArea))) {
+                playerInfo.player.sendMessage("§cYou can't place block outside the map!");
+            } else {
+                playerInfo.player.sendMessage(PLACING_BLOCK_ILLAGEL_MESSAGE);
+            }
             return;
         }
         // disallow the player to place block near cactus
@@ -1999,7 +2085,6 @@ export class BedWarsGame {
             const fireBall = this.dimension.spawnEntity(MinecraftEntityTypes.Fireball, location);
             fireBall.getComponent("projectile")!.owner = playerInfo.player;
             fireBall.applyImpulse(v3.normalize(playerInfo.player.getViewDirection()));
-            fireBall[SPAWN_LOCATION_SYMBOL] = fireBall.location;
             fireBall.setDynamicProperty(FIREBALL_GAMEID_PROP, this.id);
 
             consumeMainHandItem(playerInfo.player);
@@ -2139,8 +2224,6 @@ mc.world.beforeEvents.chatSend.subscribe(async event => {
         if (!event.sender.isOp()) return;
         const form = new ActionFormData();
         form.body("Choose the map you are in.");
-        form.button("test map");
-        maps.push([testMap, { x: -17, y: 5, z: 32 }]);
         form.button("Garden");
         maps.push([mapGarden, { x: -104, y: 54, z: -65 }]);
         form.button("Steampunk");

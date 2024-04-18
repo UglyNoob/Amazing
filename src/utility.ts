@@ -1,3 +1,4 @@
+import { Vector3Utils } from '@minecraft/math';
 import * as mc from '@minecraft/server';
 import * as ui from '@minecraft/server-ui';
 
@@ -43,7 +44,7 @@ export function getGameMode(player: mc.Player): mc.GameMode {
 
 export function setGameMode(player: mc.Player, gameMode: mc.GameMode) {
     if (player.setGameMode) return player.setGameMode(gameMode);
-    player.runCommand(`gamemode ${gameMode}`);
+    player.runCommand(`gamemode ${ gameMode }`);
 }
 
 export function capitalize(str: string) {
@@ -68,8 +69,8 @@ export function showObjectToPlayer(player: mc.Player, object: any) {
     async function _showObjectToPlayer(player: mc.Player, object: any, deriving: any): Promise<boolean> {
         const data = new ui.ActionFormData();
         if (isPrimitive(object)) {
-            data.title(`Primitive ${realTypeof(object)}`);
-            data.body(`§b${object}`);
+            data.title(`Primitive ${ realTypeof(object) }`);
+            data.body(`§b${ object }`);
             data.button("§m§lBack");
             let response = await data.show(player);
             return response.canceled;
@@ -87,24 +88,24 @@ export function showObjectToPlayer(player: mc.Player, object: any) {
         hasBackButton && data.button("§m§lBack→");
         hasCallButton && data.button("§sCall with No Argument");
 
-        let bodyText = `§pContent of §n${objectName}§p:`;
+        let bodyText = `§pContent of §n${ objectName }§p:`;
         const childObjects = [];
         const childFunctions: Function[] = [];
         const childFunctionNames: string[] = [];
         for (let key of Object.getOwnPropertyNames(object)) {
             const value = Reflect.get(object, key, deriving ?? object);
             if (isPrimitive(value)) {
-                bodyText += `\n§6Property §e${key}§6 as §a${typeof value}§6: §b${value}\n`;
+                bodyText += `\n§6Property §e${ key }§6 as §a${ typeof value }§6: §b${ value }\n`;
             } else if (typeof value == "function") {
                 childFunctionNames.push(key);
                 childFunctions.push(value);
             } else { // handle non-function object
                 childObjects.push(value);
-                data.button(`§n${getObjectName(value)} §e${key}`);
+                data.button(`§n${ getObjectName(value) } §e${ key }`);
             }
         }
         for (let name of childFunctionNames) {
-            data.button(`§sFunction §e${name}`);
+            data.button(`§sFunction §e${ name }`);
         }
         data.body(bodyText);
 
@@ -141,7 +142,7 @@ export function showObjectToPlayer(player: mc.Player, object: any) {
                     value = object.call(deriving);
                 } catch (e) {
                     if (e instanceof Error) {
-                        value = `§c${e.name}: ${e.message}\n${e?.stack}`;
+                        value = `§c${ e.name }: ${ e.message }\n${ e?.stack }`;
                     } else {
                         value = e;
                     }
@@ -298,4 +299,35 @@ export function analyzeTime(ms: number) {
         minutes,
         seconds
     };
+}
+
+export function vectorCompare(a: mc.Vector3, b: mc.Vector3) {
+    const dx = a.x - b.x;
+    const dy = a.y - b.y;
+    const dz = a.z - b.z;
+    if (dx > 0) {
+        return 1;
+    } else if (dx < 0) {
+        return -1;
+    }
+    if (dy > 0) {
+        return 1;
+    } else if (dy < 0) {
+        return -1;
+    }
+    if (dz > 0) {
+        return 1;
+    } else if (dz < 0) {
+        return -1;
+    }
+    return 0;
+}
+
+export function closestLocationOnBlock(location: mc.Vector3, blockLoc: mc.Vector3) {
+    const reletiveVec = Vector3Utils.subtract(location, blockLoc);
+    const closestReletive: mc.Vector3 = { x: 0, y: 0, z: 0 };
+    closestReletive.x = Math.max(0, Math.min(1, reletiveVec.x));
+    closestReletive.y = Math.max(0, Math.min(1, reletiveVec.y));
+    closestReletive.z = Math.max(0, Math.min(1, reletiveVec.z));
+    return Vector3Utils.add(blockLoc, closestReletive);
 }

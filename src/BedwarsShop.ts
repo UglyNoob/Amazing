@@ -260,6 +260,8 @@ const HEAL_POOL_COST: TokenValue = { ironAmount: 0, goldAmount: 0, diamondAmount
 const TNT_ITEM = new mc.ItemStack(MinecraftItemTypes.Tnt);
 const PLANKS_ITEM = new mc.ItemStack(MinecraftItemTypes.Planks, 8);
 const ENDSTONE_ITEM = new mc.ItemStack(MinecraftItemTypes.EndStone, 12);
+const LADDER_ITEM = new mc.ItemStack(MinecraftItemTypes.Ladder, 8);
+const OBSIDIAN_ITEM = new mc.ItemStack(MinecraftItemTypes.Obsidian, 4);
 const BOW_ITEM = new mc.ItemStack(MinecraftItemTypes.Bow, 1);
 const ARROW_ITEM = new mc.ItemStack(MinecraftItemTypes.Arrow, 6);
 const GOLDEN_APPLE_ITEM = new mc.ItemStack(MinecraftItemTypes.GoldenApple, 1);
@@ -316,6 +318,12 @@ const generateItemShopData: () => Menu = () => ({
                     cost: { ironAmount: 12, goldAmount: 0, emeraldAmount: 0, diamondAmount: 0 },
                     item: HARDENED_CLAY_ITEM
                 }), () => "textures/blocks/hardened_clay.png"),
+                generateBuyOneItemMenu("Blast-Proof Glass", playerInfo => ({
+                    type: ActionType.BuyNormalItem,
+                    itemName: "Blast-Proof Glass",
+                    cost: { ironAmount: 12, goldAmount: 0, emeraldAmount: 0, diamondAmount: 0 },
+                    item: new mc.ItemStack(TEAM_CONSTANTS[playerInfo.team].glassName, 4)
+                }), playerInfo => TEAM_CONSTANTS[playerInfo.team].glassIconPath),
                 generateBuyOneItemMenu("Plank", () => ({
                     type: ActionType.BuyNormalItem,
                     itemName: "Plank",
@@ -328,6 +336,18 @@ const generateItemShopData: () => Menu = () => ({
                     cost: { ironAmount: 24, goldAmount: 0, emeraldAmount: 0, diamondAmount: 0 },
                     item: ENDSTONE_ITEM
                 }), () => "textures/blocks/end_stone.png"),
+                generateBuyOneItemMenu("Ladder", () => ({
+                    type: ActionType.BuyNormalItem,
+                    itemName: "Ladder",
+                    cost: { ironAmount: 4, goldAmount: 0, emeraldAmount: 0, diamondAmount: 0 },
+                    item: LADDER_ITEM
+                }), () => "textures/blocks/ladder.png"),
+                generateBuyOneItemMenu("Obsidian", () => ({
+                    type: ActionType.BuyNormalItem,
+                    itemName: "Obsidian",
+                    cost: { ironAmount: 0, goldAmount: 0, emeraldAmount: 4, diamondAmount: 0 },
+                    item: OBSIDIAN_ITEM
+                }), () => "textures/blocks/obsidian.png"),
             ]
         }, {
             type: "entry",
