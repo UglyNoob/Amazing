@@ -1,5 +1,6 @@
 import { Vector3Utils as v3 } from '@minecraft/math';
 import * as mc from '@minecraft/server';
+import { Direction } from '@minecraft/server';
 import * as ui from '@minecraft/server-ui';
 
 export type Area = [mc.Vector3, mc.Vector3];
@@ -332,23 +333,14 @@ export function closestLocationOnBlock(location: mc.Vector3, blockLoc: mc.Vector
     return v3.add(blockLoc, closestReletive);
 }
 
-enum BlockFace {
-    Up,
-    Down,
-    East,
-    West,
-    North,
-    South
-}
-
 export function* raycastHits(loc: mc.Vector3, direction: mc.Vector3) {
-    const possibleColidingFaces: BlockFace[] = [];
-    if (direction.x > 0) possibleColidingFaces.push(BlockFace.East);
-    if (direction.x < 0) possibleColidingFaces.push(BlockFace.West);
-    if (direction.y > 0) possibleColidingFaces.push(BlockFace.Up);
-    if (direction.y < 0) possibleColidingFaces.push(BlockFace.Down);
-    if (direction.z > 0) possibleColidingFaces.push(BlockFace.South);
-    if (direction.z < 0) possibleColidingFaces.push(BlockFace.North);
+    const possibleColidingFaces: Direction[] = [];
+    if (direction.x > 0) possibleColidingFaces.push(Direction.East);
+    if (direction.x < 0) possibleColidingFaces.push(Direction.West);
+    if (direction.y > 0) possibleColidingFaces.push(Direction.Up);
+    if (direction.y < 0) possibleColidingFaces.push(Direction.Down);
+    if (direction.z > 0) possibleColidingFaces.push(Direction.South);
+    if (direction.z < 0) possibleColidingFaces.push(Direction.North);
     if (possibleColidingFaces.length == 0) return;
 
     const blockLoc = v3.floor(loc);
@@ -358,22 +350,22 @@ export function* raycastHits(loc: mc.Vector3, direction: mc.Vector3) {
         const scales: number[] = [];
         for (const face of possibleColidingFaces) {
             switch (face) {
-                case BlockFace.Up:
+                case Direction.Up:
                     scales.push((1 - reletaiveLoc.y) / direction.y);
                     break;
-                case BlockFace.Down:
+                case Direction.Down:
                     scales.push((-reletaiveLoc.y) / direction.y);
                     break;
-                case BlockFace.East:
+                case Direction.East:
                     scales.push((1 - reletaiveLoc.x) / direction.x);
                     break;
-                case BlockFace.West:
+                case Direction.West:
                     scales.push((-reletaiveLoc.x) / direction.x);
                     break;
-                case BlockFace.North:
+                case Direction.North:
                     scales.push((-reletaiveLoc.z) / direction.z);
                     break;
-                case BlockFace.South:
+                case Direction.South:
                     scales.push((1 - reletaiveLoc.z) / direction.z);
                     break;
             }
@@ -385,22 +377,22 @@ export function* raycastHits(loc: mc.Vector3, direction: mc.Vector3) {
         for (let i = 0; i < scales.length; ++i) {
             if (scales[i] != minScale) continue;
             switch (possibleColidingFaces[i]) {
-                case BlockFace.Up:
+                case Direction.Up:
                     ++blockLoc.y;
                     break;
-                case BlockFace.Down:
+                case Direction.Down:
                     --blockLoc.y;
                     break;
-                case BlockFace.East:
+                case Direction.East:
                     ++blockLoc.x;
                     break;
-                case BlockFace.West:
+                case Direction.West:
                     --blockLoc.x;
                     break;
-                case BlockFace.North:
+                case Direction.North:
                     --blockLoc.z;
                     break;
-                case BlockFace.South:
+                case Direction.South:
                     ++blockLoc.z;
                     break;
             }

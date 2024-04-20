@@ -1167,7 +1167,7 @@ function performAction(action: Action, playerInfo: PlayerGameInformation, teamIn
         ++teamInfo.ironForgeLevel;
         game.applyTeamIronForge(teamInfo.type);
         const t = TEAM_CONSTANTS[teamInfo.type];
-        game.teamBroadcast(teamInfo.type, TEAM_PURCHASE_MESSAGE, t.colorPrefix, player.name, `Iron Forge level ${ teamInfo.ironForgeLevel }`);
+        game.teamBroadcast(teamInfo.type, TEAM_PURCHASE_MESSAGE, t.colorPrefix, player.name, `Iron Forge Level ${ TIER_STRING[teamInfo.ironForgeLevel] }`);
         result = true;
     } else if (action.type == ActionType.UpgradeProtection) {
         if (teamInfo.protectionLevel >= MAX_PROTECTION_LEVEL) {
@@ -1183,7 +1183,7 @@ function performAction(action: Action, playerInfo: PlayerGameInformation, teamIn
         consumeToken(container, cost);
         ++teamInfo.protectionLevel;
         const t = TEAM_CONSTANTS[teamInfo.type];
-        game.teamBroadcast(teamInfo.type, TEAM_PURCHASE_MESSAGE, t.colorPrefix, player.name, `Reinforced Armor level ${ teamInfo.protectionLevel }`);
+        game.teamBroadcast(teamInfo.type, TEAM_PURCHASE_MESSAGE, t.colorPrefix, player.name, `Reinforced Armor Level ${ TIER_STRING[teamInfo.protectionLevel] }`);
         result = true;
     } else if (action.type == ActionType.UpgradeHaste) {
         if (teamInfo.hasteLevel >= MAX_HASTE_LEVEL) {
@@ -1200,7 +1200,7 @@ function performAction(action: Action, playerInfo: PlayerGameInformation, teamIn
         ++teamInfo.hasteLevel;
         game.applyTeamHasteLevel(teamInfo.type);
         const t = TEAM_CONSTANTS[teamInfo.type];
-        game.teamBroadcast(teamInfo.type, TEAM_PURCHASE_MESSAGE, t.colorPrefix, player.name, `Maniac Miner level ${ teamInfo.hasteLevel }`);
+        game.teamBroadcast(teamInfo.type, TEAM_PURCHASE_MESSAGE, t.colorPrefix, player.name, `Maniac Miner Level ${ TIER_STRING[teamInfo.hasteLevel] }`);
         result = true;
     } else if (action.type == ActionType.BuySharpness) {
         if (teamInfo.hasSharpness) {

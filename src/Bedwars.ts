@@ -8,7 +8,7 @@ import { sprintf, vsprintf } from 'sprintf-js';
 import { openShop, openTeamShop, TokenValue } from './BedwarsShop.js';
 import { isLocationPartOfAnyPlatforms } from './RescuePlatform.js';
 import { SimulatedPlayer } from '@minecraft/server-gametest';
-import { mapGarden, mapSteamPunk, mapWaterfall, mapEastwood } from './BedwarsMaps.js';
+import { mapGarden, mapSteamPunk, mapWaterfall, mapEastwood, mapVaryth } from './BedwarsMaps.js';
 import { ActionFormData, ActionFormResponse, FormCancelationReason } from '@minecraft/server-ui';
 import { isItemSumoStick, sumoStickCooldownSym } from './SumoStick.js';
 import { MinecraftDimensionTypes } from '@minecraft/server';
@@ -2248,6 +2248,8 @@ mc.world.beforeEvents.chatSend.subscribe(async event => {
         maps.push([mapWaterfall, { x: 0, y: 0, z: 0 }]);
         form.button("Eastwood");
         maps.push([mapEastwood, { x: 0, y: 0, z: 0 }]);
+        form.button("Varyth(voidless)");
+        maps.push([mapVaryth, { x: 0, y: 0, z: 0 }]);
         let response: ActionFormResponse;
         await sleep(0);
 
