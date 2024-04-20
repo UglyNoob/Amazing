@@ -21,7 +21,7 @@ function isItemDebugStick(item: mc.ItemStack) {
 
 mc.system.runInterval(() => {
     for (const player of mc.world.getAllPlayers()) {
-        if (!player.isOp()) return;
+        if (!player.isOp()) continue;
 
         if (player[DEBUG_MODE_COOLDOWN_SYM] == undefined) {
             player[DEBUG_MODE_COOLDOWN_SYM] = 0;
@@ -74,10 +74,10 @@ mc.world.beforeEvents.itemUse.subscribe(async event => {
                 changedName += '_';
             }
         }
-        code += `let ${changedName} = ___players[${index}]\n`;
+        code += `let ${ changedName } = ___players[${ index }]\n`;
         ++index;
     }
-    code += `return ${response.formValues![1]}`;
+    code += `return ${ response.formValues![1] }`;
     try {
         let result = new Function('mc', 'ui', 'util', 'mcMath', 'me', code)(
             mc, ui, util, mcMath, event.source
@@ -85,7 +85,7 @@ mc.world.beforeEvents.itemUse.subscribe(async event => {
         util.showObjectToPlayer(event.source, result);
     } catch (e) {
         if (e instanceof Error) {
-            event.source.sendMessage(`§c${e.name}: ${e.message}\n${e?.stack}`);
+            event.source.sendMessage(`§c${ e.name }: ${ e.message }\n${ e?.stack }`);
         }
     }
 });
@@ -98,11 +98,13 @@ mc.world.beforeEvents.playerInteractWithBlock.subscribe(async event => {
     event.cancel = true;
     player[DEBUG_MODE_COOLDOWN_SYM] = DEBUG_COOLDOWN;
 
-    await util.sleep(0);
     const obj = event.block.permutation.getAllStates();
     obj.location = mcMath.Vector3Utils.toString(event.block.location, {
         decimals: 0
     });
+    obj.tags = event.block.getTags().join(", ");
+
+    await util.sleep(0);
     util.showObjectToPlayer(player, obj);
 });
 

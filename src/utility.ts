@@ -1,4 +1,4 @@
-import { Vector3Utils } from '@minecraft/math';
+import { Vector3Utils as v3 } from '@minecraft/math';
 import * as mc from '@minecraft/server';
 import * as ui from '@minecraft/server-ui';
 
@@ -324,10 +324,121 @@ export function vectorCompare(a: mc.Vector3, b: mc.Vector3) {
 }
 
 export function closestLocationOnBlock(location: mc.Vector3, blockLoc: mc.Vector3) {
-    const reletiveVec = Vector3Utils.subtract(location, blockLoc);
+    const reletiveVec = v3.subtract(location, blockLoc);
     const closestReletive: mc.Vector3 = { x: 0, y: 0, z: 0 };
     closestReletive.x = Math.max(0, Math.min(1, reletiveVec.x));
     closestReletive.y = Math.max(0, Math.min(1, reletiveVec.y));
     closestReletive.z = Math.max(0, Math.min(1, reletiveVec.z));
-    return Vector3Utils.add(blockLoc, closestReletive);
+    return v3.add(blockLoc, closestReletive);
+}
+
+enum BlockFace {
+    Up,
+    Down,
+    East,
+    West,
+    North,
+    South
+}
+
+export function* raycastHits(loc: mc.Vector3, direction: mc.Vector3) {
+    const possibleColidingFaces: BlockFace[] = [];
+    if (direction.x > 0) possibleColidingFaces.push(BlockFace.East);
+    if (direction.x < 0) possibleColidingFaces.push(BlockFace.West);
+    if (direction.y > 0) possibleColidingFaces.push(BlockFace.Up);
+    if (direction.y < 0) possibleColidingFaces.push(BlockFace.Down);
+    if (direction.z > 0) possibleColidingFaces.push(BlockFace.South);
+    if (direction.z < 0) possibleColidingFaces.push(BlockFace.North);
+    if (possibleColidingFaces.length == 0) return;
+
+    const blockLoc = v3.floor(loc);
+    yield Object.assign({}, blockLoc);
+    while (true) {
+        const reletaiveLoc = v3.subtract(loc, blockLoc);
+        let success = false;
+        let hit: mc.Vector3;
+        for (const face of possibleColidingFaces) {
+            switch (face) {
+                case BlockFace.Up:
+                    hit = v3.add(reletaiveLoc, v3.scale(direction, (1 - reletaiveLoc.y) / direction.y));
+                    if (hit.x > 0 && hit.x < 1 && hit.z > 0 && hit.z < 1) {
+                        success = true;
+                        loc = v3.add(blockLoc, hit);
+                        ++blockLoc.y;
+                    }
+                    break;
+                case BlockFace.Down:
+                    hit = v3.add(reletaiveLoc, v3.scale(direction, (-reletaiveLoc.y) / direction.y));
+                    if (hit.x > 0 && hit.x < 1 && hit.z > 0 && hit.z < 1) {
+                        success = true;
+                        loc = v3.add(blockLoc, hit);
+                        --blockLoc.y;
+                    }
+                    break;
+                case BlockFace.East:
+                    hit = v3.add(reletaiveLoc, v3.scale(direction, (1 - reletaiveLoc.x) / direction.x));
+                    if (hit.y > 0 && hit.y < 1 && hit.z > 0 && hit.z < 1) {
+                        success = true;
+                        loc = v3.add(blockLoc, hit);
+                        ++blockLoc.x;
+                    }
+                    break;
+                case BlockFace.West:
+                    hit = v3.add(reletaiveLoc, v3.scale(direction, (-reletaiveLoc.x) / direction.x));
+                    if (hit.y > 0 && hit.y < 1 && hit.z > 0 && hit.z < 1) {
+                        success = true;
+                        loc = v3.add(blockLoc, hit);
+                        --blockLoc.x;
+                    }
+                    break;
+                case BlockFace.North:
+                    hit = v3.add(reletaiveLoc, v3.scale(direction, (-reletaiveLoc.z) / direction.z));
+                    if (hit.y > 0 && hit.y < 1 && hit.x > 0 && hit.x < 1) {
+                        success = true;
+                        loc = v3.add(blockLoc, hit);
+                        --blockLoc.z;
+                    }
+                    break;
+                case BlockFace.South:
+                    hit = v3.add(reletaiveLoc, v3.scale(direction, (1 - reletaiveLoc.z) / direction.z));
+                    if (hit.y > 0 && hit.y < 1 && hit.x > 0 && hit.x < 1) {
+                        success = true;
+                        loc = v3.add(blockLoc, hit);
+                        ++blockLoc.z;
+                    }
+                    break;
+            }
+            if (success) {
+                break;
+            }
+        }
+        if (success) {
+            // mc.world.sendMessage(v3.toString(blockLoc, { decimals: 0 })); // DEBUG
+            yield Object.assign({}, blockLoc);
+        } else {
+            return;
+        }
+    }
+}
+
+/**
+ * Find element with in a sorted array.
+ * @returns Return the element if found, otherwise null
+ * */
+export function quickFind<T>(array: T[], element: T, compareFn: (a: T, b: T) => number) {
+    if (array.length == 0) return null;
+
+    let left = 0;
+    let right = array.length - 1;
+    while (right >= left) {
+        const mid = Math.floor((left + right) / 2);
+        const compareResult = compareFn(array[mid], element);
+        if (compareResult == 0) return array[mid];
+        if (compareResult < 0) {
+            left = mid + 1;
+        } else {
+            right = mid - 1;
+        }
+    }
+    return null;
 }

@@ -1,6 +1,6 @@
 import { Vector3Utils as v3 } from '@minecraft/math';
 import * as mc from '@minecraft/server';
-import { itemEqual, Area, sleep, vectorAdd, vectorWithinArea, containerIterator, capitalize, getPlayerByName, consumeMainHandItem, makeItem, shuffle, randomInt, setGameMode, analyzeTime, vectorCompare, closestLocationOnBlock } from './utility.js';
+import { itemEqual, Area, sleep, vectorAdd, vectorWithinArea, containerIterator, capitalize, getPlayerByName, consumeMainHandItem, makeItem, shuffle, randomInt, setGameMode, analyzeTime, vectorCompare, closestLocationOnBlock, raycastHits, quickFind } from './utility.js';
 import { setupGameTest } from './GameTest.js';
 import { MinecraftBlockTypes, MinecraftEffectTypes, MinecraftEnchantmentTypes, MinecraftEntityTypes, MinecraftItemTypes } from '@minecraft/vanilla-data';
 
@@ -11,6 +11,7 @@ import { SimulatedPlayer } from '@minecraft/server-gametest';
 import { mapGarden, mapSteamPunk, mapWaterfall, mapEastwood } from './BedwarsMaps.js';
 import { ActionFormData, ActionFormResponse, FormCancelationReason } from '@minecraft/server-ui';
 import { isItemSumoStick, sumoStickCooldownSym } from './SumoStick.js';
+import { MinecraftDimensionTypes } from '@minecraft/server';
 
 const RESPAWN_TIME = 100; // in ticks
 export const IRON_ITEM_STACK = new mc.ItemStack(MinecraftItemTypes.IronIngot);
@@ -848,6 +849,13 @@ export class BedWarsGame {
             objective: this.scoreObj
         });
         this.updateScoreboard();
+
+        // mc.world.gameRules.recipesUnlock = true;
+        // mc.world.gameRules.showRecipeMessages = false;
+        // mc.world.gameRules.doLimitedCrafting = true;
+        this.dimension.runCommand("gamerule recipesunlock true");
+        this.dimension.runCommand("gamerule showrecipemessages false");
+        this.dimension.runCommand("gamerule dolimitedcrafting true");
     }
 
     private updateScoreboard() {
@@ -902,7 +910,7 @@ export class BedWarsGame {
             amplifier: 100,
             showParticles: false
         });
-        player.addEffect(MinecraftEffectTypes.Resistance, 3 * 20, {
+        player.addEffect(MinecraftEffectTypes.Resistance, 60, {
             amplifier: 5,
             showParticles: true
         });
@@ -960,6 +968,15 @@ export class BedWarsGame {
         let foundPickaxe = false;
         let foundAxe = false;
         playerInfo.swordLevel = SWORD_LEVELS[0];
+        let swordItem = playerInfo.swordLevel.item;
+        const teamInfo = this.teams.get(playerInfo.team)!;
+        if (teamInfo.hasSharpness) {
+            swordItem = swordItem.clone();
+            swordItem.getComponent("enchantable")!.addEnchantment({
+                type: MinecraftEnchantmentTypes.Sharpness,
+                level: SHARPNESS_ENCHANMENT_LEVEL
+            });
+        }
         for (const { item, index } of containerIterator(container)) {
             if (!item) continue;
             if (itemEqual(playerInfo.swordLevel.item, item)) {
@@ -989,7 +1006,7 @@ export class BedWarsGame {
             container.setItem(index);
         }
         if (!hasSword) {
-            container.addItem(playerInfo.swordLevel.item);
+            container.addItem(swordItem);
         }
         if (!foundShear && playerInfo.hasShear) {
             container.addItem(new mc.ItemStack(MinecraftItemTypes.Shears));
@@ -1252,6 +1269,7 @@ export class BedWarsGame {
                 this.onPlayerDieOrOffline(playerInfo, playerInfo.lastHurtBy);
                 continue;
             }
+            player.runCommand("recipe take @s *");
 
             if (playerInfo.player.dimension != this.dimension) {
                 setGameMode(player, mc.GameMode.spectator);
@@ -1344,16 +1362,6 @@ export class BedWarsGame {
                         if ([
                             MinecraftItemTypes.GlassBottle,
                             MinecraftItemTypes.CraftingTable,
-                            MinecraftItemTypes.WoodenButton,
-                            MinecraftItemTypes.IronNugget,
-                            MinecraftItemTypes.GoldNugget,
-                            MinecraftItemTypes.WoodenPressurePlate,
-                            MinecraftItemTypes.HeavyWeightedPressurePlate,
-                            MinecraftItemTypes.LightWeightedPressurePlate,
-                            MinecraftItemTypes.BlueCarpet,
-                            MinecraftItemTypes.RedCarpet,
-                            MinecraftItemTypes.YellowCarpet,
-                            MinecraftItemTypes.GreenCarpet
                         ].includes(item.typeId as MinecraftItemTypes)) {
                             erase = true;
                         }
@@ -1574,6 +1582,7 @@ export class BedWarsGame {
         const teamIslandEnemies: Map<TeamType, PlayerGameInformation[]> = new Map();
         for (const playerInfo of this.players.values()) {
             const teamAreaEntered = playerInfo.teamAreaEntered;
+            if (playerInfo.state != PlayerState.Alive) continue;
             if (teamAreaEntered != undefined && teamAreaEntered != playerInfo.team) {
                 const players = teamIslandEnemies.get(teamAreaEntered);
                 if (players) {
@@ -1589,21 +1598,20 @@ export class BedWarsGame {
             const victims = teamIslandEnemies.get(fakePlayerInfo.team)?.sort((a, b) =>
                 v3.distance(a.player.location, fakePlayer.location) - v3.distance(b.player.location, fakePlayer.location)
             );
+            let updateTarget = false;
+            if (!fakePlayer.attackTarget ||
+                (v3.distance(fakePlayer.location, fakePlayer.attackTarget.player.location) >= 5 ||
+                    fakePlayer.attackTarget.state != PlayerState.Alive)) {
+                updateTarget = true;
+            }
             if (!victims || victims.length == 0) {
-                if (fakePlayer.attackTarget &&
-                    (v3.distance(fakePlayer.location, fakePlayer.attackTarget.player.location) >= 5 ||
-                        fakePlayer.attackTarget.state != PlayerState.Alive)) {
+                if (updateTarget) {
                     fakePlayer.attackTarget = undefined;
                     fakePlayer.previousOnGround = fakePlayer.isOnGround;
                     continue;
                 }
             } else {
-                if (fakePlayer.attackTarget) {
-                    if (v3.distance(fakePlayer.location, victims[0].player.location) < 3) {
-                        fakePlayer.attackTarget = victims[0];
-                    }
-                }
-                if (!fakePlayer.attackTarget) {
+                if (updateTarget || (fakePlayer && v3.distance(fakePlayer.location, victims[0].player.location) < 3)) {
                     fakePlayer.attackTarget = victims[0];
                 }
             }
@@ -1682,12 +1690,14 @@ export class BedWarsGame {
     beforeExplosion(event: mc.ExplosionBeforeEvent) {
         if (this.state != GameState.started) return;
 
-        const impactedBlocks = event.getImpactedBlocks();
-        const playerPlacedBlocks: mc.Block[] = [];
+        const stainedGlassTypes = Object.values(TEAM_CONSTANTS).map(teamInfo => teamInfo.glassName);
+
+        const impactedBlocks = event.getImpactedBlocks().sort(vectorCompare);
+        const unprotectedBlocks: mc.Block[] = [];
         const protectedBlocks: mc.Block[] = [];
         for (const block of impactedBlocks) {
             let isProtected = false;
-            if (Object.values(TEAM_CONSTANTS).map(teamInfo => teamInfo.glassName).includes(block.typeId)) {
+            if (stainedGlassTypes.includes(block.typeId)) {
                 isProtected = true;
             } else {
                 let existInRecord = false;
@@ -1702,7 +1712,7 @@ export class BedWarsGame {
             if (isProtected) {
                 protectedBlocks.push(block);
             } else {
-                playerPlacedBlocks.push(block);
+                unprotectedBlocks.push(block);
             }
         }
         let explosionLocation: mc.Vector3 | undefined = undefined;
@@ -1712,20 +1722,26 @@ export class BedWarsGame {
                 explosionLocation.y += 0.5;
             } else explosionLocation = event.source.location;
         }
-        for (let index = playerPlacedBlocks.length - 1; index >= 0; --index) {
+        for (let index = unprotectedBlocks.length - 1; index >= 0; --index) {
+            const block = unprotectedBlocks[index];
             if (explosionLocation) {
-                const raycastBlock = this.dimension.getBlockFromRay(explosionLocation, v3.subtract(closestLocationOnBlock(explosionLocation, playerPlacedBlocks[index].location), explosionLocation), {
-                    includeLiquidBlocks: false,
-                })?.block;
-                if (raycastBlock && protectedBlocks.find(block => v3.equals(block.location, raycastBlock.location))) {
+                let protect = false;
+                for (const raycastLoc of raycastHits(explosionLocation, v3.subtract(block.center(), explosionLocation))) {
+                    if (v3.equals(raycastLoc, block.location)) break;
+                    if (quickFind(protectedBlocks, raycastLoc, vectorCompare)) {
+                        protect = true;
+                        break;
+                    }
+                }
+                if (protect) {
                     // mc.system.run(() => this.dimension.fillBlocks(raycastBlock.location, raycastBlock.location, MinecraftBlockTypes.Glowstone)); // DEBUG
-                    playerPlacedBlocks.splice(index, 1);
+                    unprotectedBlocks.splice(index, 1);
                     continue;
                 }
             }
-            this.removeBlockFromRecord(playerPlacedBlocks[index]);
+            this.removeBlockFromRecord(unprotectedBlocks[index]);
         }
-        event.setImpactedBlocks(playerPlacedBlocks);
+        event.setImpactedBlocks(unprotectedBlocks);
     }
     afterEntityDie(event: mc.EntityDieAfterEvent) {
         if (this.state != GameState.started) return;
