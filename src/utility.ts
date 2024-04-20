@@ -355,69 +355,57 @@ export function* raycastHits(loc: mc.Vector3, direction: mc.Vector3) {
     yield Object.assign({}, blockLoc);
     while (true) {
         const reletaiveLoc = v3.subtract(loc, blockLoc);
-        let success = false;
-        let hit: mc.Vector3;
+        const scales: number[] = [];
         for (const face of possibleColidingFaces) {
             switch (face) {
                 case BlockFace.Up:
-                    hit = v3.add(reletaiveLoc, v3.scale(direction, (1 - reletaiveLoc.y) / direction.y));
-                    if (hit.x > 0 && hit.x < 1 && hit.z > 0 && hit.z < 1) {
-                        success = true;
-                        loc = v3.add(blockLoc, hit);
-                        ++blockLoc.y;
-                    }
+                    scales.push((1 - reletaiveLoc.y) / direction.y);
                     break;
                 case BlockFace.Down:
-                    hit = v3.add(reletaiveLoc, v3.scale(direction, (-reletaiveLoc.y) / direction.y));
-                    if (hit.x > 0 && hit.x < 1 && hit.z > 0 && hit.z < 1) {
-                        success = true;
-                        loc = v3.add(blockLoc, hit);
-                        --blockLoc.y;
-                    }
+                    scales.push((-reletaiveLoc.y) / direction.y);
                     break;
                 case BlockFace.East:
-                    hit = v3.add(reletaiveLoc, v3.scale(direction, (1 - reletaiveLoc.x) / direction.x));
-                    if (hit.y > 0 && hit.y < 1 && hit.z > 0 && hit.z < 1) {
-                        success = true;
-                        loc = v3.add(blockLoc, hit);
-                        ++blockLoc.x;
-                    }
+                    scales.push((1 - reletaiveLoc.x) / direction.x);
                     break;
                 case BlockFace.West:
-                    hit = v3.add(reletaiveLoc, v3.scale(direction, (-reletaiveLoc.x) / direction.x));
-                    if (hit.y > 0 && hit.y < 1 && hit.z > 0 && hit.z < 1) {
-                        success = true;
-                        loc = v3.add(blockLoc, hit);
-                        --blockLoc.x;
-                    }
+                    scales.push((-reletaiveLoc.x) / direction.x);
                     break;
                 case BlockFace.North:
-                    hit = v3.add(reletaiveLoc, v3.scale(direction, (-reletaiveLoc.z) / direction.z));
-                    if (hit.y > 0 && hit.y < 1 && hit.x > 0 && hit.x < 1) {
-                        success = true;
-                        loc = v3.add(blockLoc, hit);
-                        --blockLoc.z;
-                    }
+                    scales.push((-reletaiveLoc.z) / direction.z);
                     break;
                 case BlockFace.South:
-                    hit = v3.add(reletaiveLoc, v3.scale(direction, (1 - reletaiveLoc.z) / direction.z));
-                    if (hit.y > 0 && hit.y < 1 && hit.x > 0 && hit.x < 1) {
-                        success = true;
-                        loc = v3.add(blockLoc, hit);
-                        ++blockLoc.z;
-                    }
+                    scales.push((1 - reletaiveLoc.z) / direction.z);
                     break;
             }
-            if (success) {
-                break;
+        }
+        let minScale = Infinity;
+        for (let i = 0; i < scales.length; ++i) {
+            if (scales[i] < minScale) minScale = scales[i];
+        }
+        for (let i = 0; i < scales.length; ++i) {
+            if (scales[i] != minScale) continue;
+            switch (possibleColidingFaces[i]) {
+                case BlockFace.Up:
+                    ++blockLoc.y;
+                    break;
+                case BlockFace.Down:
+                    --blockLoc.y;
+                    break;
+                case BlockFace.East:
+                    ++blockLoc.x;
+                    break;
+                case BlockFace.West:
+                    --blockLoc.x;
+                    break;
+                case BlockFace.North:
+                    --blockLoc.z;
+                    break;
+                case BlockFace.South:
+                    ++blockLoc.z;
+                    break;
             }
         }
-        if (success) {
-            // mc.world.sendMessage(v3.toString(blockLoc, { decimals: 0 })); // DEBUG
-            yield Object.assign({}, blockLoc);
-        } else {
-            return;
-        }
+        yield Object.assign({}, blockLoc);
     }
 }
 
