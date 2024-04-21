@@ -21,7 +21,7 @@ mc.world.afterEvents.worldInitialize.subscribe(() => {
  */
 async function showErrorMenu(player: mc.Player, message: string): Promise<boolean> {
     let form = new ui.MessageFormData();
-    form.title("Error")
+    form.title("Error");
     form.body(message);
     form.button1("Close");
     form.button2("Back");
@@ -37,7 +37,7 @@ export function setupGameTest(x: number, z: number, dimension: mc.Dimension) {
     z -= z % 32;
     dimension.fillBlocks({ x: x, y: 317, z: z + 3 }, { x: x, y: 317, z: z + 3 }, MinecraftBlockTypes.Glass);
     dimension.fillBlocks({ x: x, y: 318, z: z + 3 }, { x: x, y: 319, z: z + 3 }, MinecraftBlockTypes.Air);
-    dimension.runCommandAsync(`execute positioned ${x} 319 ${z} run gametest run AmazingSimulatedPlayerFunctionalityImplementation:Implementation`);
+    dimension.runCommandAsync(`execute positioned ${ x } 319 ${ z } run gametest run AmazingSimulatedPlayerFunctionalityImplementation:Implementation`);
 }
 
 mc.world.beforeEvents.chatSend.subscribe(event => {
@@ -108,17 +108,7 @@ mc.world.beforeEvents.chatSend.subscribe(event => {
 mc.world.afterEvents.entityDie.subscribe(event => {
     if (event.deadEntity instanceof gt.SimulatedPlayer) {
         let sPlayer = event.deadEntity;
-        mc.world.sendMessage(`${sPlayer.name} will respawn in 5 seconds`);
+        // mc.world.sendMessage(`${sPlayer.name} will respawn in 5 seconds`);
         mc.system.runTimeout(() => sPlayer.respawn(), 100);
     }
-});
-
-mc.world.beforeEvents.playerInteractWithEntity.subscribe(event => {
-    if (!event.player.isOp()) return;
-    if (!event.player.isSneaking) return;
-    if (!(event.target instanceof gt.SimulatedPlayer)) return;
-
-    event.cancel = true;
-    const player = event.player;
-    player.sendMessage("I know");
 });

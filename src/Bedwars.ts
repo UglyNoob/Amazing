@@ -725,7 +725,7 @@ export class BedWarsGame {
         for (const team of this.map.teams) {
             this.teams.set(team.type, {
                 type: team.type,
-                state: TeamState.BedAlive,
+                state: TeamState.Dead,
                 hasSharpness: false,
                 protectionLevel: 0,
                 hasteLevel: 0,
@@ -805,6 +805,7 @@ export class BedWarsGame {
                 playerInfo.state = PlayerState.Offline;
                 continue;
             }
+            this.teams.get(playerInfo.team)!.state = TeamState.BedAlive;
             playerInfo.player.getComponent("inventory")!.container!.clearAll();
             this.respawnPlayer(playerInfo);
             this.setupSpawnPoint(playerInfo.player);
@@ -824,6 +825,10 @@ export class BedWarsGame {
 
             // Place the bed
             const bedLocation = this.fixOrigin(mapBedLocation);
+            if (this.teams.get(teamType)!.state != TeamState.BedAlive) {
+                this.dimension.fillBlocks(bedLocation[0], bedLocation[1], MinecraftBlockTypes.Air);
+                continue;
+            }
             const directionVector = v3.subtract(bedLocation[1], bedLocation[0]);
             let direction: number;
             if (directionVector.x == 1) {
@@ -1940,8 +1945,7 @@ export class BedWarsGame {
             await sleep(0);
 
             /* Clear the bed */
-            event.dimension.fillBlocks(this.fixOrigin(destroyedTeam.bedLocation[0]),
-                this.fixOrigin(destroyedTeam.bedLocation[1]), "minecraft:air");
+            event.dimension.fillBlocks(...this.fixOrigin(destroyedTeam.bedLocation), "minecraft:air");
 
             if (destroyerInfo.armorDisabled) {
                 destroyerInfo.armorDisabled = false;
