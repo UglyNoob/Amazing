@@ -2005,6 +2005,20 @@ export class BedWarsGame {
         if (!vectorWithinArea(location, this.fixOrigin(this.map.playableArea))) {
             return false;
         }
+        // disallow the player to place block near cactus
+        for (const offset of [
+            { x: 1, y: 0, z: 0 },
+            { x: -1, y: 0, z: 0 },
+            { x: 0, y: 0, z: 1 },
+            { x: 0, y: 0, z: -1 },
+        ]) {
+            const block = this.dimension.getBlock(vectorAdd(location, offset));
+            if (!block) continue;
+            // Maybe I need to look up the record
+            if (block.typeId == MinecraftBlockTypes.Cactus) {
+                return false;
+            }
+        }
         return true;
     }
 
@@ -2029,7 +2043,7 @@ export class BedWarsGame {
             playerInfo.player.getComponent("equippable")!.getEquipmentSlot(mc.EquipmentSlot.Mainhand).setItem();
             return;
         }
-        // disallow the player to place block in protected area
+        // disallow the player to place block at some cases
         if (!this.isBlockLocationPlayerPlacable(event.block.location)) {
             event.cancel = true;
             if (!vectorWithinArea(event.block.location, this.fixOrigin(this.map.playableArea))) {
@@ -2038,17 +2052,6 @@ export class BedWarsGame {
                 playerInfo.player.sendMessage(PLACING_BLOCK_ILLAGEL_MESSAGE);
             }
             return;
-        }
-        // disallow the player to place block near cactus
-        {
-            for (const block of [event.block.west(), event.block.east(), event.block.north(), event.block.south()]) {
-                if (!block) continue;
-                // Maybe I need to look up the record
-                if (block.typeId == MinecraftBlockTypes.Cactus) {
-                    event.cancel = true;
-                    return;
-                }
-            }
         }
         // Allow the player to place block
         playerInfo.placement.push(event.block.location);
@@ -2191,8 +2194,7 @@ class BlockPlacementTracker {
         let index = 0;
         for (const existedLoc of this.data[bucketIndex]) {
             if (v3.equals(loc, existedLoc)) {
-                this.data[bucketIndex].splice(index, 1);
-                break;
+                return;
             }
             ++index;
         }
