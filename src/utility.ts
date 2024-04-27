@@ -422,3 +422,231 @@ export function quickFind<T>(array: T[], element: T, compareFn: (a: T, b: T) => 
     }
     return null;
 }
+
+interface RBTreeNode<T> {
+    parent: RBTreeNode<T>;
+    left: RBTreeNode<T>;
+    right: RBTreeNode<T>;
+    data: T;
+    isBlack: boolean;
+}
+export class RedBlackTree<T> {
+    readonly compare: (a: T, b: T) => number;
+    readonly NULL_NODE = {
+        isBlack: true
+    } as RBTreeNode<T>;
+    root: RBTreeNode<T>;
+
+    constructor(compareFn: (a: T, b: T) => number) {
+        this.compare = compareFn;
+        this.root = this.NULL_NODE;
+    }
+
+    private findNode(element: T) {
+        let node = this.root;
+        while (node != this.NULL_NODE) {
+            const compareResult = this.compare(element, node.data);
+            if (compareResult == 0) return node;
+            if (compareResult > 0) node = node.right;
+            else node = node.left;
+        }
+        // return nothing if it is not found
+    }
+
+    find(element: T) {
+        return this.findNode(element)?.data;
+    }
+
+    private fixNeibouringRed(node: RBTreeNode<T>) {
+        while (!node.parent.isBlack) {
+            if (node.parent == node.parent.parent.left) {
+                const sNode = node.parent.parent.right;
+                if (sNode.isBlack) {
+                    if (node == node.parent.right) {
+                        this.rotateLeft(node.parent);
+                        node = node.left;
+                    }
+                    this.rotateRight(node.parent.parent);
+                    node.parent.isBlack = true;
+                    node.parent.parent.isBlack = false;
+                } else {
+                    node.parent.isBlack = true;
+                    node.parent.parent.isBlack = false;
+                    sNode.isBlack = true;
+                    node = node.parent.parent;
+                }
+            } else {
+                const sNode = node.parent.parent.left;
+                if (sNode.isBlack) {
+                    if (node == node.parent.left) {
+                        this.rotateRight(node.parent);
+                        node = node.right;
+                    }
+                    this.rotateLeft(node.parent.parent);
+                    node.parent.isBlack = true;
+                    node.parent.parent.isBlack = false;
+                } else {
+                    node.parent.isBlack = true;
+                    node.parent.parent.isBlack = false;
+                    sNode.isBlack = true;
+                    node = node.parent.parent;
+                }
+            }
+        }
+        this.root.isBlack = true;
+    }
+
+    insert(element: T) {
+        if (this.root == this.NULL_NODE) {
+            this.root = {
+                left: this.NULL_NODE,
+                right: this.NULL_NODE,
+                parent: this.NULL_NODE,
+                data: element,
+                isBlack: true
+            };
+            return true;
+        }
+        let parentNode = this.root;
+        let insertToLeft: boolean;
+        while (true) {
+            const compareResult = this.compare(element, parentNode.data);
+            if (compareResult == 0) return false;
+            if (compareResult > 0) {
+                if (parentNode.right == this.NULL_NODE) {
+                    insertToLeft = false;
+                    break;
+                }
+                parentNode = parentNode.right;
+            } else {
+                if (parentNode.left == this.NULL_NODE) {
+                    insertToLeft = true;
+                    break;
+                }
+                parentNode = parentNode.left;
+            }
+        }
+
+        const newNode: RBTreeNode<T> = {
+            left: this.NULL_NODE,
+            right: this.NULL_NODE,
+            parent: parentNode,
+            data: element,
+            isBlack: false
+        };
+        if (insertToLeft) parentNode.left = newNode;
+        else parentNode.right = newNode;
+        if (parentNode.isBlack) {
+            return true;
+        }
+
+        // need to fix after insertion
+        this.fixNeibouringRed(newNode);
+        return true;
+    }
+
+    private deleteNode(node: RBTreeNode<T>) {
+        if (node.left == this.NULL_NODE) {
+            if (node.right == this.NULL_NODE) { // this node has no children
+                if (node == this.root) {
+                    this.root = this.NULL_NODE;
+                    return;
+                }
+                if (!node.isBlack) {
+                    if (node == node.parent.left) {
+                        node.parent.left = this.NULL_NODE;
+                    } else {
+                        node.parent.right = this.NULL_NODE;
+                    }
+                    return;
+                }
+                if (!node.parent.isBlack) {
+                    if (node.parent.left == node) {
+                        const sibling = node.parent.right;
+                        if (sibling.right == this.NULL_NODE) {
+                            if (sibling.right == this.NULL_NODE) {
+                                node.parent.isBlack = true;
+                                node.parent.left = this.NULL_NODE;
+                                sibling.isBlack = false;
+                            } else {
+                                ;
+                            }
+                        }
+                    } else {
+                        node.parent.right = this.NULL_NODE;
+                        node.parent.left.isBlack = false;
+                    }
+                    return;
+                }
+                ;
+                if (node.parent.left == node) {
+                    const sibling = node.parent.right;
+                    if (sibling.isBlack) {
+                        if (sibling.right == this.NULL_NODE) {
+                            ;
+                        } else {
+                            ;
+                        }
+                    } else {
+                        ;
+                    }
+                }
+            } else {
+                node.data = node.right.data;
+                node.right = this.NULL_NODE;
+            }
+        } else {
+            if (node.right == this.NULL_NODE) {
+                node.data = node.left.data;
+                node.left = this.NULL_NODE;
+            } else { // this node has two children
+                let delectNode = node.left;
+                while (delectNode.right != this.NULL_NODE) {
+                    delectNode = delectNode.right;
+                }
+                node.data = delectNode.data;
+                this.deleteNode(delectNode);
+            }
+        }
+    }
+
+    delete(element: T) {
+        const node = this.findNode(element);
+        if (!node) return false;
+        this.deleteNode(node);
+        return true;
+    }
+
+    private rotateLeft(headNode: RBTreeNode<T>) {
+        const childNode = headNode.right;
+        headNode.right = childNode.left;
+        childNode.left = headNode;
+        childNode.parent = headNode.parent;
+        headNode.parent = childNode;
+        if (headNode == this.root) {
+            this.root = childNode;
+        } else {
+            if (headNode == childNode.parent.left) {
+                childNode.parent.left = childNode;
+            } else {
+                childNode.parent.right = childNode;
+            }
+        }
+    }
+    private rotateRight(headNode: RBTreeNode<T>) {
+        const childNode = headNode.left;
+        headNode.left = childNode.right;
+        childNode.right = headNode;
+        childNode.parent = headNode.parent;
+        headNode.parent = childNode;
+        if (headNode == this.root) {
+            this.root = childNode;
+        } else {
+            if (headNode == childNode.parent.left) {
+                childNode.parent.left = childNode;
+            } else {
+                childNode.parent.right = childNode;
+            }
+        }
+    }
+}

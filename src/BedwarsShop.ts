@@ -8,7 +8,6 @@ import {
     PlayerGameInformation,
     PlayerState,
     TEAM_CONSTANTS,
-    PURCHASE_MESSAGE,
     SWORD_LEVELS,
     ARMOR_LEVELS,
     PICKAXE_LEVELS,
@@ -26,12 +25,12 @@ import {
     JUMP_BOOST_POTION_ITEM,
     TeamGameInformation,
     MAX_IRON_FORGE_LEVEL,
-    TEAM_PURCHASE_MESSAGE,
     MAX_PROTECTION_LEVEL,
     MAX_HASTE_LEVEL,
     TRAP_CONSTANTS,
     TrapType,
-    MAX_TRAP_COUNT
+    MAX_TRAP_COUNT,
+    strings
 } from "./Bedwars.js";
 import { ActionFormData } from "@minecraft/server-ui";
 import { containerIterator, containerSlotIterator, itemEqual, stackFirstContainerAdd } from './utility.js';
@@ -266,12 +265,15 @@ const BOW_ITEM = new mc.ItemStack(MinecraftItemTypes.Bow, 1);
 const ARROW_ITEM = new mc.ItemStack(MinecraftItemTypes.Arrow, 6);
 const GOLDEN_APPLE_ITEM = new mc.ItemStack(MinecraftItemTypes.GoldenApple, 1);
 const ENDER_PEARL_ITEM = new mc.ItemStack(MinecraftItemTypes.EnderPearl, 1);
+const WIND_CHARGE_ITEM = new mc.ItemStack(MinecraftItemTypes.WindCharge, 1);
+const WOLF_ARMOR_ITEM = new mc.ItemStack(MinecraftItemTypes.WolfArmor, 1);
+const LOYAL_WOLF_ITEM = new mc.ItemStack(MinecraftItemTypes.WolfSpawnEgg, 1);
 const HARDENED_CLAY_ITEM = new mc.ItemStack(MinecraftItemTypes.HardenedClay, 16);
 const BOW_POWERI_ITEM = (() => {
     const i = new mc.ItemStack(MinecraftItemTypes.Bow);
     i.getComponent("enchantable")!.addEnchantment({
         level: 1,
-        type: MinecraftEnchantmentTypes.Power
+        type: mc.EnchantmentTypes.get(MinecraftEnchantmentTypes.Power)!
     });
     return i;
 })();
@@ -280,11 +282,11 @@ const BOW_POWERI_PUNCHI_ITEM = (() => {
     const e = i.getComponent("enchantable")!;
     e.addEnchantment({
         level: 1,
-        type: MinecraftEnchantmentTypes.Punch
+        type: mc.EnchantmentTypes.get(MinecraftEnchantmentTypes.Punch)!
     });
     e.addEnchantment({
         level: 1,
-        type: MinecraftEnchantmentTypes.Power
+        type: mc.EnchantmentTypes.get(MinecraftEnchantmentTypes.Power)!
     });
     return i;
 })();
@@ -359,6 +361,12 @@ const generateItemShopData: () => Menu = () => ({
                 generateBuySwordMenu(SWORD_LEVELS[1], { ironAmount: 10, goldAmount: 0, diamondAmount: 0, emeraldAmount: 0 }),
                 generateBuySwordMenu(SWORD_LEVELS[2], { ironAmount: 0, goldAmount: 7, diamondAmount: 0, emeraldAmount: 0 }),
                 generateBuySwordMenu(SWORD_LEVELS[3], { ironAmount: 0, goldAmount: 0, diamondAmount: 0, emeraldAmount: 4 }),
+                generateBuyOneItemMenu("Wind Charge", () => ({
+                    type: ActionType.BuyNormalItem,
+                    itemName: "Wind Charge",
+                    cost: { ironAmount: 0, goldAmount: 4, emeraldAmount: 0, diamondAmount: 0 },
+                    item: WIND_CHARGE_ITEM
+                }), () => "textures/items/wind_charge.png"),
                 generateBuyOneItemMenu("Sumo Stick", () => ({
                     type: ActionType.BuyNormalItem,
                     itemName: "Sumo Stick",
@@ -577,6 +585,18 @@ const generateItemShopData: () => Menu = () => ({
                     cost: { ironAmount: 0, goldAmount: 0, emeraldAmount: 1, diamondAmount: 0 },
                     item: BRIDGE_EGG_ITEM
                 }), () => "textures/items/egg.png"),
+                generateBuyOneItemMenu("Loyal Wolf", () => ({
+                    type: ActionType.BuyNormalItem,
+                    itemName: "Loyal Wolf",
+                    cost: { ironAmount: 0, goldAmount: 0, emeraldAmount: 4, diamondAmount: 0 },
+                    item: LOYAL_WOLF_ITEM
+                }), () => "textures/items/spawn_egg.png"),
+                generateBuyOneItemMenu("Wolf Armor", () => ({
+                    type: ActionType.BuyNormalItem,
+                    itemName: "Wolf Armor",
+                    cost: { ironAmount: 0, goldAmount: 0, emeraldAmount: 4, diamondAmount: 0 },
+                    item: WOLF_ARMOR_ITEM
+                }), () => "textures/items/wolf_armor.png"),
                 generateBuyOneItemMenu("Rescue Platform", () => ({
                     type: ActionType.BuyNormalItem,
                     itemName: "Rescue Platform",
@@ -1000,6 +1020,7 @@ function performAction(action: Action, playerInfo: PlayerGameInformation, teamIn
     const container = player.getComponent("minecraft:inventory")!.container!;
 
     const tokens = calculateTokens(container);
+    const { purchaseMessage } = strings[game.getPlayerLang(player)];
     execute: if (action.type == ActionType.BuyNormalItem) {
         if (!isTokenSatisfying(tokens, action.cost)) {
             // Failed to buy, insufficient tokens
@@ -1014,7 +1035,7 @@ function performAction(action: Action, playerInfo: PlayerGameInformation, teamIn
             const entity = playerInfo.player.dimension.spawnItem(leftover, player.location);
             entity.applyImpulse(v3.scale(entity.getVelocity(), -1));
         }
-        player.sendMessage(sprintf(PURCHASE_MESSAGE, action.itemName));
+        player.sendMessage(sprintf(purchaseMessage, action.itemName));
         result = true;
     } else if (action.type == ActionType.BuySword) {
         if (playerInfo.swordLevel.level >= action.toLevel.level) {
@@ -1040,7 +1061,7 @@ function performAction(action: Action, playerInfo: PlayerGameInformation, teamIn
         if (!foundSword) {
             container.addItem(action.toLevel.item);
         }
-        player.sendMessage(sprintf(PURCHASE_MESSAGE, action.toLevel.name));
+        player.sendMessage(sprintf(purchaseMessage, action.toLevel.name));
         playerInfo.swordLevel = action.toLevel;
         result = true;
     } else if (action.type == ActionType.BuyShear) {
@@ -1055,7 +1076,7 @@ function performAction(action: Action, playerInfo: PlayerGameInformation, teamIn
         }
         consumeToken(container, action.cost);
         container.addItem(new mc.ItemStack(MinecraftItemTypes.Shears));
-        player.sendMessage(sprintf(PURCHASE_MESSAGE, "Shears"));
+        player.sendMessage(sprintf(purchaseMessage, "Shears"));
         playerInfo.hasShear = true;
         result = true;
     } else if (action.type == ActionType.BuyArmor) {
@@ -1074,7 +1095,7 @@ function performAction(action: Action, playerInfo: PlayerGameInformation, teamIn
         if (!playerInfo.armorDisabled) {
             game.resetArmor(playerInfo);
         }
-        player.sendMessage(sprintf(PURCHASE_MESSAGE, playerInfo.armorLevel.name));
+        player.sendMessage(sprintf(purchaseMessage, playerInfo.armorLevel.name));
         result = true;
     } else if (action.type == ActionType.UpgradePickaxe) {
         let toLevel: PickaxeLevel;
@@ -1111,7 +1132,7 @@ function performAction(action: Action, playerInfo: PlayerGameInformation, teamIn
         } else {
             container.addItem(toLevel.item);
         }
-        player.sendMessage(sprintf(PURCHASE_MESSAGE, toLevel.name));
+        player.sendMessage(sprintf(purchaseMessage, toLevel.name));
         playerInfo.pickaxeLevel = toLevel;
         result = true;
     } else if (action.type == ActionType.UpgradeAxe) {
@@ -1149,7 +1170,7 @@ function performAction(action: Action, playerInfo: PlayerGameInformation, teamIn
         } else {
             container.addItem(toLevel.item);
         }
-        player.sendMessage(sprintf(PURCHASE_MESSAGE, toLevel.name));
+        player.sendMessage(sprintf(purchaseMessage, toLevel.name));
         playerInfo.axeLevel = toLevel;
         result = true;
     } else if (action.type == ActionType.UpgradeIronForge) {
@@ -1167,7 +1188,7 @@ function performAction(action: Action, playerInfo: PlayerGameInformation, teamIn
         ++teamInfo.ironForgeLevel;
         game.applyTeamIronForge(teamInfo.type);
         const t = TEAM_CONSTANTS[teamInfo.type];
-        game.teamBroadcast(teamInfo.type, TEAM_PURCHASE_MESSAGE, t.colorPrefix, player.name, `Iron Forge Level ${ TIER_STRING[teamInfo.ironForgeLevel] }`);
+        game.teamBroadcast(teamInfo.type, "teamPurchaseMessage", t.colorPrefix, player.name, `Iron Forge Level ${ TIER_STRING[teamInfo.ironForgeLevel] }`);
         result = true;
     } else if (action.type == ActionType.UpgradeProtection) {
         if (teamInfo.protectionLevel >= MAX_PROTECTION_LEVEL) {
@@ -1183,7 +1204,7 @@ function performAction(action: Action, playerInfo: PlayerGameInformation, teamIn
         consumeToken(container, cost);
         ++teamInfo.protectionLevel;
         const t = TEAM_CONSTANTS[teamInfo.type];
-        game.teamBroadcast(teamInfo.type, TEAM_PURCHASE_MESSAGE, t.colorPrefix, player.name, `Reinforced Armor Level ${ TIER_STRING[teamInfo.protectionLevel] }`);
+        game.teamBroadcast(teamInfo.type, "teamPurchaseMessage", t.colorPrefix, player.name, `Reinforced Armor Level ${ TIER_STRING[teamInfo.protectionLevel] }`);
         result = true;
     } else if (action.type == ActionType.UpgradeHaste) {
         if (teamInfo.hasteLevel >= MAX_HASTE_LEVEL) {
@@ -1200,7 +1221,7 @@ function performAction(action: Action, playerInfo: PlayerGameInformation, teamIn
         ++teamInfo.hasteLevel;
         game.applyTeamHasteLevel(teamInfo.type);
         const t = TEAM_CONSTANTS[teamInfo.type];
-        game.teamBroadcast(teamInfo.type, TEAM_PURCHASE_MESSAGE, t.colorPrefix, player.name, `Maniac Miner Level ${ TIER_STRING[teamInfo.hasteLevel] }`);
+        game.teamBroadcast(teamInfo.type, "teamPurchaseMessage", t.colorPrefix, player.name, `Maniac Miner Level ${ TIER_STRING[teamInfo.hasteLevel] }`);
         result = true;
     } else if (action.type == ActionType.BuySharpness) {
         if (teamInfo.hasSharpness) {
@@ -1216,7 +1237,7 @@ function performAction(action: Action, playerInfo: PlayerGameInformation, teamIn
         consumeToken(container, cost);
         teamInfo.hasSharpness = true;
         const t = TEAM_CONSTANTS[teamInfo.type];
-        game.teamBroadcast(teamInfo.type, TEAM_PURCHASE_MESSAGE, t.colorPrefix, player.name, "Sharpened Sword");
+        game.teamBroadcast(teamInfo.type, "teamPurchaseMessage", t.colorPrefix, player.name, "Sharpened Sword");
         result = true;
     } else if (action.type == ActionType.BuyHealPool) {
         if (teamInfo.healPoolEnabled) {
@@ -1232,7 +1253,7 @@ function performAction(action: Action, playerInfo: PlayerGameInformation, teamIn
         consumeToken(container, cost);
         teamInfo.healPoolEnabled = true;
         const t = TEAM_CONSTANTS[teamInfo.type];
-        game.teamBroadcast(teamInfo.type, TEAM_PURCHASE_MESSAGE, t.colorPrefix, player.name, "Heal Pool");
+        game.teamBroadcast(teamInfo.type, "teamPurchaseMessage", t.colorPrefix, player.name, "Heal Pool");
         result = true;
     } else if (action.type == ActionType.BuyTrap) {
         if (isTrapBought(action.trapType, teamInfo)) {
@@ -1252,12 +1273,13 @@ function performAction(action: Action, playerInfo: PlayerGameInformation, teamIn
         consumeToken(container, cost);
         teamInfo.traps.push(action.trapType);
         const t = TEAM_CONSTANTS[teamInfo.type];
-        game.teamBroadcast(teamInfo.type, TEAM_PURCHASE_MESSAGE, t.colorPrefix, player.name, TRAP_CONSTANTS[action.trapType].name);
+        game.teamBroadcast(teamInfo.type, "teamPurchaseMessage", t.colorPrefix, player.name, TRAP_CONSTANTS[action.trapType].name);
         result = true;
     }
 
     if (result) {
         player.playSound("mob.endermen.portal");
+        // player.playSound("note.banjo");
     } else {
         player.playSound("note.bass");
     }
