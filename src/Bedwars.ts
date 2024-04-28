@@ -138,6 +138,10 @@ interface BedWarsStrings {
     openEnemyChestMessage: string;
     teamPurchaseMessage: string;
     purchaseMessage: string;
+    trapActivatedTitle: string;
+    alarmTrapSubtitle: string;
+    trapActivatedMessage: string; // sent to players whose team owns the trap
+    activatingTrapWarning: string; // sent to player that activates the trap
 }
 
 // DO NOT CHANGE THE ORDER
@@ -170,7 +174,11 @@ strings[Lang.en_US] = {
     gameEndedMessage: "§lGAME ENDED > §r%s%s §7is the winner!",
     openEnemyChestMessage: "§cYou can't open enemy's chest.",
     teamPurchaseMessage: "%s%s §ahas purchased §6%s",
-    purchaseMessage: "§aYou purchased §6%s"
+    purchaseMessage: "§aYou purchased §6%s",
+    trapActivatedTitle: "§cTRAP ACTIVATED!",
+    alarmTrapSubtitle: "%s%s §7has entered your base!",
+    trapActivatedMessage: "§7%s §chas been activated!",
+    activatingTrapWarning: "§7You have activated §e%s!"
 };
 
 strings[Lang.zh_CN] = {};
@@ -1167,18 +1175,23 @@ export class BedWarsGame {
                 teamPlayerInfo.player.addEffect(MinecraftEffectTypes.Speed, 300, { amplifier: 1 });
                 teamPlayerInfo.player.addEffect(MinecraftEffectTypes.JumpBoost, 300, { amplifier: 1 });
             }
+            const {
+                trapActivatedTitle,
+                alarmTrapSubtitle,
+                trapActivatedMessage
+            } = strings[this.getPlayerLang(teamPlayerInfo.player)];
 
-            teamPlayerInfo.player.onScreenDisplay.setTitle("§cTRAP ACTIVATED!", {
-                subtitle: isAlarmTrap ? `${ TEAM_CONSTANTS[playerInfo.team].colorPrefix }${ player.name } §7has entered your base!` : undefined,
+            teamPlayerInfo.player.onScreenDisplay.setTitle(trapActivatedTitle, {
+                subtitle: isAlarmTrap ? sprintf(alarmTrapSubtitle, TEAM_CONSTANTS[playerInfo.team].colorPrefix, player.name) : undefined,
                 fadeInDuration: 10,
                 stayDuration: 60,
                 fadeOutDuration: 20
             });
             teamPlayerInfo.player.playSound("mob.wither.spawn");
-            teamPlayerInfo.player.sendMessage(`§7${ TRAP_CONSTANTS[trapType].name } §chas been activated!`);
+            teamPlayerInfo.player.sendMessage(sprintf(trapActivatedMessage, TRAP_CONSTANTS[trapType].name));
         }
         player.playSound("mob.wither.spawn");
-        player.sendMessage(`§7You have activated §e${ TRAP_CONSTANTS[trapType].name }!`);
+        player.sendMessage(sprintf(strings[this.getPlayerLang(player)].activatingTrapWarning, TRAP_CONSTANTS[trapType].name));
     }
     /**
      * Adjust team generator based on its iron forge level
@@ -1243,11 +1256,7 @@ export class BedWarsGame {
             if (aliveCount == 0) {
                 this.teams.get(teamType)!.state = TeamState.Dead;
                 const { name, colorPrefix } = TEAM_CONSTANTS[teamType];
-                for (const { player, state } of this.players.values()) {
-                    if (state == PlayerState.Offline) continue;
-                    const string = strings[this.getPlayerLang(player)].teamEliminationMessage;
-                    player.sendMessage(sprintf(string, colorPrefix, capitalize(name)));
-                }
+                this.broadcast("teamEliminationMessage", colorPrefix, capitalize(name));
                 const teamMapInfo = this.map.teams.find(t => t.type == teamType)!;
                 const bedLocation = this.fixOrigin(teamMapInfo.bedLocation);
                 this.dimension.fillBlocks(bedLocation[0], bedLocation[1], MinecraftBlockTypes.Air);
@@ -1287,6 +1296,14 @@ export class BedWarsGame {
                     this.dimension.fillBlocks(loc, loc, MinecraftBlockTypes.Air);
                 }
             }
+        }
+    }
+    private broadcast(stringName: keyof BedWarsStrings, ...params: any[]) {
+        for (const { player, state } of this.players.values()) {
+            if (state == PlayerState.Offline) continue;
+            const string = strings[this.getPlayerLang(player)][stringName];
+
+            player.sendMessage(vsprintf(string, params));
         }
     }
 
@@ -1354,30 +1371,12 @@ export class BedWarsGame {
                         });
                         break;
                 }
-                for (const { player, state } of this.players.values()) {
-                    if (state == PlayerState.Offline) continue;
-
-                    const { reconnectionMessage } = strings[this.getPlayerLang(player)];
-                    player.sendMessage(sprintf(
-                        reconnectionMessage,
-                        TEAM_CONSTANTS[playerInfo.team].colorPrefix,
-                        playerInfo.name
-                    ));
-                }
+                this.broadcast("reconnectionMessage", TEAM_CONSTANTS[playerInfo.team].colorPrefix, playerInfo.name);
             }
             const player = playerInfo.player;
             if (!player.isValid()) {
                 playerInfo.state = PlayerState.Offline; // the player comes offline
-                for (const { player, state } of this.players.values()) {
-                    if (state == PlayerState.Offline) continue;
-
-                    const { disconnectedMessage } = strings[this.getPlayerLang(player)];
-                    player.sendMessage(sprintf(
-                        disconnectedMessage,
-                        TEAM_CONSTANTS[playerInfo.team].colorPrefix,
-                        playerInfo.name
-                    ));
-                }
+                this.broadcast("disconnectedMessage", TEAM_CONSTANTS[playerInfo.team].colorPrefix, playerInfo.name);
                 this.onPlayerDieOrOffline(playerInfo, playerInfo.lastHurtBy);
                 continue;
             }
@@ -1777,17 +1776,12 @@ export class BedWarsGame {
         } else { // FINAL KILL
             if (killerInfo) {
                 ++killerInfo.finalKillCount;
-                for (const { player, state } of this.players.values()) {
-                    if (state == PlayerState.Offline) continue;
-
-                    const { finalKillMessage } = strings[this.getPlayerLang(player)];
-                    player.sendMessage(sprintf(finalKillMessage, {
-                        killerColor: TEAM_CONSTANTS[killerInfo.team].colorPrefix,
-                        killer: killerInfo.name,
-                        victimColor: TEAM_CONSTANTS[victimInfo.team].colorPrefix,
-                        victim: victimInfo.name
-                    }));
-                }
+                this.broadcast("finalKillMessage", {
+                    killerColor: TEAM_CONSTANTS[killerInfo.team].colorPrefix,
+                    killer: killerInfo.name,
+                    victimColor: TEAM_CONSTANTS[victimInfo.team].colorPrefix,
+                    victim: victimInfo.name
+                });
                 killerInfo.player.onScreenDisplay.setActionBar(sprintf(
                     killerStrings!.finalKillNotification,
                     TEAM_CONSTANTS[victimInfo.team].colorPrefix,
