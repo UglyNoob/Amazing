@@ -30,7 +30,8 @@ import {
     TRAP_CONSTANTS,
     TrapType,
     MAX_TRAP_COUNT,
-    strings
+    strings,
+    BedWarsStrings
 } from "./Bedwars.js";
 import { ActionFormData } from "@minecraft/server-ui";
 import { containerIterator, containerSlotIterator, itemEqual, stackFirstContainerAdd } from './utility.js';
@@ -65,7 +66,7 @@ enum ActionType {
 interface BuyNormalItemAction {
     type: ActionType.BuyNormalItem;
     cost: TokenValue;
-    itemName: string;
+    itemName: string | LocalString;
     item: mc.ItemStack;
 }
 interface BuyArmorAction {
@@ -129,15 +130,19 @@ type isUnion<T, K = T> = T extends any ? (Exclude<K, T> extends T ? false : true
 type FieldOrFunction<PropName extends string, ValueType> = isUnion<PropName> extends true ? never : {
     [prop in PropName]: ValueType;
 } | {
-        [prop in PropName as `get${ Capitalize<prop> }`]:
-        (playerInfo: PlayerGameInformation, currentTokens: TokenValue, teamInfo: TeamGameInformation, game: BedWarsGame) => ValueType;
-    };
+    [prop in PropName as `get${Capitalize<prop>}`]:
+    (playerInfo: PlayerGameInformation, currentTokens: TokenValue, teamInfo: TeamGameInformation, game: BedWarsGame) => ValueType;
+};
 
-type Menu = FieldOrFunction<"display", string> & FieldOrFunction<"icon", string> &
+type LocalString = {
+    local: keyof BedWarsStrings
+}
+
+type Menu = FieldOrFunction<"display", string | LocalString> & FieldOrFunction<"icon", string> &
     (
         ({ type: "entry"; }
-            & FieldOrFunction<"body", string>
-            & FieldOrFunction<"title", string>
+            & FieldOrFunction<"body", string | LocalString>
+            & FieldOrFunction<"title", string | LocalString>
             & FieldOrFunction<"subMenus", Menu[]>)
         |
         ({ type: "action"; }
@@ -145,8 +150,11 @@ type Menu = FieldOrFunction<"display", string> & FieldOrFunction<"icon", string>
     );
 
 function generateBuyOneItemMenu(
-    name: string,
-    getAction: (playerInfo: PlayerGameInformation) => BuyNormalItemAction,
+    name: string | LocalString,
+    getAction: (playerInfo: PlayerGameInformation) => {
+        cost: TokenValue,
+        item: mc.ItemStack
+    },
     getIcon: (playerInfo: PlayerGameInformation) => string
 ): Menu {
     return {
@@ -163,12 +171,20 @@ function generateBuyOneItemMenu(
                 color = "§4";
             }
             if (item.amount == 1) {
-                return `${ color }${ name }\n${ tokenToString(cost) }`;
+                return `${color}${name}\n${tokenToString(cost)}`;
             } else {
-                return `${ color }${ name } * ${ item.amount }\n${ tokenToString(cost) }`;
+                return `${color}${name} * ${item.amount}\n${tokenToString(cost)}`;
             }
         },
-        getAction
+        getAction(playerInfo) {
+            const { item, cost } = getAction(playerInfo);
+            return {
+                type: ActionType.BuyNormalItem,
+                cost,
+                item,
+                itemName: name
+            }
+        }
     };
 }
 
@@ -198,7 +214,7 @@ function generateBuySwordMenu(toLevel: SwordLevel, cost: TokenValue): Menu {
             } else {
                 color = "§4";
             }
-            return `${ color }${ toLevel.name }\n${ tokenToString(cost) }`;
+            return `${color}${toLevel.name}\n${tokenToString(cost)}`;
         },
         icon: toLevel.icon,
         action: {
@@ -221,7 +237,7 @@ function generateBuyArmorMenu(toLevel: ArmorLevel, cost: TokenValue): Menu {
             } else {
                 color = "§4";
             }
-            return `${ color }${ toLevel.name }\n${ tokenToString(cost) }`;
+            return `${color}${toLevel.name}\n${tokenToString(cost)}`;
         },
         icon: toLevel.icon,
         action: {
@@ -296,57 +312,43 @@ let itemShopData: Menu | null = null;
 // so it has to be initialized afterwards
 const generateItemShopData: () => Menu = () => ({
     type: "entry",
-    body: "",
+    body: { local: "itemShopBody" },
     icon: "",
-    display: "Bedwars shop",
-    title: "Bedwars Shop",
+    display: "",
+    title: { local: "itemShopTitle" },
     subMenus: [
         {
             type: "entry",
-            display: "Blocks",
+            display: { local: "blocksShopDisplay" },
             icon: "textures/blocks/wool_colored_white.png",
-            title: "Blocks Shop",
+            title: { local: "blocksShopTitle" },
             getBody: generateSecondMenuGetBody("Buy blocks"),
             subMenus: [
                 generateBuyOneItemMenu("Wool", playerInfo => ({
-                    type: ActionType.BuyNormalItem,
-                    itemName: "Wool",
                     cost: { ironAmount: 4, goldAmount: 0, emeraldAmount: 0, diamondAmount: 0 },
                     item: new mc.ItemStack(TEAM_CONSTANTS[playerInfo.team].woolName, 16)
                 }), playerInfo => TEAM_CONSTANTS[playerInfo.team].woolIconPath),
                 generateBuyOneItemMenu("Hardened Clay", () => ({
-                    type: ActionType.BuyNormalItem,
-                    itemName: "Hardened Clay",
                     cost: { ironAmount: 12, goldAmount: 0, emeraldAmount: 0, diamondAmount: 0 },
                     item: HARDENED_CLAY_ITEM
                 }), () => "textures/blocks/hardened_clay.png"),
                 generateBuyOneItemMenu("Blast-Proof Glass", playerInfo => ({
-                    type: ActionType.BuyNormalItem,
-                    itemName: "Blast-Proof Glass",
                     cost: { ironAmount: 12, goldAmount: 0, emeraldAmount: 0, diamondAmount: 0 },
                     item: new mc.ItemStack(TEAM_CONSTANTS[playerInfo.team].glassName, 4)
                 }), playerInfo => TEAM_CONSTANTS[playerInfo.team].glassIconPath),
                 generateBuyOneItemMenu("Plank", () => ({
-                    type: ActionType.BuyNormalItem,
-                    itemName: "Plank",
                     cost: { ironAmount: 0, goldAmount: 4, emeraldAmount: 0, diamondAmount: 0 },
                     item: PLANKS_ITEM
                 }), () => "textures/blocks/planks_oak.png"),
                 generateBuyOneItemMenu("End Stone", () => ({
-                    type: ActionType.BuyNormalItem,
-                    itemName: "End Stone",
                     cost: { ironAmount: 24, goldAmount: 0, emeraldAmount: 0, diamondAmount: 0 },
                     item: ENDSTONE_ITEM
                 }), () => "textures/blocks/end_stone.png"),
                 generateBuyOneItemMenu("Ladder", () => ({
-                    type: ActionType.BuyNormalItem,
-                    itemName: "Ladder",
                     cost: { ironAmount: 4, goldAmount: 0, emeraldAmount: 0, diamondAmount: 0 },
                     item: LADDER_ITEM
                 }), () => "textures/blocks/ladder.png"),
                 generateBuyOneItemMenu("Obsidian", () => ({
-                    type: ActionType.BuyNormalItem,
-                    itemName: "Obsidian",
                     cost: { ironAmount: 0, goldAmount: 0, emeraldAmount: 4, diamondAmount: 0 },
                     item: OBSIDIAN_ITEM
                 }), () => "textures/blocks/obsidian.png"),
@@ -362,14 +364,10 @@ const generateItemShopData: () => Menu = () => ({
                 generateBuySwordMenu(SWORD_LEVELS[2], { ironAmount: 0, goldAmount: 7, diamondAmount: 0, emeraldAmount: 0 }),
                 generateBuySwordMenu(SWORD_LEVELS[3], { ironAmount: 0, goldAmount: 0, diamondAmount: 0, emeraldAmount: 4 }),
                 generateBuyOneItemMenu("Wind Charge", () => ({
-                    type: ActionType.BuyNormalItem,
-                    itemName: "Wind Charge",
                     cost: { ironAmount: 0, goldAmount: 4, emeraldAmount: 0, diamondAmount: 0 },
                     item: WIND_CHARGE_ITEM
                 }), () => "textures/items/wind_charge.png"),
                 generateBuyOneItemMenu("Sumo Stick", () => ({
-                    type: ActionType.BuyNormalItem,
-                    itemName: "Sumo Stick",
                     cost: { ironAmount: 0, goldAmount: 0, emeraldAmount: 3, diamondAmount: 0 },
                     item: SUMO_STICK_ITEM
                 }), () => "textures/items/stick.png")
@@ -405,7 +403,7 @@ const generateItemShopData: () => Menu = () => ({
                         } else {
                             color = "§4";
                         }
-                        return `${ color }Shears\n${ tokenToString(cost) }`;
+                        return `${color}Shears\n${tokenToString(cost)}`;
                     },
                     icon: "textures/items/shears.png",
                     action: {
@@ -432,7 +430,7 @@ const generateItemShopData: () => Menu = () => ({
                         } else {
                             color = "§4";
                         }
-                        return `${ color }${ toLevel.name }\n${ tokenToString(cost) }`;
+                        return `${color}${toLevel.name}\n${tokenToString(cost)}`;
                     },
                     getIcon(playerInfo) {
                         let toLevel: PickaxeLevel;
@@ -470,7 +468,7 @@ const generateItemShopData: () => Menu = () => ({
                         } else {
                             color = "§4";
                         }
-                        return `${ color }${ toLevel.name }\n${ tokenToString(cost) }`;
+                        return `${color}${toLevel.name}\n${tokenToString(cost)}`;
                     },
                     getIcon(playerInfo) {
                         let toLevel: AxeLevel;
@@ -498,20 +496,14 @@ const generateItemShopData: () => Menu = () => ({
             getBody: generateSecondMenuGetBody("Buy potions"),
             subMenus: [
                 generateBuyOneItemMenu("Invisible Potion (0:30)", () => ({
-                    type: ActionType.BuyNormalItem,
-                    itemName: "Invisible Potion (0:30)",
                     cost: { ironAmount: 0, goldAmount: 0, emeraldAmount: 2, diamondAmount: 0 },
                     item: INVISIBLILITY_POTION_ITEM
                 }), () => "textures/items/potion_bottle_invisibility.png"),
                 generateBuyOneItemMenu("Jump V Potion (0:45)", () => ({
-                    type: ActionType.BuyNormalItem,
-                    itemName: "Jump V Potion (0:45)",
                     cost: { ironAmount: 0, goldAmount: 0, emeraldAmount: 1, diamondAmount: 0 },
                     item: JUMP_BOOST_POTION_ITEM
                 }), () => "textures/items/potion_bottle_jump.png"),
                 generateBuyOneItemMenu("Speed II Potion (0:45)", () => ({
-                    type: ActionType.BuyNormalItem,
-                    itemName: "Speed II Potion (0:45)",
                     cost: { ironAmount: 0, goldAmount: 0, emeraldAmount: 1, diamondAmount: 0 },
                     item: SPEED_POTION_ITEM
                 }), () => "textures/items/potion_bottle_moveSpeed.png")
@@ -524,26 +516,18 @@ const generateItemShopData: () => Menu = () => ({
             getBody: generateSecondMenuGetBody("Buy bows"),
             subMenus: [
                 generateBuyOneItemMenu("Arrow", () => ({
-                    type: ActionType.BuyNormalItem,
-                    itemName: "Arrow",
                     cost: { ironAmount: 0, goldAmount: 2, emeraldAmount: 0, diamondAmount: 0 },
                     item: ARROW_ITEM
                 }), () => "textures/items/arrow.png"),
                 generateBuyOneItemMenu("Bow", () => ({
-                    type: ActionType.BuyNormalItem,
-                    itemName: "Bow",
                     cost: { ironAmount: 0, goldAmount: 12, emeraldAmount: 0, diamondAmount: 0 },
                     item: BOW_ITEM
                 }), () => "textures/items/bow_standby.png"),
                 generateBuyOneItemMenu("Bow Power I", () => ({
-                    type: ActionType.BuyNormalItem,
-                    itemName: "Bow Power I",
                     cost: { ironAmount: 0, goldAmount: 20, emeraldAmount: 0, diamondAmount: 0 },
                     item: BOW_POWERI_ITEM
                 }), () => "textures/items/bow_pulling_0.png"),
                 generateBuyOneItemMenu("Bow Power I,Punch I", () => ({
-                    type: ActionType.BuyNormalItem,
-                    itemName: "Bow Power I,Punch I",
                     cost: { ironAmount: 0, goldAmount: 0, emeraldAmount: 6, diamondAmount: 0 },
                     item: BOW_POWERI_PUNCHI_ITEM
                 }), () => "textures/items/bow_pulling_1.png"),
@@ -555,51 +539,35 @@ const generateItemShopData: () => Menu = () => ({
             title: "Utility Shop",
             getBody: generateSecondMenuGetBody("Fancy utilities!"),
             subMenus: [
-                generateBuyOneItemMenu("Tnt", () => ({
-                    type: ActionType.BuyNormalItem,
-                    itemName: "Tnt",
+                generateBuyOneItemMenu("TNT", () => ({
                     cost: { ironAmount: 0, goldAmount: 4, emeraldAmount: 0, diamondAmount: 0 },
                     item: TNT_ITEM
                 }), () => "textures/blocks/tnt_side.png"),
                 generateBuyOneItemMenu("Golden Apple", () => ({
-                    type: ActionType.BuyNormalItem,
-                    itemName: "Golden Apple",
                     cost: { ironAmount: 0, goldAmount: 3, emeraldAmount: 0, diamondAmount: 0 },
                     item: GOLDEN_APPLE_ITEM
                 }), () => "textures/items/apple_golden.png"),
                 generateBuyOneItemMenu("Fire Ball", () => ({
-                    type: ActionType.BuyNormalItem,
-                    itemName: "Fire Ball",
                     cost: { ironAmount: 40, goldAmount: 0, emeraldAmount: 0, diamondAmount: 0 },
                     item: FIRE_BALL_ITEM
                 }), () => "textures/items/fireball.png"),
                 generateBuyOneItemMenu("Ender Pearl", () => ({
-                    type: ActionType.BuyNormalItem,
-                    itemName: "Ender Pearl",
                     cost: { ironAmount: 0, goldAmount: 0, emeraldAmount: 4, diamondAmount: 0 },
                     item: ENDER_PEARL_ITEM
                 }), () => "textures/items/ender_pearl.png"),
                 generateBuyOneItemMenu("Bridge Egg", () => ({
-                    type: ActionType.BuyNormalItem,
-                    itemName: "Bridge Egg",
                     cost: { ironAmount: 0, goldAmount: 0, emeraldAmount: 1, diamondAmount: 0 },
                     item: BRIDGE_EGG_ITEM
                 }), () => "textures/items/egg.png"),
                 generateBuyOneItemMenu("Loyal Wolf", () => ({
-                    type: ActionType.BuyNormalItem,
-                    itemName: "Loyal Wolf",
                     cost: { ironAmount: 0, goldAmount: 0, emeraldAmount: 4, diamondAmount: 0 },
                     item: LOYAL_WOLF_ITEM
                 }), () => "textures/items/spawn_egg.png"),
                 generateBuyOneItemMenu("Wolf Armor", () => ({
-                    type: ActionType.BuyNormalItem,
-                    itemName: "Wolf Armor",
-                    cost: { ironAmount: 0, goldAmount: 0, emeraldAmount: 4, diamondAmount: 0 },
+                    cost: { ironAmount: 0, goldAmount: 0, emeraldAmount: 2, diamondAmount: 0 },
                     item: WOLF_ARMOR_ITEM
                 }), () => "textures/items/wolf_armor.png"),
                 generateBuyOneItemMenu("Rescue Platform", () => ({
-                    type: ActionType.BuyNormalItem,
-                    itemName: "Rescue Platform",
                     cost: { ironAmount: 0, goldAmount: 0, emeraldAmount: 2, diamondAmount: 0 },
                     item: PLATFORM_ITEM
                 }), () => "textures/items/blaze_rod.png")
@@ -647,14 +615,14 @@ function generateTeamFirstGetDisplay(text: string, available: (teamInfo: TeamGam
         if (available(teamInfo)) {
             color = "";
         }
-        return `${ color }${ text }`;
+        return `${color}${text}`;
     };
 }
 function generateTeamSecondGetDisplay(getName: (teamInfo: TeamGameInformation) => string, getCost: (teamInfo: TeamGameInformation) => TokenValue, available: (teamInfo: TeamGameInformation) => boolean) {
     return (_: any, currentTokens: TokenValue, teamInfo: TeamGameInformation) => {
         const name = getName(teamInfo);
         if (!available(teamInfo)) {
-            return `§h${ name }`;
+            return `§h${name}`;
         }
         let color: string;
         const cost = getCost(teamInfo);
@@ -663,7 +631,7 @@ function generateTeamSecondGetDisplay(getName: (teamInfo: TeamGameInformation) =
         } else {
             color = "§4";
         }
-        return `${ color }${ name }\n${ tokenToString(cost) }`;
+        return `${color}${name}\n${tokenToString(cost)}`;
     };
 }
 
@@ -706,8 +674,8 @@ const generateTeamShopData: () => Menu = () => ({
             type: "entry",
             display: "Traps",
             icon: TRAP_CONSTANTS[TrapType.NegativeEffect].iconPath,
-            getBody: (_, __, teamInfo) => `Buy some traps for your team!${ teamInfo.traps.length == MAX_TRAP_COUNT ?
-                "\nYour team's traps have reached the maximum!" : "" }`,
+            getBody: (_, __, teamInfo) => `Buy some traps for your team!${teamInfo.traps.length == MAX_TRAP_COUNT ?
+                "\nYour team's traps have reached the maximum!" : ""}`,
             title: "Traps Shop",
             subMenus: [
                 generateTrapMenu(TrapType.NegativeEffect),
@@ -724,7 +692,7 @@ const generateTeamShopData: () => Menu = () => ({
                         for (let index = 0; index < MAX_TRAP_COUNT; ++index) {
                             const fixedIndex = index + 1;
                             const trapName = TRAP_CONSTANTS[teamInfo.traps[index]]?.name ?? "§cNo Trap";
-                            result += `§7Trap #${ fixedIndex }: §a${ trapName }§7, activates when the ${ words[index] } enemy walks into your base\n`;
+                            result += `§7Trap #${fixedIndex}: §a${trapName}§7, activates when the ${words[index]} enemy walks into your base\n`;
                         }
                         return result;
                     },
@@ -760,7 +728,7 @@ const generateTeamShopData: () => Menu = () => ({
                 {
                     type: "action",
                     getDisplay: generateTeamSecondGetDisplay(
-                        teamInfo => `Reinforced Armor ${ TIER_STRING[addOneWithMaximum(teamInfo.protectionLevel, MAX_PROTECTION_LEVEL)] }`,
+                        teamInfo => `Reinforced Armor ${TIER_STRING[addOneWithMaximum(teamInfo.protectionLevel, MAX_PROTECTION_LEVEL)]}`,
                         teamInfo => PROTECTION_TO_NEXT_LEVEL_COSTS[teamInfo.protectionLevel],
                         teamInfo => teamInfo.protectionLevel != MAX_PROTECTION_LEVEL),
                     icon: "textures/items/diamond_boots.png",
@@ -779,7 +747,7 @@ const generateTeamShopData: () => Menu = () => ({
                 {
                     type: "action",
                     getDisplay: generateTeamSecondGetDisplay(
-                        teamInfo => `Iron Forge ${ TIER_STRING[addOneWithMaximum(teamInfo.ironForgeLevel, MAX_IRON_FORGE_LEVEL)] }`,
+                        teamInfo => `Iron Forge ${TIER_STRING[addOneWithMaximum(teamInfo.ironForgeLevel, MAX_IRON_FORGE_LEVEL)]}`,
                         teamInfo => IRON_FORGE_TO_NEXT_LEVEL_COSTS[teamInfo.ironForgeLevel],
                         teamInfo => teamInfo.ironForgeLevel != MAX_IRON_FORGE_LEVEL),
                     icon: "textures/blocks/furnace_front_off.png",
@@ -798,7 +766,7 @@ const generateTeamShopData: () => Menu = () => ({
                 {
                     type: "action",
                     getDisplay: generateTeamSecondGetDisplay(
-                        teamInfo => `Maniac Miner ${ TIER_STRING[addOneWithMaximum(teamInfo.hasteLevel, MAX_HASTE_LEVEL)] }`,
+                        teamInfo => `Maniac Miner ${TIER_STRING[addOneWithMaximum(teamInfo.hasteLevel, MAX_HASTE_LEVEL)]}`,
                         teamInfo => HASTE_TO_NEXT_LEVEL_COSTS[teamInfo.hasteLevel],
                         teamInfo => teamInfo.hasteLevel != MAX_HASTE_LEVEL),
                     icon: "textures/items/gold_pickaxe.png",
@@ -860,16 +828,16 @@ function isTokenSatisfying(a: TokenValue, b: TokenValue) {
 function tokenToString(t: TokenValue) {
     let result = "";
     if (t.ironAmount) {
-        result += `${ t.ironAmount } Irons `;
+        result += `${t.ironAmount} Irons `;
     }
     if (t.goldAmount) {
-        result += `${ t.goldAmount } Golds `;
+        result += `${t.goldAmount} Golds `;
     }
     if (t.diamondAmount) {
-        result += `${ t.diamondAmount } Diamonds `;
+        result += `${t.diamondAmount} Diamonds `;
     }
     if (t.emeraldAmount) {
-        result += `${ t.emeraldAmount } Emeralds `;
+        result += `${t.emeraldAmount} Emeralds `;
     }
     if (result.length > 0)
         result = result.slice(0, result.length - 1);
@@ -930,6 +898,13 @@ function consumeToken(container: mc.Container, _tokens: TokenValue) {
     return tokens;
 }
 
+function evaluateString(string: string | LocalString, strs: BedWarsStrings) {
+    if (typeof string == "string") {
+        return string;
+    } else {
+        return strs[string.local];
+    }
+}
 
 /**
  * @param playerInfo the player to be showed
@@ -939,6 +914,7 @@ function consumeToken(container: mc.Container, _tokens: TokenValue) {
  */
 async function showMenuForPlayer(menu: Menu, playerInfo: PlayerGameInformation, teamInfo: TeamGameInformation, game: BedWarsGame, hasParentMenu: boolean): Promise<boolean> {
     if (menu.type != "entry") throw new Error();
+    const strs = strings[game.getPlayerLang(playerInfo.player)];
     while (true) {
         let title: string;
         let body: string;
@@ -949,14 +925,14 @@ async function showMenuForPlayer(menu: Menu, playerInfo: PlayerGameInformation, 
 
         // Extract information
         if ("title" in menu) {
-            title = menu.title;
+            title = evaluateString(menu.title, strs);
         } else {
-            title = menu.getTitle(playerInfo, currentTokens, teamInfo, game);
+            title = evaluateString(menu.getTitle(playerInfo, currentTokens, teamInfo, game), strs);
         }
         if ("body" in menu) {
-            body = menu.body;
+            body = evaluateString(menu.body, strs);
         } else {
-            body = menu.getBody(playerInfo, currentTokens, teamInfo, game);
+            body = evaluateString(menu.getBody(playerInfo, currentTokens, teamInfo, game), strs);
         }
         if ("subMenus" in menu) {
             subMenus = menu.subMenus;
@@ -972,9 +948,9 @@ async function showMenuForPlayer(menu: Menu, playerInfo: PlayerGameInformation, 
             let display: string;
             let icon: string;
             if ("display" in subMenu) {
-                display = subMenu.display;
+                display = evaluateString(subMenu.display, strs);
             } else {
-                display = subMenu.getDisplay(playerInfo, currentTokens, teamInfo, game);
+                display = evaluateString(subMenu.getDisplay(playerInfo, currentTokens, teamInfo, game), strs);
             }
             if ("icon" in subMenu) {
                 icon = subMenu.icon;
@@ -1188,7 +1164,7 @@ function performAction(action: Action, playerInfo: PlayerGameInformation, teamIn
         ++teamInfo.ironForgeLevel;
         game.applyTeamIronForge(teamInfo.type);
         const t = TEAM_CONSTANTS[teamInfo.type];
-        game.teamBroadcast(teamInfo.type, "teamPurchaseMessage", t.colorPrefix, player.name, `Iron Forge Level ${ TIER_STRING[teamInfo.ironForgeLevel] }`);
+        game.teamBroadcast(teamInfo.type, "teamPurchaseMessage", t.colorPrefix, player.name, `Iron Forge Level ${TIER_STRING[teamInfo.ironForgeLevel]}`);
         result = true;
     } else if (action.type == ActionType.UpgradeProtection) {
         if (teamInfo.protectionLevel >= MAX_PROTECTION_LEVEL) {
@@ -1204,7 +1180,7 @@ function performAction(action: Action, playerInfo: PlayerGameInformation, teamIn
         consumeToken(container, cost);
         ++teamInfo.protectionLevel;
         const t = TEAM_CONSTANTS[teamInfo.type];
-        game.teamBroadcast(teamInfo.type, "teamPurchaseMessage", t.colorPrefix, player.name, `Reinforced Armor Level ${ TIER_STRING[teamInfo.protectionLevel] }`);
+        game.teamBroadcast(teamInfo.type, "teamPurchaseMessage", t.colorPrefix, player.name, `Reinforced Armor Level ${TIER_STRING[teamInfo.protectionLevel]}`);
         result = true;
     } else if (action.type == ActionType.UpgradeHaste) {
         if (teamInfo.hasteLevel >= MAX_HASTE_LEVEL) {
@@ -1221,7 +1197,7 @@ function performAction(action: Action, playerInfo: PlayerGameInformation, teamIn
         ++teamInfo.hasteLevel;
         game.applyTeamHasteLevel(teamInfo.type);
         const t = TEAM_CONSTANTS[teamInfo.type];
-        game.teamBroadcast(teamInfo.type, "teamPurchaseMessage", t.colorPrefix, player.name, `Maniac Miner Level ${ TIER_STRING[teamInfo.hasteLevel] }`);
+        game.teamBroadcast(teamInfo.type, "teamPurchaseMessage", t.colorPrefix, player.name, `Maniac Miner Level ${TIER_STRING[teamInfo.hasteLevel]}`);
         result = true;
     } else if (action.type == ActionType.BuySharpness) {
         if (teamInfo.hasSharpness) {

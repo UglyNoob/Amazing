@@ -115,7 +115,7 @@ function isSettingsItem(item: mc.ItemStack) {
     return SETTINGS_ITEM.getLore()[1] == item.getLore()[1];
 }
 
-interface BedWarsStrings {
+export interface BedWarsStrings {
     deathTitle: string;
     deathSubtitle: string;
     spectateTitle: string;
@@ -142,6 +142,7 @@ interface BedWarsStrings {
     alarmTrapSubtitle: string;
     trapActivatedMessage: string; // sent to players whose team owns the trap
     activatingTrapWarning: string; // sent to player that activates the trap
+    languageChangedMessage: string;
     redName: string;
     blueName: string;
     yellowName: string;
@@ -150,7 +151,11 @@ interface BedWarsStrings {
     grayName: string;
     cyanName: string;
     whiteName: string;
-
+    itemShopBody: string;
+    itemShopTitle: string;
+    blocksShopTitle: string;
+    blocksShopDisplay: string;
+    blocksShopBody: string;
 }
 
 // DO NOT CHANGE THE ORDER
@@ -180,7 +185,7 @@ strings[Lang.en_US] = {
     disconnectedMessage: "%s%s §7disconnected.",
     reconnectionMessage: "%s%s §ereconnected.",
     placingBlockIllagelMessage: "§cYou can't place blocks here!",
-    gameEndedMessage: "§lGAME ENDED > §r%s%s §7is the winner!",
+    gameEndedMessage: "\n§lGAME ENDED > §r%s%s §7is the winner!\n",
     openEnemyChestMessage: "§cYou can't open enemy's chest.",
     teamPurchaseMessage: "%s%s §ahas purchased §6%s",
     purchaseMessage: "§aYou purchased §6%s",
@@ -188,6 +193,7 @@ strings[Lang.en_US] = {
     alarmTrapSubtitle: "%s%s §7has entered your base!",
     trapActivatedMessage: "§7%s §chas been activated!",
     activatingTrapWarning: "§7You have activated §e%s!",
+    languageChangedMessage: "§7Your language have been switched to §6English",
     redName: "red",
     blueName: "blue",
     greenName: "green",
@@ -195,7 +201,12 @@ strings[Lang.en_US] = {
     cyanName: "cyan",
     grayName: "gray",
     pinkName: "pink",
-    whiteName: "white"
+    whiteName: "white",
+    itemShopBody: "Buy items!",
+    itemShopTitle: "Bedwars Item Shops",
+    blocksShopBody: "Buy blocks",
+    blocksShopDisplay: "Blocks",
+    blocksShopTitle: "Blocks Shop"
 };
 
 strings[Lang.zh_CN] = {
@@ -209,30 +220,36 @@ strings[Lang.zh_CN] = {
     victoryTitle: "§6§l胜利!",
     bedDestroyedSubtitle: "你将无法重生!",
     teamBedDestroyedMessage: "\n§l床被摧毁 > §r%s%s的床§7被 %s%s§7 摧毁!\n ",
-    teamEliminationMessage: "\n§lTEAM ELIMINATED > §r%s%s §chas been eliminated!\n ",
-    finalKillMessage: "%(victimColor)s%(victim)s §7was killed by %(killerColor)s%(killer)s§7. §b§lFINAL KILL!",
-    breakingBlockInvalidMessage: "§cYou cannot break blocks that are not placed by players.",
-    killNotification: "KILL: %s%s",
-    finalKillNotification: "FINAL KILL: %s%s",
-    disconnectedMessage: "%s%s §7disconnected.",
-    reconnectionMessage: "%s%s §ereconnected.",
-    placingBlockIllagelMessage: "§cYou can't place blocks here!",
-    gameEndedMessage: "§lGAME ENDED > §r%s%s §7is the winner!",
-    openEnemyChestMessage: "§cYou can't open enemy's chest.",
-    teamPurchaseMessage: "%s%s §ahas purchased §6%s",
-    purchaseMessage: "§aYou purchased §6%s",
-    trapActivatedTitle: "§cTRAP ACTIVATED!",
-    alarmTrapSubtitle: "%s%s §7has entered your base!",
-    trapActivatedMessage: "§7%s §chas been activated!",
-    activatingTrapWarning: "§7You have activated §e%s!",
-    redName: "red",
-    blueName: "blue",
-    greenName: "green",
-    yellowName: "yellow",
-    cyanName: "cyan",
-    grayName: "gray",
-    pinkName: "pink",
-    whiteName: "white"
+    teamEliminationMessage: "\n§l队伍淘汰 > §r%s%s §c已被淘汰!\n ",
+    finalKillMessage: "%(victimColor)s%(victim)s §7被 %(killerColor)s%(killer)s§7 击杀. §b§l最终击杀!",
+    breakingBlockInvalidMessage: "§c你不能破坏不是由玩家破坏的方块.",
+    killNotification: "击杀: %s%s",
+    finalKillNotification: "最终击杀: %s%s",
+    disconnectedMessage: "%s%s §7断开了连接.",
+    reconnectionMessage: "%s%s §e重新连接.",
+    placingBlockIllagelMessage: "§c你不能在这里放置方块!",
+    gameEndedMessage: "\n§l游戏结束 > §r%s%s §7胜利!\n",
+    openEnemyChestMessage: "§c你不能打开敌队的箱子.",
+    teamPurchaseMessage: "%s%s §a购买了 §6%s",
+    purchaseMessage: "§a你购买了 §6%s",
+    trapActivatedTitle: "§c陷阱触发!",
+    alarmTrapSubtitle: "%s%s §7进入了你的基地!",
+    trapActivatedMessage: "§7%s §c被激活了!",
+    activatingTrapWarning: "§7你激活了 §e%s!",
+    languageChangedMessage: "§7你的语言已被设置为§6简体中文",
+    redName: "红",
+    blueName: "蓝",
+    greenName: "绿",
+    yellowName: "黄",
+    cyanName: "青",
+    grayName: "灰",
+    pinkName: "粉",
+    whiteName: "白",
+    itemShopBody: "买点物品!",
+    itemShopTitle: "起床战争物品商店",
+    blocksShopBody: "买一些方块！",
+    blocksShopDisplay: "方块",
+    blocksShopTitle: "方块商店"
 };
 
 declare module '@minecraft/server' {
@@ -699,28 +716,27 @@ export const TRAP_CONSTANTS: Record<TrapType, {
     iconPath: string;
 }> = Object.create(null);
 
-{
-    TRAP_CONSTANTS[TrapType.NegativeEffect] = {
-        name: "It's a Trap!",
-        description: "§7Inflicts Blindness and Slowness for 8 seconds.",
-        iconPath: "textures/blocks/trip_wire_source.png"
-    };
-    TRAP_CONSTANTS[TrapType.Defensive] = {
-        name: "Counter-Offensive Trap",
-        description: "§7Grants Speed II and Jump Boost II for 15 seconds to allied players near your base.",
-        iconPath: "textures/items/feather.png"
-    };
-    TRAP_CONSTANTS[TrapType.Alarm] = {
-        name: "Alarm Trap",
-        description: "§7Reveals invisible players as well as their name and team.",
-        iconPath: "textures/blocks/redstone_torch_on.png"
-    };
-    TRAP_CONSTANTS[TrapType.MinerFatigue] = {
-        name: "Miner Fatigue Trap",
-        description: "§7Inflict Mining Fatigue for 10 seconds.",
-        iconPath: "textures/items/gold_pickaxe.png"
-    };
-}
+TRAP_CONSTANTS[TrapType.NegativeEffect] = {
+    name: "It's a Trap!",
+    description: "§7Inflicts Blindness and Slowness for 8 seconds.",
+    iconPath: "textures/blocks/trip_wire_source.png"
+};
+TRAP_CONSTANTS[TrapType.Defensive] = {
+    name: "Counter-Offensive Trap",
+    description: "§7Grants Speed II and Jump Boost II for 15 seconds to allied players near your base.",
+    iconPath: "textures/items/feather.png"
+};
+TRAP_CONSTANTS[TrapType.Alarm] = {
+    name: "Alarm Trap",
+    description: "§7Reveals invisible players as well as their name and team.",
+    iconPath: "textures/blocks/redstone_torch_on.png"
+};
+TRAP_CONSTANTS[TrapType.MinerFatigue] = {
+    name: "Miner Fatigue Trap",
+    description: "§7Inflict Mining Fatigue for 10 seconds.",
+    iconPath: "textures/items/gold_pickaxe.png"
+};
+
 
 export enum PlayerState {
     Alive/* = "alive"*/,
@@ -893,7 +909,7 @@ export class BedWarsGame {
     }
 
     setPlayer(player: mc.Player, teamType: TeamType) {
-        if (this.map.teams.find(t => t.type == teamType) == undefined) throw new Error(`No such team(${ TEAM_CONSTANTS[teamType].name }).`);
+        if (this.map.teams.find(t => t.type == teamType) == undefined) throw new Error(`No such team(${TEAM_CONSTANTS[teamType].name}).`);
 
         const playerInfo = this.players.get(player.name);
         if (playerInfo) {
@@ -946,7 +962,7 @@ export class BedWarsGame {
                 if (teamChestContainer) {
                     teamChestContainer.clearAll();
                 } else {
-                    throw new Error(`Team chest of team ${ TEAM_CONSTANTS[teamType].name } does not exist at ${ v3.toString(teamChestLocation) }`);
+                    throw new Error(`Team chest of team ${TEAM_CONSTANTS[teamType].name} does not exist at ${v3.toString(teamChestLocation)}`);
                 }
             }
 
@@ -990,12 +1006,6 @@ export class BedWarsGame {
         this.dimension.runCommand("gamerule dolimitedcrafting true");
     }
 
-    /*private getPlayerSettings(playerInfo: PlayerGameInformation): PlayerSettings {
-        return {
-            lang: playerInfo.player.getDynamicProperty("LANG_PREFERENCE") as Lang
-        };
-    }*/
-
     getPlayerLang(player: mc.Player) {
         return player.getDynamicProperty("LANG_PREFERENCE") as Lang;
     }
@@ -1015,7 +1025,7 @@ export class BedWarsGame {
         for (const [teamType, { state }] of this.teams) {
             ++index;
             const t = TEAM_CONSTANTS[teamType];
-            let result = `${ t.colorPrefix }${ t.name.charAt(0).toUpperCase() } §r${ capitalize(t.name) }: `;
+            let result = `${t.colorPrefix}${t.name.charAt(0).toUpperCase()} §r${capitalize(t.name)}: `;
             switch (state) {
                 case TeamState.BedAlive:
                     // result += "§a✔";
@@ -1031,7 +1041,7 @@ export class BedWarsGame {
                         if (playerInfo.team != teamType) continue;
                         if (this.isPlayerPlaying(playerInfo)) ++aliveCount;
                     }
-                    result += `§a${ aliveCount }`;
+                    result += `§a${aliveCount}`;
             }
             this.scoreObj.setScore(result, index);
         }
@@ -1043,7 +1053,7 @@ export class BedWarsGame {
         if (secondsStr.length == 1) secondsStr = "0" + secondsStr;
         let minutesStr = minutes.toString();
         if (minutesStr.length == 1) minutesStr = "0" + minutesStr;
-        this.scoreObj.setScore(`§a${ minutesStr }:${ secondsStr }`, index);
+        this.scoreObj.setScore(`§a${minutesStr}:${secondsStr}`, index);
     }
 
     private respawnPlayer(playerInfo: PlayerGameInformation) {
@@ -1070,7 +1080,7 @@ export class BedWarsGame {
             });
         }
         player.extinguishFire();
-        player.nameTag = `${ TEAM_CONSTANTS[playerInfo.team].colorPrefix }${ playerInfo.name }`;
+        player.nameTag = `${TEAM_CONSTANTS[playerInfo.team].colorPrefix}${playerInfo.name}`;
         playerInfo.armorDisabled = false;
         playerInfo.armorToEnablingTicks = 0;
         playerInfo.bridgeEggCooldown = 0;
@@ -1311,8 +1321,13 @@ export class BedWarsGame {
         for (const [teamType, aliveCount] of remainingPlayerCounts) {
             if (aliveCount == 0) {
                 this.teams.get(teamType)!.state = TeamState.Dead;
-                const { name, colorPrefix } = TEAM_CONSTANTS[teamType];
-                this.broadcast("teamEliminationMessage", colorPrefix, capitalize(name));
+                const { localName, colorPrefix } = TEAM_CONSTANTS[teamType];
+                for (const { player, state } of this.players.values()) {
+                    if (state == PlayerState.Offline) continue;
+                    const str = strings[this.getPlayerLang(player)];
+
+                    player.sendMessage(sprintf(str.teamEliminationMessage, colorPrefix, capitalize(str[localName])));
+                }
                 const teamMapInfo = this.map.teams.find(t => t.type == teamType)!;
                 const bedLocation = this.fixOrigin(teamMapInfo.bedLocation);
                 this.dimension.fillBlocks(bedLocation[0], bedLocation[1], MinecraftBlockTypes.Air);
@@ -1337,8 +1352,9 @@ export class BedWarsGame {
             const t = TEAM_CONSTANTS[aliveTeam];
             for (const playerInfo of this.players.values()) {
                 if (playerInfo.state == PlayerState.Offline) continue;
-                const { gameEndedMessage, victoryTitle } = strings[this.getPlayerLang(playerInfo.player)];
-                playerInfo.player.sendMessage(sprintf(gameEndedMessage, t.colorPrefix, capitalize(t.name)));
+                const str = strings[this.getPlayerLang(playerInfo.player)];
+                const { gameEndedMessage, victoryTitle } = str;
+                playerInfo.player.sendMessage(sprintf(gameEndedMessage, t.colorPrefix, capitalize(str[t.localName])));
                 if (playerInfo.team != aliveTeam) continue;
 
                 playerInfo.player.onScreenDisplay.setTitle(victoryTitle, {
@@ -1623,10 +1639,10 @@ export class BedWarsGame {
                 for (const loc of gen.indicatorLocations) {
                     const sign = this.dimension.getBlock(loc)?.getComponent("sign");
                     if (!sign) {
-                        throw new Error(`Generator indicator does not exist at ${ v3.toString(loc) }.`);
+                        throw new Error(`Generator indicator does not exist at ${v3.toString(loc)}.`);
                     }
                     sign.setWaxed(true);
-                    [mc.SignSide.Front, mc.SignSide.Back].forEach(signSide => sign.setText(`§eSpawns in §c${ gen.remainingCooldown / 20 } §eseconds`, signSide));
+                    [mc.SignSide.Front, mc.SignSide.Back].forEach(signSide => sign.setText(`§eSpawns in §c${gen.remainingCooldown / 20} §eseconds`, signSide));
                 }
             }
             if (gen.remainingCooldown > 0) {
@@ -2121,11 +2137,12 @@ export class BedWarsGame {
             /* Inform all the players */
             for (const playerInfo of this.players.values()) {
                 if (playerInfo.state == PlayerState.Offline) continue;
+                const str = strings[this.getPlayerLang(playerInfo.player)];
                 const {
                     bedDestroyedSubtitle,
                     bedDestroyedTitle,
                     teamBedDestroyedMessage
-                } = strings[this.getPlayerLang(playerInfo.player)];
+                } = str;
 
                 if (playerInfo.team == destroyedTeam.type) {
                     playerInfo.player.playSound("mob.wither.death");
@@ -2140,7 +2157,7 @@ export class BedWarsGame {
                 }
                 const t = TEAM_CONSTANTS[destroyedTeam.type];
                 playerInfo.player.sendMessage(sprintf(teamBedDestroyedMessage,
-                    t.colorPrefix, capitalize(t.name),
+                    t.colorPrefix, capitalize(str[t.localName]),
                     TEAM_CONSTANTS[destroyerInfo.team].colorPrefix, destroyerInfo.name));
             }
             this.checkTeamPlayers();
@@ -2297,12 +2314,17 @@ export class BedWarsGame {
     }
     private async openSettingsMenu(player: mc.Player) {
         const menu = new ModalFormData();
-        const lang = this.getPlayerLang(player);
-        menu.dropdown("Languages", ["English", "简体中文"], lang);
+        const pervLang = this.getPlayerLang(player);
+        menu.dropdown("Languages", ["English", "简体中文"], pervLang);
         const response = await menu.show(player);
 
         if (response.canceled) return;
-        this.setPlayerLang(player, response.formValues![0] as Lang);
+        const chosenLang = response.formValues![0] as Lang;
+        if (chosenLang != pervLang) {
+            this.setPlayerLang(player, response.formValues![0] as Lang);
+            player.playSound("note.banjo");
+            player.sendMessage(strings[chosenLang].languageChangedMessage);
+        }
     }
     async beforeItemUseOn(event: mc.ItemUseOnBeforeEvent) {
         if (this.state != GameState.started) return;
@@ -2364,7 +2386,7 @@ export class BedWarsGame {
         if (!senderInfo) return;
 
         event.cancel = true;
-        mc.world.sendMessage(`<${ sender.nameTag }§r> ${ event.message }`);
+        mc.world.sendMessage(`<${sender.nameTag}§r> ${event.message}`);
     }
 };
 
