@@ -142,6 +142,15 @@ interface BedWarsStrings {
     alarmTrapSubtitle: string;
     trapActivatedMessage: string; // sent to players whose team owns the trap
     activatingTrapWarning: string; // sent to player that activates the trap
+    redName: string;
+    blueName: string;
+    yellowName: string;
+    greenName: string;
+    pinkName: string;
+    grayName: string;
+    cyanName: string;
+    whiteName: string;
+
 }
 
 // DO NOT CHANGE THE ORDER
@@ -178,15 +187,53 @@ strings[Lang.en_US] = {
     trapActivatedTitle: "§cTRAP ACTIVATED!",
     alarmTrapSubtitle: "%s%s §7has entered your base!",
     trapActivatedMessage: "§7%s §chas been activated!",
-    activatingTrapWarning: "§7You have activated §e%s!"
+    activatingTrapWarning: "§7You have activated §e%s!",
+    redName: "red",
+    blueName: "blue",
+    greenName: "green",
+    yellowName: "yellow",
+    cyanName: "cyan",
+    grayName: "gray",
+    pinkName: "pink",
+    whiteName: "white"
 };
 
-strings[Lang.zh_CN] = {};
-
-interface PlayerSettings {
-    lang: Lang;
-}
-
+strings[Lang.zh_CN] = {
+    deathTitle: "§c你死了!",
+    deathSubtitle: "§e你将在 §c%d §e秒后重生!",
+    spectateTitle: "§c你已进入观察模式!",
+    spectateSubtitle: "你的床已被摧毁",
+    respawnTitle: "§a你已重生!",
+    respawnMessage: "§e你已重生!",
+    bedDestroyedTitle: "§c床被摧毁!",
+    victoryTitle: "§6§l胜利!",
+    bedDestroyedSubtitle: "你将无法重生!",
+    teamBedDestroyedMessage: "\n§l床被摧毁 > §r%s%s的床§7被 %s%s§7 摧毁!\n ",
+    teamEliminationMessage: "\n§lTEAM ELIMINATED > §r%s%s §chas been eliminated!\n ",
+    finalKillMessage: "%(victimColor)s%(victim)s §7was killed by %(killerColor)s%(killer)s§7. §b§lFINAL KILL!",
+    breakingBlockInvalidMessage: "§cYou cannot break blocks that are not placed by players.",
+    killNotification: "KILL: %s%s",
+    finalKillNotification: "FINAL KILL: %s%s",
+    disconnectedMessage: "%s%s §7disconnected.",
+    reconnectionMessage: "%s%s §ereconnected.",
+    placingBlockIllagelMessage: "§cYou can't place blocks here!",
+    gameEndedMessage: "§lGAME ENDED > §r%s%s §7is the winner!",
+    openEnemyChestMessage: "§cYou can't open enemy's chest.",
+    teamPurchaseMessage: "%s%s §ahas purchased §6%s",
+    purchaseMessage: "§aYou purchased §6%s",
+    trapActivatedTitle: "§cTRAP ACTIVATED!",
+    alarmTrapSubtitle: "%s%s §7has entered your base!",
+    trapActivatedMessage: "§7%s §chas been activated!",
+    activatingTrapWarning: "§7You have activated §e%s!",
+    redName: "red",
+    blueName: "blue",
+    greenName: "green",
+    yellowName: "yellow",
+    cyanName: "cyan",
+    grayName: "gray",
+    pinkName: "pink",
+    whiteName: "white"
+};
 
 declare module '@minecraft/server' {
     interface Entity {
@@ -238,6 +285,7 @@ export enum TeamType {
 }
 export const TEAM_CONSTANTS: Record<TeamType, {
     name: string;
+    localName: keyof BedWarsStrings;
     colorPrefix: string;
     woolName: string;
     woolIconPath: string;
@@ -260,6 +308,7 @@ export const TEAM_CONSTANTS: Record<TeamType, {
 
     TEAM_CONSTANTS[TeamType.Blue] = {
         name: "blue",
+        localName: "blueName",
         colorPrefix: "§9",
         woolName: MinecraftItemTypes.BlueWool,
         woolIconPath: "textures/blocks/wool_colored_blue.png",
@@ -272,6 +321,7 @@ export const TEAM_CONSTANTS: Record<TeamType, {
     };
     TEAM_CONSTANTS[TeamType.Green] = {
         name: "green",
+        localName: "greenName",
         colorPrefix: "§a",
         woolName: MinecraftItemTypes.GreenWool,
         woolIconPath: "textures/blocks/wool_colored_green.png",
@@ -284,6 +334,7 @@ export const TEAM_CONSTANTS: Record<TeamType, {
     };
     TEAM_CONSTANTS[TeamType.Red] = {
         name: "red",
+        localName: "redName",
         colorPrefix: "§c",
         woolName: MinecraftItemTypes.RedWool,
         woolIconPath: "textures/blocks/wool_colored_red.png",
@@ -296,6 +347,7 @@ export const TEAM_CONSTANTS: Record<TeamType, {
     };
     TEAM_CONSTANTS[TeamType.Yellow] = {
         name: "yellow",
+        localName: "yellowName",
         colorPrefix: "§g",
         woolName: MinecraftItemTypes.YellowWool,
         woolIconPath: "textures/blocks/wool_colored_yellow.png",
@@ -308,6 +360,7 @@ export const TEAM_CONSTANTS: Record<TeamType, {
     };
     TEAM_CONSTANTS[TeamType.Pink] = {
         name: "pink",
+        localName: "pinkName",
         colorPrefix: "§d",
         woolName: MinecraftItemTypes.PinkWool,
         woolIconPath: "textures/blocks/wool_colored_pink.png",
@@ -320,6 +373,7 @@ export const TEAM_CONSTANTS: Record<TeamType, {
     };
     TEAM_CONSTANTS[TeamType.Gray] = {
         name: "gray",
+        localName: "grayName",
         colorPrefix: "§8",
         woolName: MinecraftItemTypes.GrayWool,
         woolIconPath: "textures/blocks/wool_colored_gray.png",
@@ -332,6 +386,7 @@ export const TEAM_CONSTANTS: Record<TeamType, {
     };
     TEAM_CONSTANTS[TeamType.Cyan] = {
         name: "cyan",
+        localName: "cyanName",
         colorPrefix: "§3",
         woolName: MinecraftItemTypes.CyanWool,
         woolIconPath: "textures/blocks/wool_colored_cyan.png",
@@ -344,6 +399,7 @@ export const TEAM_CONSTANTS: Record<TeamType, {
     };
     TEAM_CONSTANTS[TeamType.White] = {
         name: "white",
+        localName: "whiteName",
         colorPrefix: "§f",
         woolName: MinecraftItemTypes.WhiteWool,
         woolIconPath: "textures/blocks/wool_colored_white.png",
