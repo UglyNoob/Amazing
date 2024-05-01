@@ -975,6 +975,7 @@ export class BedWarsGame {
     resetArmor(playerInfo: PlayerGameInformation) {
         const t = TEAM_CONSTANTS[playerInfo.team];
         const equipment = playerInfo.player.getComponent("minecraft:equippable")!;
+        equipment.setEquipment(mc.EquipmentSlot.Offhand);
         equipment.setEquipment(mc.EquipmentSlot.Head, t.leatherHelmet);
         equipment.setEquipment(mc.EquipmentSlot.Chest, t.leatherChestplate);
         if (playerInfo.armorLevel.level == 0) {
@@ -1841,6 +1842,14 @@ export class BedWarsGame {
             // workaround for disabling in-team damage
             const health = victim.getComponent("health")!;
             health.setCurrentValue(health.currentValue + event.damage);
+            return;
+        }
+
+        const attackingItem = hurter.getComponent("equippable")!.getEquipment(mc.EquipmentSlot.Mainhand);
+        if (attackingItem && isKnockBackStickItem(attackingItem)) {
+            const x = victim.location.x - hurter.location.x;
+            const z = victim.location.z - hurter.location.z;
+            victim.applyKnockback(x, z, 0.7, 0.3);
         }
     }
     afterEntityHitEntity(event: mc.EntityHitEntityAfterEvent) {
@@ -1862,12 +1871,6 @@ export class BedWarsGame {
                     return;
                 }
                 victimInfo.lastHurtBy = hurterInfo;
-                const attackingItem = hurterInfo.player.getComponent("equippable")!.getEquipment(mc.EquipmentSlot.Mainhand);
-                if (attackingItem && isKnockBackStickItem(attackingItem)) {
-                    const x = victimInfo.player.location.x - hurterInfo.player.location.x;
-                    const z = victimInfo.player.location.z - hurterInfo.player.location.z;
-                    victimInfo.player.applyKnockback(x, z, 0.7, 0.3);
-                }
             } else {
                 victimInfo.lastHurtBy = undefined;
             }

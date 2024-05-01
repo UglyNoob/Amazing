@@ -547,7 +547,7 @@ const generateItemShopData: () => Menu = () => ({
                     item: FIRE_BALL_ITEM
                 }), () => "textures/items/fireball.png"),
                 generateBuyOneItemMenu("Wind Charge", () => ({
-                    cost: { ironAmount: 0, goldAmount: 4, emeraldAmount: 0, diamondAmount: 0 },
+                    cost: { ironAmount: 35, goldAmount: 0, emeraldAmount: 0, diamondAmount: 0 },
                     item: WIND_CHARGE_ITEM
                 }), () => "textures/items/wind_charge.png"),
                 generateBuyOneItemMenu("Ender Pearl", () => ({
@@ -670,13 +670,13 @@ const generateTeamShopData: () => Menu = () => ({
                     type: "entry",
                     display: "Your Traps",
                     icon: "",
-                    getBody(_, __, teamInfo) {
+                    getBody({ player }, __, teamInfo, game) {
                         let result = "§7Your team currently has:\n\n";
                         const words = ["first", "second", "third"];
+                        const strs = strings[game.getPlayerLang(player)];
                         for (let index = 0; index < MAX_TRAP_COUNT; ++index) {
-                            const fixedIndex = index + 1;
                             const trapName = TRAP_CONSTANTS[teamInfo.traps[index]]?.name ?? "§cNo Trap";
-                            result += `§7Trap #${fixedIndex}: §a${trapName}§7, activates when the ${words[index]} enemy walks into your base\n`;
+                            result += `§7Trap #${index + 1}: §a${strs[trapName]}§7, activates when the ${words[index]} enemy walks into your base\n`;
                         }
                         return result;
                     },
