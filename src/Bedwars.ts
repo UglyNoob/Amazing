@@ -2271,16 +2271,18 @@ export class BedWarsGame {
                 }
             }
             const strs = strings[this.getPlayerLang(playerInfo.player)];
+            let soundEffect: string;
             if (newTarget) {
-                playerInfo.player.playSound("random.orb");
+                soundEffect = "random.orb";
                 playerInfo.player.sendMessage(sprintf(strs.trackerChangeTargetMessage, TEAM_CONSTANTS[newTarget.team].colorPrefix, newTarget.name));
                 playerInfo.trackingTarget = newTarget;
             } else {
-                playerInfo.player.playSound("note.bass");
+                soundEffect = "note.bass";
                 playerInfo.player.sendMessage(strs.trackerFailedToFindTargetMessage);
             }
-
             playerInfo.trackerChangeTargetCooldown = TRACKER_CHANGE_TARGET_COOLDOWN;
+            await sleep(0);
+            playerInfo.player.playSound(soundEffect);
         }
     }
     private async openSettingsMenu(player: mc.Player) {
