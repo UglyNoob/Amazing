@@ -1866,7 +1866,7 @@ export class BedWarsGame {
                 if (attackingItem && isKnockBackStickItem(attackingItem)) {
                     const x = victimInfo.player.location.x - hurterInfo.player.location.x;
                     const z = victimInfo.player.location.z - hurterInfo.player.location.z;
-                    victimInfo.player.applyKnockback(x, z, 0.6, 0.3);
+                    victimInfo.player.applyKnockback(x, z, 0.7, 0.3);
                 }
             } else {
                 victimInfo.lastHurtBy = undefined;

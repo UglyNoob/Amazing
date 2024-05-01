@@ -1004,7 +1004,7 @@ function performAction(action: Action, playerInfo: PlayerGameInformation, teamIn
             const entity = playerInfo.player.dimension.spawnItem(leftover, player.location);
             entity.applyImpulse(v3.scale(entity.getVelocity(), -1));
         }
-        player.sendMessage(sprintf(purchaseMessage, action.itemName));
+        player.sendMessage(sprintf(purchaseMessage, evaluateString(action.itemName, strs)));
         result = true;
     } else if (action.type == ActionType.BuySword) {
         if (playerInfo.swordLevel.level >= action.toLevel.level) {
@@ -1157,7 +1157,7 @@ function performAction(action: Action, playerInfo: PlayerGameInformation, teamIn
         ++teamInfo.ironForgeLevel;
         game.applyTeamIronForge(teamInfo.type);
         const t = TEAM_CONSTANTS[teamInfo.type];
-        game.teamBroadcast(teamInfo.type, "teamPurchaseMessage", t.colorPrefix, player.name, `Iron Forge Level ${TIER_STRING[teamInfo.ironForgeLevel]}`);
+        game.teamBroadcast(teamInfo.type, "teamPurchaseMessage", t.colorPrefix, player.name, `${strs.ironForgeName} ${TIER_STRING[teamInfo.ironForgeLevel]}`);
         result = true;
     } else if (action.type == ActionType.UpgradeProtection) {
         if (teamInfo.protectionLevel >= MAX_PROTECTION_LEVEL) {
@@ -1173,7 +1173,7 @@ function performAction(action: Action, playerInfo: PlayerGameInformation, teamIn
         consumeToken(container, cost);
         ++teamInfo.protectionLevel;
         const t = TEAM_CONSTANTS[teamInfo.type];
-        game.teamBroadcast(teamInfo.type, "teamPurchaseMessage", t.colorPrefix, player.name, `Reinforced Armor Level ${TIER_STRING[teamInfo.protectionLevel]}`);
+        game.teamBroadcast(teamInfo.type, "teamPurchaseMessage", t.colorPrefix, player.name, `${strs.reinforcedArmorName} ${TIER_STRING[teamInfo.protectionLevel]}`);
         result = true;
     } else if (action.type == ActionType.UpgradeHaste) {
         if (teamInfo.hasteLevel >= MAX_HASTE_LEVEL) {
@@ -1190,7 +1190,7 @@ function performAction(action: Action, playerInfo: PlayerGameInformation, teamIn
         ++teamInfo.hasteLevel;
         game.applyTeamHasteLevel(teamInfo.type);
         const t = TEAM_CONSTANTS[teamInfo.type];
-        game.teamBroadcast(teamInfo.type, "teamPurchaseMessage", t.colorPrefix, player.name, `Maniac Miner Level ${TIER_STRING[teamInfo.hasteLevel]}`);
+        game.teamBroadcast(teamInfo.type, "teamPurchaseMessage", t.colorPrefix, player.name, `${strs.maniacMinerName} ${TIER_STRING[teamInfo.hasteLevel]}`);
         result = true;
     } else if (action.type == ActionType.BuySharpness) {
         if (teamInfo.hasSharpness) {
@@ -1206,7 +1206,7 @@ function performAction(action: Action, playerInfo: PlayerGameInformation, teamIn
         consumeToken(container, cost);
         teamInfo.hasSharpness = true;
         const t = TEAM_CONSTANTS[teamInfo.type];
-        game.teamBroadcast(teamInfo.type, "teamPurchaseMessage", t.colorPrefix, player.name, "Sharpened Sword");
+        game.teamBroadcast(teamInfo.type, "teamPurchaseMessage", t.colorPrefix, player.name, strs.sharpenedSwordName);
         result = true;
     } else if (action.type == ActionType.BuyHealPool) {
         if (teamInfo.healPoolEnabled) {
@@ -1222,7 +1222,7 @@ function performAction(action: Action, playerInfo: PlayerGameInformation, teamIn
         consumeToken(container, cost);
         teamInfo.healPoolEnabled = true;
         const t = TEAM_CONSTANTS[teamInfo.type];
-        game.teamBroadcast(teamInfo.type, "teamPurchaseMessage", t.colorPrefix, player.name, "Heal Pool");
+        game.teamBroadcast(teamInfo.type, "teamPurchaseMessage", t.colorPrefix, player.name, strs.healPoolName);
         result = true;
     } else if (action.type == ActionType.BuyTrap) {
         if (isTrapBought(action.trapType, teamInfo)) {
@@ -1242,7 +1242,7 @@ function performAction(action: Action, playerInfo: PlayerGameInformation, teamIn
         consumeToken(container, cost);
         teamInfo.traps.push(action.trapType);
         const t = TEAM_CONSTANTS[teamInfo.type];
-        game.teamBroadcast(teamInfo.type, "teamPurchaseMessage", t.colorPrefix, player.name, TRAP_CONSTANTS[action.trapType].name);
+        game.teamBroadcast(teamInfo.type, "teamPurchaseMessage", t.colorPrefix, player.name, strs[TRAP_CONSTANTS[action.trapType].name]);
         result = true;
     }
 
