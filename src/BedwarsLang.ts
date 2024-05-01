@@ -204,7 +204,7 @@ strings[Lang.zh_CN] = {
     activatingTrapWarning: "§7你激活了 §e%s!",
     languageChangedMessage: "§7你的语言已被设置为§6简体中文。",
     trackerFailedToFindTargetMessage: "§c没有可以追踪的敌人!",
-    trackerChangeTargetMessage: "§6正在追踪 %s%s§6.",
+    trackerChangeTargetMessage: "§6正在追踪 %s%s§6。",
     trackerTrackingNotification: "§6追踪: %s%s §a%dm §6%s",
 
     redName: "红",

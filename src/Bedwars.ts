@@ -1479,19 +1479,19 @@ export class BedWarsGame {
                             if (angle <= PI / 8 || angle >= PI * 15 / 8) {
                                 directionString = "↑";
                             } else if (angle <= PI * 3 / 8) {
-                                directionString = "↖";
+                                directionString = "↗";
                             } else if (angle <= PI * 5 / 8) {
-                                directionString = "←";
+                                directionString = "→";
                             } else if (angle <= PI * 7 / 8) {
-                                directionString = "↙";
+                                directionString = "↘";
                             } else if (angle <= PI * 9 / 8) {
                                 directionString = "↓";
                             } else if (angle <= PI * 11 / 8) {
-                                directionString = "↘";
+                                directionString = "↙";
                             } else if (angle <= PI * 13 / 8) {
-                                directionString = "→";
+                                directionString = "←";
                             } else {
-                                directionString = "↗";
+                                directionString = "↖";
                             }
                             player.onScreenDisplay.setActionBar(sprintf(trackerTrackingNotification,
                                 TEAM_CONSTANTS[playerInfo.trackingTarget.team].colorPrefix,
