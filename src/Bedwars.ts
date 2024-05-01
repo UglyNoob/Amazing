@@ -10,10 +10,10 @@ import { isLocationPartOfAnyPlatforms } from './RescuePlatform.js';
 import { SimulatedPlayer } from '@minecraft/server-gametest';
 import { mapGarden, mapSteamPunk, mapWaterfall, mapEastwood, mapVaryth } from './BedwarsMaps.js';
 import { ActionFormData, ActionFormResponse, FormCancelationReason, ModalFormData } from '@minecraft/server-ui';
-import { isItemSumoStick, sumoStickCooldownSym } from './SumoStick.js';
 import { BedWarsStrings, Lang, strings } from './BedwarsLang.js';
 
 const RESPAWN_TIME = 100; // in ticks
+const TRACKER_CHANGE_TARGET_COOLDOWN = 10; // in ticks
 export const IRON_ITEM_STACK = new mc.ItemStack(MinecraftItemTypes.IronIngot);
 IRON_ITEM_STACK.nameTag = "Iron Token";
 export const GOLD_ITEM_STACK = new mc.ItemStack(MinecraftItemTypes.GoldIngot);
@@ -113,6 +113,18 @@ export const KNOCKBACK_STICK_ITEM = (() => {
 
 function isKnockBackStickItem(item: mc.ItemStack) {
     return item.getLore()[1] == KNOCKBACK_STICK_ITEM.getLore()[1];
+}
+
+export const TRACKER_ITEM = (() => {
+    const i = new mc.ItemStack(MinecraftItemTypes.Deadbush);
+    i.nameTag = "Player Tracker";
+    i.setLore(["", "Can track an enemy for you"]);
+
+    return i;
+})();
+
+function isTrackerItem(item: mc.ItemStack) {
+    return item.getLore()[1] == TRACKER_ITEM.getLore()[1];
 }
 
 const SETTINGS_ITEM = (() => {
@@ -683,6 +695,8 @@ export interface PlayerGameInformation {
     armorDisabled: boolean;
     armorToEnablingTicks: number;
     teamAreaEntered?: TeamType;
+    trackerChangeTargetCooldown: number;
+    trackingTarget?: PlayerGameInformation;
 }
 
 export const MAX_IRON_FORGE_LEVEL = 4;
@@ -811,7 +825,8 @@ export class BedWarsGame {
             bridgeEggCooldown: 0,
             fireBallCooldown: 0,
             armorDisabled: false,
-            armorToEnablingTicks: 0
+            armorToEnablingTicks: 0,
+            trackerChangeTargetCooldown: 0
         });
     }
 
@@ -1291,7 +1306,8 @@ export class BedWarsGame {
                 spectateTitle,
                 spectateSubtitle,
                 respawnTitle,
-                respawnMessage
+                respawnMessage,
+                trackerTrackingNotification
             } = strings[this.getPlayerLang(playerInfo.player)];
             if (playerInfo.state == PlayerState.Offline) {
                 const player = getPlayerByName(playerInfo.name);
@@ -1418,9 +1434,9 @@ export class BedWarsGame {
                 }
                 // player.onScreenDisplay.setActionBar(String(TEAM_CONSTANTS[playerInfo.teamAreaEntered!]?.name)); // DEBUG
                 const equipment = player.getComponent("equippable")!;
-                [mc.EquipmentSlot.Head, mc.EquipmentSlot.Chest, mc.EquipmentSlot.Legs, mc.EquipmentSlot.Feet, mc.EquipmentSlot.Mainhand].forEach(slotName => {
+                for (const slotName of [mc.EquipmentSlot.Head, mc.EquipmentSlot.Chest, mc.EquipmentSlot.Legs, mc.EquipmentSlot.Feet, mc.EquipmentSlot.Mainhand]) {
                     const item = equipment.getEquipment(slotName);
-                    if (!item) return;
+                    if (!item) continue;
                     if (slotName == mc.EquipmentSlot.Mainhand) {
                         let erase = false;
                         // clean items
@@ -1435,7 +1451,7 @@ export class BedWarsGame {
                         }
                         if (erase) {
                             equipment.getEquipmentSlot(slotName).setItem();
-                            return;
+                            continue;
                         }
                         if (itemEqual(item, playerInfo.swordLevel.item)) {
                             const teamInfo = this.teams.get(playerInfo.team)!;
@@ -1448,9 +1464,62 @@ export class BedWarsGame {
                                         level: SHARPNESS_ENCHANMENT_LEVEL
                                     });
                                     equipment.setEquipment(slotName, item);
-                                    return;
+                                    continue;
                                 }
                             }
+                        } else if (isTrackerItem(item) && playerInfo.trackingTarget) {
+                            const direction = v3.subtract(playerInfo.trackingTarget.player.location, player.location);
+                            const sqrt2 = Math.sqrt(2);
+                            const sqrtsqrtAdd = Math.sqrt(sqrt2 + 1);
+                            const sqrtsqrtMinus = Math.sqrt(sqrt2 - 1);
+                            const vec0 = { x: Math.sqrt(2 + sqrt2), y: 0, z: Math.sqrt(2 - sqrt2) };
+                            const vec1 = { x: sqrtsqrtAdd - sqrtsqrtMinus, y: 0, z: sqrtsqrtAdd + sqrtsqrtMinus };
+                            const vec2 = { x: -vec0.z, y: 0, z: vec0.x };
+                            const vec3 = { x: -vec1.z, y: 0, z: vec1.x }
+                            const vectors = [
+                                vec0,
+                                vec1,
+                                vec2,
+                                vec3,
+                                v3.scale(vec0, -1),
+                                v3.scale(vec1, -1),
+                                v3.scale(vec2, -1),
+                                v3.scale(vec3, -1),
+                            ];
+                            const productResults = vectors.map(v => v3.dot(direction, v));
+                            let topIndexA = 0;
+                            let topIndexB = 0;
+                            for (let index = 0; index < 8; ++index) {
+                                const product = productResults[index];
+                                if (product > productResults[topIndexA]) {
+                                    topIndexB = topIndexA;
+                                    topIndexA = index;
+                                } else if (product > productResults[topIndexB]) {
+                                    topIndexB = index;
+                                }
+                            }
+                            let directionString = "";
+                            switch (Math.min(topIndexA, topIndexB)) {
+                                case 0:
+                                    if (Math.max(topIndexA, topIndexB) == 1) {
+                                        directionString = "↗";
+                                    } else {
+                                        directionString = "→";
+                                    }
+                                    break;
+                                case 1: directionString = "↑"; break;
+                                case 2: directionString = "↖"; break;
+                                case 3: directionString = "←"; break;
+                                case 4: directionString = "↙"; break;
+                                case 5: directionString = "↓"; break;
+                                case 6: directionString = "↘"; break;
+                            }
+                            player.onScreenDisplay.setActionBar(sprintf(trackerTrackingNotification,
+                                TEAM_CONSTANTS[playerInfo.trackingTarget.team].colorPrefix,
+                                playerInfo.trackingTarget.name,
+                                v3.magnitude(direction),
+                                directionString
+                            ));
                         }
                     } else { // Armors
                         const teamInfo = this.teams.get(playerInfo.team)!;
@@ -1463,19 +1532,20 @@ export class BedWarsGame {
                                     level: teamInfo.protectionLevel
                                 });
                                 equipment.setEquipment(slotName, item);
-                                return;
+                                continue;
                             }
                         }
                     }
                     const com = item.getComponent("durability");
-                    if (!com) return;
+                    if (!com) continue;
                     if (com.damage > 20) {
                         com.damage = 0;
                         equipment.setEquipment(slotName, item);
                     }
-                });
+                };
                 if (playerInfo.bridgeEggCooldown > 0) --playerInfo.bridgeEggCooldown;
                 if (playerInfo.fireBallCooldown > 0) --playerInfo.fireBallCooldown;
+                if (playerInfo.trackerChangeTargetCooldown > 0) --playerInfo.trackerChangeTargetCooldown;
                 if (playerInfo.armorToEnablingTicks > 0) {
                     --playerInfo.armorToEnablingTicks;
                 } else { // enable the armor
@@ -1664,7 +1734,7 @@ export class BedWarsGame {
             );
             let updateTarget = false;
             if (!fakePlayer.attackTarget ||
-                (v3.distance(fakePlayer.location, fakePlayer.attackTarget.player.location) >= 5 ||
+                (v3.distance(fakePlayer.location, fakePlayer.attackTarget.player.location) >= 12 ||
                     fakePlayer.attackTarget.state != PlayerState.Alive)) {
                 updateTarget = true;
             }
@@ -1850,6 +1920,11 @@ export class BedWarsGame {
             const x = victim.location.x - hurter.location.x;
             const z = victim.location.z - hurter.location.z;
             victim.applyKnockback(x, z, 0.7, 0.3);
+        }
+        if (victim instanceof SimulatedPlayer) {
+            if (!victim.attackTarget) {
+                victim.attackTarget = hurterInfo;
+            }
         }
     }
     afterEntityHitEntity(event: mc.EntityHitEntityAfterEvent) {
@@ -2194,6 +2269,35 @@ export class BedWarsGame {
             await sleep(0);
 
             this.openSettingsMenu(playerInfo.player);
+        } else if (isTrackerItem(event.itemStack)) {
+            event.cancel = true;
+
+            if (playerInfo.trackerChangeTargetCooldown > 0) return;
+
+            let newTarget: PlayerGameInformation | null = null;
+
+            let minDistance = Infinity;
+            for (const potentialInfo of this.players.values()) {
+                if (playerInfo.team == potentialInfo.team) continue;
+                if (potentialInfo.state == PlayerState.Offline) continue;
+
+                const distance = v3.distance(potentialInfo.player.location, playerInfo.player.location);
+                if (distance < minDistance) {
+                    minDistance = distance;
+                    newTarget = potentialInfo;
+                }
+            }
+            const strs = strings[this.getPlayerLang(playerInfo.player)];
+            if (newTarget) {
+                playerInfo.player.playSound("random.orb");
+                playerInfo.player.sendMessage(sprintf(strs.trackerChangeTargetMessage, TEAM_CONSTANTS[newTarget.team].colorPrefix, newTarget.name));
+                playerInfo.trackingTarget = newTarget;
+            } else {
+                playerInfo.player.playSound("note.bass");
+                playerInfo.player.sendMessage(strs.trackerFailedToFindTargetMessage);
+            }
+
+            playerInfo.trackerChangeTargetCooldown = TRACKER_CHANGE_TARGET_COOLDOWN;
         }
     }
     private async openSettingsMenu(player: mc.Player) {
@@ -2218,8 +2322,7 @@ export class BedWarsGame {
 
         if (isFireBallItem(event.itemStack)) {
             event.cancel = true;
-        }
-        if (event.itemStack.typeId == MinecraftItemTypes.WolfSpawnEgg) {
+        } else if (event.itemStack.typeId == MinecraftItemTypes.WolfSpawnEgg) {
             event.cancel = true;
             await sleep(0);
 
@@ -2230,6 +2333,8 @@ export class BedWarsGame {
             wolf.getComponent("tameable")!.tame();
             // wolf.teleport(wolfLocation);
             consumeMainHandItem(playerInfo.player);
+        } else if (isTrackerItem(event.itemStack)) {
+            event.cancel = true;
         }
     }
     afterItemCompleteUse(event: mc.ItemCompleteUseAfterEvent) {

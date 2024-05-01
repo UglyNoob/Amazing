@@ -26,6 +26,9 @@ export interface BedWarsStrings {
     trapActivatedMessage: string; // sent to players whose team owns the trap
     activatingTrapWarning: string; // sent to player that activates the trap
     languageChangedMessage: string;
+    trackerFailedToFindTargetMessage: string;
+    trackerChangeTargetMessage: string;
+    trackerTrackingNotification: string;
 
     redName: string;
     blueName: string;
@@ -109,6 +112,9 @@ strings[Lang.en_US] = {
     trapActivatedMessage: "§7%s §chas been activated!",
     activatingTrapWarning: "§7You have activated §e%s!",
     languageChangedMessage: "§7Your language have been switched to §6English.",
+    trackerFailedToFindTargetMessage: "§cFailed to find any enemy to track!",
+    trackerChangeTargetMessage: "§6Now tracking %s%s§6.",
+    trackerTrackingNotification: "§6TRACKING: %s%s §a%dm §6%s",
 
     redName: "red",
     blueName: "blue",
@@ -172,7 +178,7 @@ strings[Lang.en_US] = {
 strings[Lang.zh_CN] = {
     deathTitle: "§c你死了!",
     deathSubtitle: "§e你将在 §c%d §e秒后重生!",
-    spectateTitle: "§c你已进入观察模式!",
+    spectateTitle: "§c你已进入观察者模式!",
     spectateSubtitle: "你的床已被摧毁",
     respawnTitle: "§a你已重生!",
     respawnMessage: "§e你已重生!",
@@ -182,14 +188,14 @@ strings[Lang.zh_CN] = {
     teamBedDestroyedMessage: "\n§l床被摧毁 > §r%s%s的床 §7被 %s%s§7 摧毁!\n ",
     teamEliminationMessage: "\n§l队伍淘汰 > §r%s%s §c已被淘汰!\n ",
     finalKillMessage: "%(victimColor)s%(victim)s §7被 %(killerColor)s%(killer)s§7 击杀。 §b§l最终击杀!",
-    breakingBlockInvalidMessage: "§c你不能破坏不是由玩家破坏的方块.",
+    breakingBlockInvalidMessage: "§c你不能破坏非玩家放置的方块。",
     killNotification: "§c击杀: %s%s",
     finalKillNotification: "§c最终击杀: %s%s",
-    disconnectedMessage: "%s%s §7断开了连接.",
-    reconnectionMessage: "%s%s §e重新连接.",
+    disconnectedMessage: "%s%s §7断开了连接。",
+    reconnectionMessage: "%s%s §e重新连接。",
     placingBlockIllagelMessage: "§c你不能在这里放置方块!",
     gameEndedMessage: "\n§l游戏结束 > §r%s%s §7胜利!\n",
-    openEnemyChestMessage: "§c你不能打开敌队的箱子.",
+    openEnemyChestMessage: "§c你不能打开敌队的箱子。",
     teamPurchaseMessage: "%s%s §a购买了 §6%s",
     purchaseMessage: "§a你购买了 §6%s",
     trapActivatedTitle: "§c陷阱触发!",
@@ -197,6 +203,9 @@ strings[Lang.zh_CN] = {
     trapActivatedMessage: "§7%s §c被激活了!",
     activatingTrapWarning: "§7你激活了 §e%s!",
     languageChangedMessage: "§7你的语言已被设置为§6简体中文。",
+    trackerFailedToFindTargetMessage: "§c没有可以追踪的敌人!",
+    trackerChangeTargetMessage: "§6正在追踪 %s%s§6.",
+    trackerTrackingNotification: "§6追踪: %s%s §a%dm §6%s",
 
     redName: "红",
     blueName: "蓝",
@@ -229,26 +238,26 @@ strings[Lang.zh_CN] = {
     sharpenedSwordName: "锋利",
     reinforcedArmorName: "加强盔甲",
     sharpenedSwordBody: "§7你的队伍永久获得在剑上获得锋利I!",
-    reinforcedArmorBody: `§7你的队伍永久在所有盔甲上获得保护!
+    reinforcedArmorBody: `§7你的队伍永久在所有盔甲上获得保护
 
 §7第1等级: 保护 I, §b需2个钻石
 §7第2等级: 保护 II, §b需4个钻石
 §7第3等级: 保护 III, §b需8个钻石
 §7第4等级: 保护 IV, §b需16个钻石`,
     ironForgeName: "铁熔炉",
-    ironForgeBody: `§7升级你的岛屿的资源.
+    ironForgeBody: `§7升级队伍岛屿的资源。
 
 §7第1等级: +50%% 资源, §b需2个钻石
 §7第2等级: +100%% 资源, §b需4个钻石
 §7第3等级: 产生绿宝石, §b需6个钻石
 §7第4等级: +200%% 资源, §b需8个钻石`,
     maniacMinerName: "疯狂矿工",
-    maniacMinerBody: `§7所有队友获得永久急迫
+    maniacMinerBody: `§7你的队伍获得永久急迫
 
 §7第1等级: 急迫 I, §b需2个钻石
 §7第2等级: 急迫 II, §b需4个钻石`,
     healPoolName: "治疗池",
-    healPoolBody: "§7在你的基地周围给予队友生命恢复!",
+    healPoolBody: "§7在基地周围给予你的队伍生命恢复效果",
 
     itemShopBody: "买点物品!",
     itemShopTitle: "起床战争物品商店",

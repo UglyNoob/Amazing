@@ -30,7 +30,8 @@ import {
     TRAP_CONSTANTS,
     TrapType,
     MAX_TRAP_COUNT,
-    KNOCKBACK_STICK_ITEM
+    KNOCKBACK_STICK_ITEM,
+    TRACKER_ITEM
 } from "./Bedwars.js";
 import { ActionFormData } from "@minecraft/server-ui";
 import { containerIterator, containerSlotIterator, itemEqual, stackFirstContainerAdd } from './utility.js';
@@ -362,6 +363,14 @@ const generateItemShopData: () => Menu = () => ({
                 generateBuySwordMenu(SWORD_LEVELS[1], { ironAmount: 10, goldAmount: 0, diamondAmount: 0, emeraldAmount: 0 }),
                 generateBuySwordMenu(SWORD_LEVELS[2], { ironAmount: 0, goldAmount: 7, diamondAmount: 0, emeraldAmount: 0 }),
                 generateBuySwordMenu(SWORD_LEVELS[3], { ironAmount: 0, goldAmount: 0, diamondAmount: 0, emeraldAmount: 4 }),
+                generateBuyOneItemMenu("Fire Ball", () => ({
+                    cost: { ironAmount: 40, goldAmount: 0, emeraldAmount: 0, diamondAmount: 0 },
+                    item: FIRE_BALL_ITEM
+                }), () => "textures/items/fireball.png"),
+                generateBuyOneItemMenu("Wind Charge", () => ({
+                    cost: { ironAmount: 30, goldAmount: 0, emeraldAmount: 0, diamondAmount: 0 },
+                    item: WIND_CHARGE_ITEM
+                }), () => "textures/items/wind_charge.png"),
                 generateBuyOneItemMenu("Knockback Stick", () => ({
                     cost: { ironAmount: 0, goldAmount: 5, emeraldAmount: 0, diamondAmount: 0 },
                     item: KNOCKBACK_STICK_ITEM
@@ -542,14 +551,6 @@ const generateItemShopData: () => Menu = () => ({
                     cost: { ironAmount: 0, goldAmount: 3, emeraldAmount: 0, diamondAmount: 0 },
                     item: GOLDEN_APPLE_ITEM
                 }), () => "textures/items/apple_golden.png"),
-                generateBuyOneItemMenu("Fire Ball", () => ({
-                    cost: { ironAmount: 40, goldAmount: 0, emeraldAmount: 0, diamondAmount: 0 },
-                    item: FIRE_BALL_ITEM
-                }), () => "textures/items/fireball.png"),
-                generateBuyOneItemMenu("Wind Charge", () => ({
-                    cost: { ironAmount: 35, goldAmount: 0, emeraldAmount: 0, diamondAmount: 0 },
-                    item: WIND_CHARGE_ITEM
-                }), () => "textures/items/wind_charge.png"),
                 generateBuyOneItemMenu("Ender Pearl", () => ({
                     cost: { ironAmount: 0, goldAmount: 0, emeraldAmount: 4, diamondAmount: 0 },
                     item: ENDER_PEARL_ITEM
@@ -558,6 +559,10 @@ const generateItemShopData: () => Menu = () => ({
                     cost: { ironAmount: 0, goldAmount: 0, emeraldAmount: 1, diamondAmount: 0 },
                     item: BRIDGE_EGG_ITEM
                 }), () => "textures/items/egg.png"),
+                generateBuyOneItemMenu("Tracker", () => ({
+                    cost: { ironAmount: 0, goldAmount: 2, emeraldAmount: 0, diamondAmount: 0 },
+                    item: TRACKER_ITEM
+                }), () => "textures/blocks/deadbush.png"),
                 generateBuyOneItemMenu("Loyal Wolf", () => ({
                     cost: { ironAmount: 0, goldAmount: 0, emeraldAmount: 4, diamondAmount: 0 },
                     item: LOYAL_WOLF_ITEM
