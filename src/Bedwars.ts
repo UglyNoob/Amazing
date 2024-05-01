@@ -11,6 +11,7 @@ import { SimulatedPlayer } from '@minecraft/server-gametest';
 import { mapGarden, mapSteamPunk, mapWaterfall, mapEastwood, mapVaryth } from './BedwarsMaps.js';
 import { ActionFormData, ActionFormResponse, FormCancelationReason, ModalFormData } from '@minecraft/server-ui';
 import { isItemSumoStick, sumoStickCooldownSym } from './SumoStick.js';
+import { BedWarsStrings, Lang, strings } from './BedwarsLang.js';
 
 const RESPAWN_TIME = 100; // in ticks
 export const IRON_ITEM_STACK = new mc.ItemStack(MinecraftItemTypes.IronIngot);
@@ -102,6 +103,18 @@ function isSpeedPotionItem(item: mc.ItemStack) {
         loreA[1] == loreB[1];
 }
 
+export const KNOCKBACK_STICK_ITEM = (() => {
+    const i = new mc.ItemStack(MinecraftItemTypes.Stick);
+    i.nameTag = "§r§eKnockBack Stick";
+    i.setLore(["", "§rKnock off all your opponents!"]);
+
+    return i;
+})();
+
+function isKnockBackStickItem(item: mc.ItemStack) {
+    return item.getLore()[1] == KNOCKBACK_STICK_ITEM.getLore()[1];
+}
+
 const SETTINGS_ITEM = (() => {
     const i = new mc.ItemStack(MinecraftItemTypes.Clock);
     i.nameTag = "§r§fBedwars Settings";
@@ -114,143 +127,6 @@ const SETTINGS_ITEM = (() => {
 function isSettingsItem(item: mc.ItemStack) {
     return SETTINGS_ITEM.getLore()[1] == item.getLore()[1];
 }
-
-export interface BedWarsStrings {
-    deathTitle: string;
-    deathSubtitle: string;
-    spectateTitle: string;
-    spectateSubtitle: string;
-    respawnTitle: string;
-    respawnMessage: string;
-    bedDestroyedTitle: string;
-    victoryTitle: string;
-    bedDestroyedSubtitle: string;
-    teamBedDestroyedMessage: string;
-    teamEliminationMessage: string;
-    finalKillMessage: string;
-    breakingBlockInvalidMessage: string;
-    killNotification: string;
-    finalKillNotification: string;
-    disconnectedMessage: string;
-    reconnectionMessage: string;
-    placingBlockIllagelMessage: string;
-    gameEndedMessage: string;
-    openEnemyChestMessage: string;
-    teamPurchaseMessage: string;
-    purchaseMessage: string;
-    trapActivatedTitle: string;
-    alarmTrapSubtitle: string;
-    trapActivatedMessage: string; // sent to players whose team owns the trap
-    activatingTrapWarning: string; // sent to player that activates the trap
-    languageChangedMessage: string;
-    redName: string;
-    blueName: string;
-    yellowName: string;
-    greenName: string;
-    pinkName: string;
-    grayName: string;
-    cyanName: string;
-    whiteName: string;
-    itemShopBody: string;
-    itemShopTitle: string;
-    blocksShopTitle: string;
-    blocksShopDisplay: string;
-    blocksShopBody: string;
-}
-
-// DO NOT CHANGE THE ORDER
-export enum Lang {
-    en_US,
-    zh_CN
-}
-
-export const strings: Record<Lang, BedWarsStrings> = Object.create(null);
-
-strings[Lang.en_US] = {
-    deathTitle: "§cYOU DIED!",
-    deathSubtitle: "§eYou will respawn in §c%d §eseconds!",
-    spectateTitle: "§cSPECTATING!",
-    spectateSubtitle: "Your bed has been destroyed",
-    respawnTitle: "§aRESPAWNED!",
-    respawnMessage: "§eYou have respawned!",
-    bedDestroyedTitle: "§cBED DESTROYED!",
-    victoryTitle: "§6§lVICTORY!",
-    bedDestroyedSubtitle: "You will no longer respawn!",
-    teamBedDestroyedMessage: "\n§lBED DESTRUCTION > §r%s%s Bed §7was destroyed by %s%s§7!\n ",
-    teamEliminationMessage: "\n§lTEAM ELIMINATED > §r%s%s §chas been eliminated!\n ",
-    finalKillMessage: "%(victimColor)s%(victim)s §7was killed by %(killerColor)s%(killer)s§7. §b§lFINAL KILL!",
-    breakingBlockInvalidMessage: "§cYou cannot break blocks that are not placed by players.",
-    killNotification: "KILL: %s%s",
-    finalKillNotification: "FINAL KILL: %s%s",
-    disconnectedMessage: "%s%s §7disconnected.",
-    reconnectionMessage: "%s%s §ereconnected.",
-    placingBlockIllagelMessage: "§cYou can't place blocks here!",
-    gameEndedMessage: "\n§lGAME ENDED > §r%s%s §7is the winner!\n",
-    openEnemyChestMessage: "§cYou can't open enemy's chest.",
-    teamPurchaseMessage: "%s%s §ahas purchased §6%s",
-    purchaseMessage: "§aYou purchased §6%s",
-    trapActivatedTitle: "§cTRAP ACTIVATED!",
-    alarmTrapSubtitle: "%s%s §7has entered your base!",
-    trapActivatedMessage: "§7%s §chas been activated!",
-    activatingTrapWarning: "§7You have activated §e%s!",
-    languageChangedMessage: "§7Your language have been switched to §6English",
-    redName: "red",
-    blueName: "blue",
-    greenName: "green",
-    yellowName: "yellow",
-    cyanName: "cyan",
-    grayName: "gray",
-    pinkName: "pink",
-    whiteName: "white",
-    itemShopBody: "Buy items!",
-    itemShopTitle: "Bedwars Item Shops",
-    blocksShopBody: "Buy blocks",
-    blocksShopDisplay: "Blocks",
-    blocksShopTitle: "Blocks Shop"
-};
-
-strings[Lang.zh_CN] = {
-    deathTitle: "§c你死了!",
-    deathSubtitle: "§e你将在 §c%d §e秒后重生!",
-    spectateTitle: "§c你已进入观察模式!",
-    spectateSubtitle: "你的床已被摧毁",
-    respawnTitle: "§a你已重生!",
-    respawnMessage: "§e你已重生!",
-    bedDestroyedTitle: "§c床被摧毁!",
-    victoryTitle: "§6§l胜利!",
-    bedDestroyedSubtitle: "你将无法重生!",
-    teamBedDestroyedMessage: "\n§l床被摧毁 > §r%s%s的床§7被 %s%s§7 摧毁!\n ",
-    teamEliminationMessage: "\n§l队伍淘汰 > §r%s%s §c已被淘汰!\n ",
-    finalKillMessage: "%(victimColor)s%(victim)s §7被 %(killerColor)s%(killer)s§7 击杀. §b§l最终击杀!",
-    breakingBlockInvalidMessage: "§c你不能破坏不是由玩家破坏的方块.",
-    killNotification: "击杀: %s%s",
-    finalKillNotification: "最终击杀: %s%s",
-    disconnectedMessage: "%s%s §7断开了连接.",
-    reconnectionMessage: "%s%s §e重新连接.",
-    placingBlockIllagelMessage: "§c你不能在这里放置方块!",
-    gameEndedMessage: "\n§l游戏结束 > §r%s%s §7胜利!\n",
-    openEnemyChestMessage: "§c你不能打开敌队的箱子.",
-    teamPurchaseMessage: "%s%s §a购买了 §6%s",
-    purchaseMessage: "§a你购买了 §6%s",
-    trapActivatedTitle: "§c陷阱触发!",
-    alarmTrapSubtitle: "%s%s §7进入了你的基地!",
-    trapActivatedMessage: "§7%s §c被激活了!",
-    activatingTrapWarning: "§7你激活了 §e%s!",
-    languageChangedMessage: "§7你的语言已被设置为§6简体中文",
-    redName: "红",
-    blueName: "蓝",
-    greenName: "绿",
-    yellowName: "黄",
-    cyanName: "青",
-    grayName: "灰",
-    pinkName: "粉",
-    whiteName: "白",
-    itemShopBody: "买点物品!",
-    itemShopTitle: "起床战争物品商店",
-    blocksShopBody: "买一些方块！",
-    blocksShopDisplay: "方块",
-    blocksShopTitle: "方块商店"
-};
 
 declare module '@minecraft/server' {
     interface Entity {
@@ -582,7 +458,7 @@ export function hasPrevPickaxeLevel(level: PickaxeLevel) {
 
 export interface AxeLevel {
     level: number;
-    name: string;
+    name: keyof BedWarsStrings;
     icon: string;
     item: mc.ItemStack;
     toCurrentLevelCost: TokenValue;
@@ -605,7 +481,7 @@ export const AXE_LEVELS: AxeLevel[] = (() => {
     return [
         {
             level: 0,
-            name: "Wooden Axe",
+            name: "woodenAxeName",
             icon: "textures/items/wood_axe.png",
             item: setupItem(MinecraftItemTypes.WoodenAxe, [
                 {
@@ -616,7 +492,7 @@ export const AXE_LEVELS: AxeLevel[] = (() => {
             toCurrentLevelCost: { ironAmount: 10, goldAmount: 0, diamondAmount: 0, emeraldAmount: 0 }
         }, {
             level: 1,
-            name: "Stone Axe",
+            name: "stoneAxeName",
             icon: "textures/items/stone_axe.png",
             item: setupItem(MinecraftItemTypes.StoneAxe, [
                 {
@@ -627,7 +503,7 @@ export const AXE_LEVELS: AxeLevel[] = (() => {
             toCurrentLevelCost: { ironAmount: 10, goldAmount: 0, diamondAmount: 0, emeraldAmount: 0 }
         }, {
             level: 2,
-            name: "Iron Axe",
+            name: "ironAxeName",
             icon: "textures/items/iron_axe.png",
             item: setupItem(MinecraftItemTypes.IronAxe, [
                 {
@@ -638,7 +514,7 @@ export const AXE_LEVELS: AxeLevel[] = (() => {
             toCurrentLevelCost: { ironAmount: 0, goldAmount: 3, diamondAmount: 0, emeraldAmount: 0 }
         }, {
             level: 3,
-            name: "Diamond Axe",
+            name: "diamondAxeName",
             icon: "textures/items/diamond_axe.png",
             item: setupItem(MinecraftItemTypes.DiamondAxe, [
                 {
@@ -711,29 +587,29 @@ export enum TrapType {
 }
 
 export const TRAP_CONSTANTS: Record<TrapType, {
-    name: string;
-    description: string;
+    name: keyof BedWarsStrings;
+    description: keyof BedWarsStrings;
     iconPath: string;
 }> = Object.create(null);
 
 TRAP_CONSTANTS[TrapType.NegativeEffect] = {
-    name: "It's a Trap!",
-    description: "§7Inflicts Blindness and Slowness for 8 seconds.",
+    name: "negativeEffectTrapName",
+    description: "negativeEffectTrapDescription",
     iconPath: "textures/blocks/trip_wire_source.png"
 };
 TRAP_CONSTANTS[TrapType.Defensive] = {
-    name: "Counter-Offensive Trap",
-    description: "§7Grants Speed II and Jump Boost II for 15 seconds to allied players near your base.",
+    name: "defensiveTrapName",
+    description: "defensiveTrapDescription",
     iconPath: "textures/items/feather.png"
 };
 TRAP_CONSTANTS[TrapType.Alarm] = {
-    name: "Alarm Trap",
-    description: "§7Reveals invisible players as well as their name and team.",
+    name: "alarmTrapName",
+    description: "alarmTrapDescription",
     iconPath: "textures/blocks/redstone_torch_on.png"
 };
 TRAP_CONSTANTS[TrapType.MinerFatigue] = {
-    name: "Miner Fatigue Trap",
-    description: "§7Inflict Mining Fatigue for 10 seconds.",
+    name: "minerFatigueTrapName",
+    description: "minerFatigueTrapDescription",
     iconPath: "textures/items/gold_pickaxe.png"
 };
 
@@ -990,9 +866,11 @@ export class BedWarsGame {
         }
 
         const mapArea = this.fixOrigin(this.map.playableArea);
-        this.dimension.getEntities({ type: "minecraft:item" }).forEach(e => {
-            if (vectorWithinArea(e.location, mapArea)) e.kill();
-        });
+        for (const type of ["minecraft:item", "minecraft:wolf"]) {
+            this.dimension.getEntities({ type }).forEach(e => {
+                if (vectorWithinArea(e.location, mapArea)) e.kill();
+            });
+        }
         mc.world.scoreboard.setObjectiveAtDisplaySlot(mc.DisplaySlotId.Sidebar, {
             objective: this.scoreObj
         });
@@ -1241,11 +1119,12 @@ export class BedWarsGame {
                 teamPlayerInfo.player.addEffect(MinecraftEffectTypes.Speed, 300, { amplifier: 1 });
                 teamPlayerInfo.player.addEffect(MinecraftEffectTypes.JumpBoost, 300, { amplifier: 1 });
             }
+            const strs = strings[this.getPlayerLang(teamPlayerInfo.player)];
             const {
                 trapActivatedTitle,
                 alarmTrapSubtitle,
                 trapActivatedMessage
-            } = strings[this.getPlayerLang(teamPlayerInfo.player)];
+            } = strs;
 
             teamPlayerInfo.player.onScreenDisplay.setTitle(trapActivatedTitle, {
                 subtitle: isAlarmTrap ? sprintf(alarmTrapSubtitle, TEAM_CONSTANTS[playerInfo.team].colorPrefix, player.name) : undefined,
@@ -1254,10 +1133,11 @@ export class BedWarsGame {
                 fadeOutDuration: 20
             });
             teamPlayerInfo.player.playSound("mob.wither.spawn");
-            teamPlayerInfo.player.sendMessage(sprintf(trapActivatedMessage, TRAP_CONSTANTS[trapType].name));
+            teamPlayerInfo.player.sendMessage(sprintf(trapActivatedMessage, strs[TRAP_CONSTANTS[trapType].name]));
         }
         player.playSound("mob.wither.spawn");
-        player.sendMessage(sprintf(strings[this.getPlayerLang(player)].activatingTrapWarning, TRAP_CONSTANTS[trapType].name));
+        const strs = strings[this.getPlayerLang(player)];
+        player.sendMessage(sprintf(strs.activatingTrapWarning, strs[TRAP_CONSTANTS[trapType].name]));
     }
     /**
      * Adjust team generator based on its iron forge level
@@ -1982,6 +1862,12 @@ export class BedWarsGame {
                     return;
                 }
                 victimInfo.lastHurtBy = hurterInfo;
+                const attackingItem = hurterInfo.player.getComponent("equippable")!.getEquipment(mc.EquipmentSlot.Mainhand);
+                if (attackingItem && isKnockBackStickItem(attackingItem)) {
+                    const x = victimInfo.player.location.x - hurterInfo.player.location.x;
+                    const z = victimInfo.player.location.z - hurterInfo.player.location.z;
+                    victimInfo.player.applyKnockback(x, z, 0.6, 0.3);
+                }
             } else {
                 victimInfo.lastHurtBy = undefined;
             }
@@ -2300,11 +2186,6 @@ export class BedWarsGame {
 
             consumeMainHandItem(playerInfo.player);
             playerInfo.fireBallCooldown = FIRE_BALL_COOLDOWN;
-        } else if (isItemSumoStick(event.itemStack)) {
-            if (playerInfo.player[sumoStickCooldownSym] > 0) return;
-
-            await sleep(0);
-            consumeMainHandItem(playerInfo.player);
         } else if (isSettingsItem(event.itemStack)) {
             event.cancel = true;
             await sleep(0);
@@ -2321,7 +2202,7 @@ export class BedWarsGame {
         if (response.canceled) return;
         const chosenLang = response.formValues![0] as Lang;
         if (chosenLang != pervLang) {
-            this.setPlayerLang(player, response.formValues![0] as Lang);
+            this.setPlayerLang(player, chosenLang);
             player.playSound("note.banjo");
             player.sendMessage(strings[chosenLang].languageChangedMessage);
         }
@@ -2339,11 +2220,12 @@ export class BedWarsGame {
             event.cancel = true;
             await sleep(0);
 
-            const wolfLocation = v3.add(event.block.location, event.faceLocation);
+            //const wolfLocation = v3.add(event.block.location, event.faceLocation);
+            //this.dimension.getEntities({type: "minecraft:wolf", location: wolfLocation, maxDistance: 2}).filter(e => e.getComponent("tameable").)
             const wolf = this.dimension.spawnEntity(MinecraftEntityTypes.Wolf, playerInfo.player.location);
             // tame() method would make the wolf tamed to the nearest player
             wolf.getComponent("tameable")!.tame();
-            wolf.teleport(wolfLocation);
+            // wolf.teleport(wolfLocation);
             consumeMainHandItem(playerInfo.player);
         }
     }
