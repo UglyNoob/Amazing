@@ -1820,6 +1820,11 @@ export class BedWarsGame {
                 });
             };
         }
+        for (const playerInfo of this.players.values()) {
+            if (playerInfo.trackingTarget == victimInfo) {
+                playerInfo.trackingTarget = undefined;
+            }
+        }
 
         this.checkTeamPlayers();
     }
