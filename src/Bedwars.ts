@@ -1,6 +1,6 @@
 import { Vector3Utils as v3 } from '@minecraft/math';
 import * as mc from '@minecraft/server';
-import { itemEqual, Area, sleep, vectorAdd, vectorWithinArea, containerIterator, capitalize, getPlayerByName, consumeMainHandItem, makeItem, shuffle, randomInt, setGameMode, analyzeTime, vectorCompare, raycastHits, quickFind } from './utility.js';
+import { itemEqual, Area, sleep, vectorAdd, vectorWithinArea, containerIterator, capitalize, getPlayerByName, consumeMainHandItem, makeItem, shuffle, randomInt, setGameMode, analyzeTime, vectorCompare, raycastHits, quickFind, getAngle } from './utility.js';
 import { setupGameTest } from './GameTest.js';
 import { MinecraftBlockTypes, MinecraftEffectTypes, MinecraftEnchantmentTypes, MinecraftEntityTypes, MinecraftItemTypes } from '@minecraft/vanilla-data';
 
@@ -117,8 +117,8 @@ function isKnockBackStickItem(item: mc.ItemStack) {
 
 export const TRACKER_ITEM = (() => {
     const i = new mc.ItemStack(MinecraftItemTypes.Deadbush);
-    i.nameTag = "Player Tracker";
-    i.setLore(["", "Can track an enemy for you"]);
+    i.nameTag = "§r§6Player Tracker";
+    i.setLore(["", "§rCan track an enemy for you."]);
 
     return i;
 })();
@@ -839,7 +839,9 @@ export class BedWarsGame {
                 continue;
             }
             this.teams.get(playerInfo.team)!.state = TeamState.BedAlive;
-            playerInfo.player.getComponent("inventory")!.container!.setItem(8, SETTINGS_ITEM);
+            const container = playerInfo.player.getComponent("inventory")!.container!;
+            container.clearAll();
+            container.setItem(8, SETTINGS_ITEM);
             this.respawnPlayer(playerInfo);
             this.setupSpawnPoint(playerInfo.player);
             this.fixPlayerSettings(playerInfo);
@@ -1468,56 +1470,33 @@ export class BedWarsGame {
                                 }
                             }
                         } else if (isTrackerItem(item) && playerInfo.trackingTarget) {
-                            const direction = v3.subtract(playerInfo.trackingTarget.player.location, player.location);
-                            const sqrt2 = Math.sqrt(2);
-                            const sqrtsqrtAdd = Math.sqrt(sqrt2 + 1);
-                            const sqrtsqrtMinus = Math.sqrt(sqrt2 - 1);
-                            const vec0 = { x: Math.sqrt(2 + sqrt2), y: 0, z: Math.sqrt(2 - sqrt2) };
-                            const vec1 = { x: sqrtsqrtAdd - sqrtsqrtMinus, y: 0, z: sqrtsqrtAdd + sqrtsqrtMinus };
-                            const vec2 = { x: -vec0.z, y: 0, z: vec0.x };
-                            const vec3 = { x: -vec1.z, y: 0, z: vec1.x }
-                            const vectors = [
-                                vec0,
-                                vec1,
-                                vec2,
-                                vec3,
-                                v3.scale(vec0, -1),
-                                v3.scale(vec1, -1),
-                                v3.scale(vec2, -1),
-                                v3.scale(vec3, -1),
-                            ];
-                            const productResults = vectors.map(v => v3.dot(direction, v));
-                            let topIndexA = 0;
-                            let topIndexB = 0;
-                            for (let index = 0; index < 8; ++index) {
-                                const product = productResults[index];
-                                if (product > productResults[topIndexA]) {
-                                    topIndexB = topIndexA;
-                                    topIndexA = index;
-                                } else if (product > productResults[topIndexB]) {
-                                    topIndexB = index;
-                                }
-                            }
-                            let directionString = "";
-                            switch (Math.min(topIndexA, topIndexB)) {
-                                case 0:
-                                    if (Math.max(topIndexA, topIndexB) == 1) {
-                                        directionString = "↗";
-                                    } else {
-                                        directionString = "→";
-                                    }
-                                    break;
-                                case 1: directionString = "↑"; break;
-                                case 2: directionString = "↖"; break;
-                                case 3: directionString = "←"; break;
-                                case 4: directionString = "↙"; break;
-                                case 5: directionString = "↓"; break;
-                                case 6: directionString = "↘"; break;
+                            const distanceVec = v3.subtract(playerInfo.trackingTarget.player.location, player.location);
+                            const viewDirection = player.getViewDirection();
+                            const PI = Math.PI;
+                            let angle = getAngle(distanceVec.x, distanceVec.z) - getAngle(viewDirection.x, viewDirection.z);
+                            if (angle < 0) angle += PI * 2;
+                            let directionString: string;
+                            if (angle <= PI / 8 || angle >= PI * 15 / 8) {
+                                directionString = "↑";
+                            } else if (angle <= PI * 3 / 8) {
+                                directionString = "↖";
+                            } else if (angle <= PI * 5 / 8) {
+                                directionString = "←";
+                            } else if (angle <= PI * 7 / 8) {
+                                directionString = "↙";
+                            } else if (angle <= PI * 9 / 8) {
+                                directionString = "↓";
+                            } else if (angle <= PI * 11 / 8) {
+                                directionString = "↘";
+                            } else if (angle <= PI * 13 / 8) {
+                                directionString = "→";
+                            } else {
+                                directionString = "↗";
                             }
                             player.onScreenDisplay.setActionBar(sprintf(trackerTrackingNotification,
                                 TEAM_CONSTANTS[playerInfo.trackingTarget.team].colorPrefix,
                                 playerInfo.trackingTarget.name,
-                                v3.magnitude(direction),
+                                v3.magnitude(distanceVec),
                                 directionString
                             ));
                         }
@@ -2280,7 +2259,6 @@ export class BedWarsGame {
             if (playerInfo.trackerChangeTargetCooldown > 0) return;
 
             let newTarget: PlayerGameInformation | null = null;
-
             let minDistance = Infinity;
             for (const potentialInfo of this.players.values()) {
                 if (playerInfo.team == potentialInfo.team) continue;

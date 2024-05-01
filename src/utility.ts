@@ -191,6 +191,20 @@ export function vectorAdd(...vecs: mc.Vector3[]): mc.Vector3 {
 export function vectorSize(vec: mc.Vector3) {
     return Math.sqrt(vec.x * vec.x + vec.y * vec.y + vec.z * vec.z);
 }
+export function getAngle(x: number, z: number) {
+    const mag = Math.sqrt(x * x + z * z);
+    x /= mag;
+    z /= mag;
+    let result = Math.asin(z);
+    if(x < 0) {
+        if(z > 0) {
+            result = Math.PI - result;
+        } else {
+            result = -Math.PI - result;
+        }
+    }
+    return result;
+}
 
 export function makeItem(item: mc.ItemStack, newAmount: number): mc.ItemStack;
 export function makeItem(itemType: string, amount: number): mc.ItemStack;
