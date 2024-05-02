@@ -2262,7 +2262,7 @@ export class BedWarsGame {
             let minDistance = Infinity;
             for (const potentialInfo of this.players.values()) {
                 if (playerInfo.team == potentialInfo.team) continue;
-                if (potentialInfo.state == PlayerState.Offline) continue;
+                if (potentialInfo.state != PlayerState.Alive) continue;
 
                 const distance = v3.distance(potentialInfo.player.location, playerInfo.player.location);
                 if (distance < minDistance) {
