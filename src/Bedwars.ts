@@ -799,7 +799,7 @@ export class BedWarsGame {
     }
 
     setPlayer(player: mc.Player, teamType: TeamType) {
-        if (this.map.teams.find(t => t.type == teamType) == undefined) throw new Error(`No such team(${TEAM_CONSTANTS[teamType].name}).`);
+        if (this.map.teams.find(t => t.type == teamType) == undefined) throw new Error(`No such team(${ TEAM_CONSTANTS[teamType].name }).`);
 
         const playerInfo = this.players.get(player.name);
         if (playerInfo) {
@@ -855,7 +855,7 @@ export class BedWarsGame {
                 if (teamChestContainer) {
                     teamChestContainer.clearAll();
                 } else {
-                    throw new Error(`Team chest of team ${TEAM_CONSTANTS[teamType].name} does not exist at ${v3.toString(teamChestLocation)}`);
+                    throw new Error(`Team chest of team ${ TEAM_CONSTANTS[teamType].name } does not exist at ${ v3.toString(teamChestLocation) }`);
                 }
             }
 
@@ -920,7 +920,7 @@ export class BedWarsGame {
         for (const [teamType, { state }] of this.teams) {
             ++index;
             const t = TEAM_CONSTANTS[teamType];
-            let result = `${t.colorPrefix}${t.name.charAt(0).toUpperCase()} §r${capitalize(t.name)}: `;
+            let result = `${ t.colorPrefix }${ t.name.charAt(0).toUpperCase() } §r${ capitalize(t.name) }: `;
             switch (state) {
                 case TeamState.BedAlive:
                     // result += "§a✔";
@@ -936,7 +936,7 @@ export class BedWarsGame {
                         if (playerInfo.team != teamType) continue;
                         if (this.isPlayerPlaying(playerInfo)) ++aliveCount;
                     }
-                    result += `§a${aliveCount}`;
+                    result += `§a${ aliveCount }`;
             }
             this.scoreObj.setScore(result, index);
         }
@@ -948,7 +948,7 @@ export class BedWarsGame {
         if (secondsStr.length == 1) secondsStr = "0" + secondsStr;
         let minutesStr = minutes.toString();
         if (minutesStr.length == 1) minutesStr = "0" + minutesStr;
-        this.scoreObj.setScore(`§a${minutesStr}:${secondsStr}`, index);
+        this.scoreObj.setScore(`§a${ minutesStr }:${ secondsStr }`, index);
     }
 
     private respawnPlayer(playerInfo: PlayerGameInformation) {
@@ -975,7 +975,7 @@ export class BedWarsGame {
             });
         }
         player.extinguishFire();
-        player.nameTag = `${TEAM_CONSTANTS[playerInfo.team].colorPrefix}${playerInfo.name}`;
+        player.nameTag = `${ TEAM_CONSTANTS[playerInfo.team].colorPrefix }${ playerInfo.name }`;
         playerInfo.armorDisabled = false;
         playerInfo.armorToEnablingTicks = 0;
         playerInfo.bridgeEggCooldown = 0;
@@ -1569,10 +1569,10 @@ export class BedWarsGame {
                 for (const loc of gen.indicatorLocations) {
                     const sign = this.dimension.getBlock(loc)?.getComponent("sign");
                     if (!sign) {
-                        throw new Error(`Generator indicator does not exist at ${v3.toString(loc)}.`);
+                        throw new Error(`Generator indicator does not exist at ${ v3.toString(loc) }.`);
                     }
                     sign.setWaxed(true);
-                    [mc.SignSide.Front, mc.SignSide.Back].forEach(signSide => sign.setText(`§eSpawns in §c${gen.remainingCooldown / 20} §eseconds`, signSide));
+                    [mc.SignSide.Front, mc.SignSide.Back].forEach(signSide => sign.setText(`§eSpawns in §c${ gen.remainingCooldown / 20 } §eseconds`, signSide));
                 }
             }
             if (gen.remainingCooldown > 0) {
@@ -2141,6 +2141,9 @@ export class BedWarsGame {
         if (!vectorWithinArea(location, this.fixOrigin(this.map.playableArea))) {
             return false;
         }
+        const block = this.dimension.getBlock(location);
+        if (!block) return false;
+        if (block.typeId != MinecraftBlockTypes.Air) return false;
         // disallow the player to place block near cactus
         for (const offset of [
             { x: 1, y: 0, z: 0 },
@@ -2361,7 +2364,7 @@ export class BedWarsGame {
         if (!senderInfo) return;
 
         event.cancel = true;
-        mc.world.sendMessage(`<${sender.nameTag}§r> ${event.message}`);
+        mc.world.sendMessage(`<${ sender.nameTag }§r> ${ event.message }`);
     }
 };
 
