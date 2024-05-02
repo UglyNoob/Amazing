@@ -392,7 +392,7 @@ export const SWORD_LEVELS: SwordLevel[] = (() => {
 
 export interface PickaxeLevel {
     level: number;
-    name: string;
+    name: keyof BedWarsStrings;
     icon: string;
     item: mc.ItemStack;
     toCurrentLevelCost: TokenValue;
@@ -416,7 +416,7 @@ export const PICKAXE_LEVELS: PickaxeLevel[] = (() => {
     return [
         {
             level: 0,
-            name: "Wooden Pickaxe",
+            name: "woodenPickaxeName",
             icon: "textures/items/wood_pickaxe.png",
             item: setupItem(MinecraftItemTypes.WoodenPickaxe, [
                 {
@@ -427,7 +427,7 @@ export const PICKAXE_LEVELS: PickaxeLevel[] = (() => {
             toCurrentLevelCost: { ironAmount: 10, goldAmount: 0, diamondAmount: 0, emeraldAmount: 0 }
         }, {
             level: 1,
-            name: "Iron Pickaxe",
+            name: "ironPickaxeName",
             icon: "textures/items/iron_pickaxe.png",
             item: setupItem(MinecraftItemTypes.IronPickaxe, [
                 {
@@ -438,7 +438,7 @@ export const PICKAXE_LEVELS: PickaxeLevel[] = (() => {
             toCurrentLevelCost: { ironAmount: 10, goldAmount: 0, diamondAmount: 0, emeraldAmount: 0 }
         }, {
             level: 2,
-            name: "Golden Pickaxe",
+            name: "goldenPickaxeName",
             icon: "textures/items/gold_pickaxe.png",
             item: setupItem(MinecraftItemTypes.GoldenPickaxe, [
                 {
@@ -449,7 +449,7 @@ export const PICKAXE_LEVELS: PickaxeLevel[] = (() => {
             toCurrentLevelCost: { ironAmount: 0, goldAmount: 3, diamondAmount: 0, emeraldAmount: 0 }
         }, {
             level: 3,
-            name: "Diamond Pickaxe",
+            name: "diamondPickaxeName",
             icon: "textures/items/diamond_pickaxe.png",
             item: setupItem(MinecraftItemTypes.DiamondPickaxe, [
                 {
@@ -547,7 +547,7 @@ export function hasPrevAxeLevel(level: AxeLevel) {
 
 export interface ArmorLevel {
     level: number;
-    name: string;
+    name: keyof BedWarsStrings;
     icon: string;
     leggings: mc.ItemStack;
     boots: mc.ItemStack;
@@ -563,25 +563,25 @@ export const ARMOR_LEVELS: ArmorLevel[] = (() => {
     return [
         {
             level: 0,
-            name: "Leather Armors",
+            name: "leatherArmorName",
             icon: "textures/items/leather_boots.tga",
             leggings: setupItem(MinecraftItemTypes.LeatherLeggings),
             boots: setupItem(MinecraftItemTypes.LeatherBoots)
         }, {
             level: 1,
-            name: "Chainmail Armors",
+            name: "chainmailArmorName",
             icon: "textures/items/chainmail_boots.png",
             leggings: setupItem(MinecraftItemTypes.ChainmailLeggings),
             boots: setupItem(MinecraftItemTypes.ChainmailBoots)
         }, {
             level: 2,
-            name: "Iron Armors",
+            name: "ironArmorName",
             icon: "textures/items/iron_boots.png",
             leggings: setupItem(MinecraftItemTypes.IronLeggings),
             boots: setupItem(MinecraftItemTypes.IronBoots)
         }, {
             level: 3,
-            name: "Diamond Armors",
+            name: "diamondArmorName",
             icon: "textures/items/diamond_boots.png",
             leggings: setupItem(MinecraftItemTypes.DiamondLeggings),
             boots: setupItem(MinecraftItemTypes.DiamondBoots)
@@ -799,7 +799,7 @@ export class BedWarsGame {
     }
 
     setPlayer(player: mc.Player, teamType: TeamType) {
-        if (this.map.teams.find(t => t.type == teamType) == undefined) throw new Error(`No such team(${ TEAM_CONSTANTS[teamType].name }).`);
+        if (this.map.teams.find(t => t.type == teamType) == undefined) throw new Error(`No such team(${TEAM_CONSTANTS[teamType].name}).`);
 
         const playerInfo = this.players.get(player.name);
         if (playerInfo) {
@@ -855,7 +855,7 @@ export class BedWarsGame {
                 if (teamChestContainer) {
                     teamChestContainer.clearAll();
                 } else {
-                    throw new Error(`Team chest of team ${ TEAM_CONSTANTS[teamType].name } does not exist at ${ v3.toString(teamChestLocation) }`);
+                    throw new Error(`Team chest of team ${TEAM_CONSTANTS[teamType].name} does not exist at ${v3.toString(teamChestLocation)}`);
                 }
             }
 
@@ -920,7 +920,7 @@ export class BedWarsGame {
         for (const [teamType, { state }] of this.teams) {
             ++index;
             const t = TEAM_CONSTANTS[teamType];
-            let result = `${ t.colorPrefix }${ t.name.charAt(0).toUpperCase() } §r${ capitalize(t.name) }: `;
+            let result = `${t.colorPrefix}${t.name.charAt(0).toUpperCase()} §r${capitalize(t.name)}: `;
             switch (state) {
                 case TeamState.BedAlive:
                     // result += "§a✔";
@@ -936,7 +936,7 @@ export class BedWarsGame {
                         if (playerInfo.team != teamType) continue;
                         if (this.isPlayerPlaying(playerInfo)) ++aliveCount;
                     }
-                    result += `§a${ aliveCount }`;
+                    result += `§a${aliveCount}`;
             }
             this.scoreObj.setScore(result, index);
         }
@@ -948,7 +948,7 @@ export class BedWarsGame {
         if (secondsStr.length == 1) secondsStr = "0" + secondsStr;
         let minutesStr = minutes.toString();
         if (minutesStr.length == 1) minutesStr = "0" + minutesStr;
-        this.scoreObj.setScore(`§a${ minutesStr }:${ secondsStr }`, index);
+        this.scoreObj.setScore(`§a${minutesStr}:${secondsStr}`, index);
     }
 
     private respawnPlayer(playerInfo: PlayerGameInformation) {
@@ -975,13 +975,13 @@ export class BedWarsGame {
             });
         }
         player.extinguishFire();
-        player.nameTag = `${ TEAM_CONSTANTS[playerInfo.team].colorPrefix }${ playerInfo.name }`;
         playerInfo.armorDisabled = false;
         playerInfo.armorToEnablingTicks = 0;
         playerInfo.bridgeEggCooldown = 0;
         playerInfo.fireBallCooldown = 0;
         this.resetInventory(playerInfo);
         playerInfo.lastHurtBy = undefined;
+        this.resetNameTag(playerInfo);
 
         playerInfo.state = PlayerState.Alive;
     }
@@ -1496,7 +1496,7 @@ export class BedWarsGame {
                             player.onScreenDisplay.setActionBar(sprintf(trackerTrackingNotification,
                                 TEAM_CONSTANTS[playerInfo.trackingTarget.team].colorPrefix,
                                 playerInfo.trackingTarget.name,
-                                v3.magnitude(distanceVec),
+                                v3.magnitude(distanceVec).toFixed(0),
                                 directionString
                             ));
                         }
@@ -1569,10 +1569,10 @@ export class BedWarsGame {
                 for (const loc of gen.indicatorLocations) {
                     const sign = this.dimension.getBlock(loc)?.getComponent("sign");
                     if (!sign) {
-                        throw new Error(`Generator indicator does not exist at ${ v3.toString(loc) }.`);
+                        throw new Error(`Generator indicator does not exist at ${v3.toString(loc)}.`);
                     }
                     sign.setWaxed(true);
-                    [mc.SignSide.Front, mc.SignSide.Back].forEach(signSide => sign.setText(`§eSpawns in §c${ gen.remainingCooldown / 20 } §eseconds`, signSide));
+                    [mc.SignSide.Front, mc.SignSide.Back].forEach(signSide => sign.setText(`§eSpawns in §c${gen.remainingCooldown / 20} §eseconds`, signSide));
                 }
             }
             if (gen.remainingCooldown > 0) {
@@ -1881,6 +1881,11 @@ export class BedWarsGame {
         this.onPlayerDieOrOffline(victimInfo, killerInfo);
     }
 
+    private resetNameTag(playerInfo: PlayerGameInformation) {
+        const health = playerInfo.player.getComponent("health")!.currentValue.toFixed(0);
+        playerInfo.player.nameTag = `${TEAM_CONSTANTS[playerInfo.team].colorPrefix}${playerInfo.name}\n§c${health}♡`;
+    }
+
     afterEntityHurt(event: mc.EntityHurtAfterEvent) {
         if (this.state != GameState.started) return;
 
@@ -1891,6 +1896,7 @@ export class BedWarsGame {
         const victimInfo = this.players.get(victim.name);
         const hurterInfo = this.players.get(hurter.name);
         if (!victimInfo) return;
+        this.resetNameTag(victimInfo);
         if (!hurterInfo) return;
         if (victimInfo.team == hurterInfo.team) {
             // workaround for disabling in-team damage
@@ -2364,7 +2370,7 @@ export class BedWarsGame {
         if (!senderInfo) return;
 
         event.cancel = true;
-        mc.world.sendMessage(`<${ sender.nameTag }§r> ${ event.message }`);
+        mc.world.sendMessage(`<${TEAM_CONSTANTS[senderInfo.team].colorPrefix}${sender.name}§r> ${event.message}`);
     }
 };
 

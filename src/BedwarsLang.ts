@@ -48,6 +48,45 @@ export interface BedWarsStrings {
     stoneAxeName: string;
     ironAxeName: string;
     diamondAxeName: string;
+    axeMaxLevelString: string;
+
+    leatherArmorName: string;
+    chainmailArmorName: string;
+    ironArmorName: string;
+    diamondArmorName: string;
+
+    woodenPickaxeName: string;
+    ironPickaxeName: string;
+    goldenPickaxeName: string;
+    diamondPickaxeName: string;
+    pickaxeMaxLevelString: string;
+
+    woolName: string;
+    hardenedClayName: string;
+    blastProofGlassName: string;
+    plankName: string;
+    endStoneName: string;
+    ladderName: string;
+    obsidianName: string;
+    fireBallName: string;
+    windChargeName: string;
+    knockbackStickName: string;
+    shearsName: string;
+    itemAlreadyHaveString: string;
+    invisiblePotionName: string;
+    jumpPotionName: string;
+    speedPotionName: string;
+    arrowName: string;
+    bowName: string;
+    bowPowerIName: string;
+    bowPowerIPunchIName: string;
+    goldenAppleName: string;
+    enderPearlName: string;
+    bridgeEggName: string;
+    trackerName: string;
+    loyalWolfName: string;
+    wolfArmorName: string;
+    rescuePlatformName: string;
 
     negativeEffectTrapName: string;
     negativeEffectTrapDescription: string;
@@ -69,6 +108,7 @@ export interface BedWarsStrings {
     healPoolName: string;
     healPoolBody: string;
 
+    backButtonDisplay: string;
     itemShopBody: string;
     itemShopTitle: string;
     blocksShopTitle: string;
@@ -134,6 +174,45 @@ strings[Lang.en_US] = {
     stoneAxeName: "Stone Axe",
     ironAxeName: "Iron Axe",
     diamondAxeName: "Diamond Axe",
+    axeMaxLevelString: "§hYour axe is\nof the max level.",
+
+    leatherArmorName: "Leather Armors",
+    chainmailArmorName: "Chainmail Armors",
+    ironArmorName: "Iron Armors",
+    diamondArmorName: "Diamond Armors",
+
+    woodenPickaxeName: "Wooden Pickaxe",
+    ironPickaxeName: "Iron Pickaxe",
+    goldenPickaxeName: "Golden Pickaxe",
+    diamondPickaxeName: "Diamond Pickaxe",
+    pickaxeMaxLevelString: "§hYour pickaxe is\nof the max level.",
+
+    woolName: "Wool",
+    hardenedClayName: "Hardened Clay",
+    blastProofGlassName: "Blast-Proof Glass",
+    plankName: "Plank",
+    endStoneName: "End Stone",
+    ladderName: "Ladder",
+    obsidianName: "Obsidian",
+    fireBallName: "Fire Ball",
+    windChargeName: "Wind Charge",
+    knockbackStickName: "Knockback Stick",
+    shearsName: "Shears",
+    itemAlreadyHaveString: "§hYou already have this item.",
+    invisiblePotionName: "Invisible Potion (0:30)",
+    jumpPotionName: "Jump V Potion (0:45)",
+    speedPotionName: "Speed II Potion (0:45)",
+    arrowName: "Arrow",
+    bowName: "Bow",
+    bowPowerIName: "Bow Power I",
+    bowPowerIPunchIName: "Bow Power I,Punch I",
+    goldenAppleName: "Golden Apple",
+    enderPearlName: "Ender Pearl",
+    bridgeEggName: "Bridge Egg",
+    trackerName: "Tracker",
+    loyalWolfName: "Loyal Wolf",
+    wolfArmorName: "Wolf Armor",
+    rescuePlatformName: "Rescue Platform",
 
     negativeEffectTrapName: "It's a Trap!",
     negativeEffectTrapDescription: "§7Inflicts Blindness and Slowness for 8 seconds.",
@@ -168,6 +247,7 @@ strings[Lang.en_US] = {
     healPoolName: "Heal Pool",
     healPoolBody: "§7Create a regeneration field around your base!",
 
+    backButtonDisplay: "Back",
     itemShopBody: "Buy items!",
     itemShopTitle: "Bedwars Item Shops",
     blocksShopBody: "Buy blocks",
@@ -225,6 +305,45 @@ strings[Lang.zh_CN] = {
     stoneAxeName: "石斧",
     ironAxeName: "铁斧",
     diamondAxeName: "钻石斧",
+    axeMaxLevelString: "§h你的斧子已达到最大等级。",
+
+    leatherArmorName: "皮革护甲",
+    chainmailArmorName: "锁链护甲",
+    ironArmorName: "铁护甲",
+    diamondArmorName: "钻石护甲",
+
+    woodenPickaxeName: "木稿",
+    ironPickaxeName: "铁稿",
+    goldenPickaxeName: "金稿",
+    diamondPickaxeName: "钻石镐",
+    pickaxeMaxLevelString: "§h你的稿子已达到最大等级。",
+
+    woolName: "羊毛",
+    hardenedClayName: "硬化黏土",
+    blastProofGlassName: "防爆玻璃",
+    plankName: "木板",
+    endStoneName: "末地石",
+    ladderName: "梯子",
+    obsidianName: "黑曜石",
+    fireBallName: "火球",
+    windChargeName: "风弹",
+    knockbackStickName: "击退棒",
+    shearsName: "剪刀",
+    itemAlreadyHaveString: "§h你已经拥有这项物品。",
+    invisiblePotionName: "隐身药水 (0:30)",
+    jumpPotionName: "跳跃提升V (0:45)",
+    speedPotionName: "速度II Potion (0:45)",
+    arrowName: "箭",
+    bowName: "弓",
+    bowPowerIName: "弓 力量I",
+    bowPowerIPunchIName: "Bow 力量I,冲击I",
+    goldenAppleName: "金苹果",
+    enderPearlName: "末影珍珠",
+    bridgeEggName: "搭桥蛋",
+    trackerName: "追踪器",
+    loyalWolfName: "忠诚的狼",
+    wolfArmorName: "狼甲",
+    rescuePlatformName: "救援平台",
 
     negativeEffectTrapName: "这是一个陷阱!",
     negativeEffectTrapDescription: "§7给敌人8秒的失明与缓慢。",
@@ -259,6 +378,7 @@ strings[Lang.zh_CN] = {
     healPoolName: "治疗池",
     healPoolBody: "§7在基地周围给予你的队伍生命恢复效果",
 
+    backButtonDisplay: "返回",
     itemShopBody: "买点物品!",
     itemShopTitle: "起床战争物品商店",
     blocksShopBody: "买一些方块！",

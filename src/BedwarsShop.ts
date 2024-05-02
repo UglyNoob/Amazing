@@ -170,10 +170,11 @@ function generateBuyOneItemMenu(
             } else {
                 color = "§4";
             }
+            const strs = strings[game.getPlayerLang(playerInfo.player)];
             if (item.amount == 1) {
-                return `${color}${name}\n${tokenToString(cost, playerInfo.player, game)}`;
+                return `${color}${name}\n${tokenToString(cost, strs)}`;
             } else {
-                return `${color}${name} * ${item.amount}\n${tokenToString(cost, playerInfo.player, game)}`;
+                return `${color}${name} * ${item.amount}\n${tokenToString(cost, strs)}`;
             }
         },
         getAction(playerInfo) {
@@ -214,7 +215,7 @@ function generateBuySwordMenu(toLevel: SwordLevel, cost: TokenValue): Menu {
             } else {
                 color = "§4";
             }
-            return `${color}${toLevel.name}\n${tokenToString(cost, playerInfo.player, game)}`;
+            return `${color}${toLevel.name}\n${tokenToString(cost, strings[game.getPlayerLang(playerInfo.player)])}`;
         },
         icon: toLevel.icon,
         action: {
@@ -228,8 +229,9 @@ function generateBuyArmorMenu(toLevel: ArmorLevel, cost: TokenValue): Menu {
     return {
         type: "action",
         getDisplay(playerInfo, currentTokens, _, game) {
+            const strs = strings[game.getPlayerLang(playerInfo.player)];
             if (playerInfo.armorLevel.level >= toLevel.level) {
-                return "§h" + toLevel.name;
+                return "§h" + strs[toLevel.name];
             }
             let color: string;
             if (isTokenSatisfying(currentTokens, cost)) {
@@ -237,7 +239,7 @@ function generateBuyArmorMenu(toLevel: ArmorLevel, cost: TokenValue): Menu {
             } else {
                 color = "§4";
             }
-            return `${color}${toLevel.name}\n${tokenToString(cost, playerInfo.player, game)}`;
+            return `${color}${strs[toLevel.name]}\n${tokenToString(cost, strs)}`;
         },
         icon: toLevel.icon,
         action: {
@@ -324,31 +326,31 @@ const generateItemShopData: () => Menu = () => ({
             title: { local: "blocksShopTitle" },
             getBody: generateSecondMenuGetBody("Buy blocks"),
             subMenus: [
-                generateBuyOneItemMenu("Wool", playerInfo => ({
+                generateBuyOneItemMenu({ local: "woolName" }, playerInfo => ({
                     cost: { ironAmount: 4, goldAmount: 0, emeraldAmount: 0, diamondAmount: 0 },
                     item: new mc.ItemStack(TEAM_CONSTANTS[playerInfo.team].woolName, 16)
                 }), playerInfo => TEAM_CONSTANTS[playerInfo.team].woolIconPath),
-                generateBuyOneItemMenu("Hardened Clay", () => ({
+                generateBuyOneItemMenu({ local: "hardenedClayName" }, () => ({
                     cost: { ironAmount: 12, goldAmount: 0, emeraldAmount: 0, diamondAmount: 0 },
                     item: HARDENED_CLAY_ITEM
                 }), () => "textures/blocks/hardened_clay.png"),
-                generateBuyOneItemMenu("Blast-Proof Glass", playerInfo => ({
+                generateBuyOneItemMenu({ local: "blastProofGlassName" }, playerInfo => ({
                     cost: { ironAmount: 12, goldAmount: 0, emeraldAmount: 0, diamondAmount: 0 },
                     item: new mc.ItemStack(TEAM_CONSTANTS[playerInfo.team].glassName, 4)
                 }), playerInfo => TEAM_CONSTANTS[playerInfo.team].glassIconPath),
-                generateBuyOneItemMenu("Plank", () => ({
+                generateBuyOneItemMenu({ local: "plankName" }, () => ({
                     cost: { ironAmount: 0, goldAmount: 4, emeraldAmount: 0, diamondAmount: 0 },
                     item: PLANKS_ITEM
                 }), () => "textures/blocks/planks_oak.png"),
-                generateBuyOneItemMenu("End Stone", () => ({
+                generateBuyOneItemMenu({ local: "endStoneName" }, () => ({
                     cost: { ironAmount: 24, goldAmount: 0, emeraldAmount: 0, diamondAmount: 0 },
                     item: ENDSTONE_ITEM
                 }), () => "textures/blocks/end_stone.png"),
-                generateBuyOneItemMenu("Ladder", () => ({
+                generateBuyOneItemMenu({ local: "ladderName" }, () => ({
                     cost: { ironAmount: 4, goldAmount: 0, emeraldAmount: 0, diamondAmount: 0 },
                     item: LADDER_ITEM
                 }), () => "textures/blocks/ladder.png"),
-                generateBuyOneItemMenu("Obsidian", () => ({
+                generateBuyOneItemMenu({ local: "obsidianName" }, () => ({
                     cost: { ironAmount: 0, goldAmount: 0, emeraldAmount: 4, diamondAmount: 0 },
                     item: OBSIDIAN_ITEM
                 }), () => "textures/blocks/obsidian.png"),
@@ -363,15 +365,15 @@ const generateItemShopData: () => Menu = () => ({
                 generateBuySwordMenu(SWORD_LEVELS[1], { ironAmount: 10, goldAmount: 0, diamondAmount: 0, emeraldAmount: 0 }),
                 generateBuySwordMenu(SWORD_LEVELS[2], { ironAmount: 0, goldAmount: 7, diamondAmount: 0, emeraldAmount: 0 }),
                 generateBuySwordMenu(SWORD_LEVELS[3], { ironAmount: 0, goldAmount: 0, diamondAmount: 0, emeraldAmount: 4 }),
-                generateBuyOneItemMenu("Fire Ball", () => ({
+                generateBuyOneItemMenu({ local: "fireBallName" }, () => ({
                     cost: { ironAmount: 40, goldAmount: 0, emeraldAmount: 0, diamondAmount: 0 },
                     item: FIRE_BALL_ITEM
                 }), () => "textures/items/fireball.png"),
-                generateBuyOneItemMenu("Wind Charge", () => ({
+                generateBuyOneItemMenu({ local: "windChargeName" }, () => ({
                     cost: { ironAmount: 30, goldAmount: 0, emeraldAmount: 0, diamondAmount: 0 },
                     item: WIND_CHARGE_ITEM
                 }), () => "textures/items/wind_charge.png"),
-                generateBuyOneItemMenu("Knockback Stick", () => ({
+                generateBuyOneItemMenu({ local: "knockbackStickName" }, () => ({
                     cost: { ironAmount: 0, goldAmount: 5, emeraldAmount: 0, diamondAmount: 0 },
                     item: KNOCKBACK_STICK_ITEM
                 }), () => "textures/items/stick.png")
@@ -397,8 +399,9 @@ const generateItemShopData: () => Menu = () => ({
                 {
                     type: "action",
                     getDisplay(playerInfo, tokens, _, game) {
+                        const strs = strings[game.getPlayerLang(playerInfo.player)];
                         if (playerInfo.hasShear) {
-                            return "§hYou already have this item.";
+                            return strs.itemAlreadyHaveString;
                         }
                         const cost = SHEARS_COST;
                         let color: string;
@@ -407,7 +410,7 @@ const generateItemShopData: () => Menu = () => ({
                         } else {
                             color = "§4";
                         }
-                        return `${color}Shears\n${tokenToString(cost, playerInfo.player, game)}`;
+                        return `${color}${strs.shearsName}\n${tokenToString(cost, strs)}`;
                     },
                     icon: "textures/items/shears.png",
                     action: {
@@ -417,10 +420,11 @@ const generateItemShopData: () => Menu = () => ({
                 }, {
                     type: "action",
                     getDisplay(playerInfo, currentTokens, _, game) {
+                        const strs = strings[game.getPlayerLang(playerInfo.player)];
                         let toLevel: PickaxeLevel;
                         if (playerInfo.pickaxeLevel) {
                             if (!hasNextPickaxeLevel(playerInfo.pickaxeLevel)) {
-                                return "§hYour pickaxe is\nof the max level.";
+                                return strs.pickaxeMaxLevelString;
                             }
                             toLevel = PICKAXE_LEVELS[playerInfo.pickaxeLevel.level + 1];
                         } else {
@@ -434,7 +438,7 @@ const generateItemShopData: () => Menu = () => ({
                         } else {
                             color = "§4";
                         }
-                        return `${color}${toLevel.name}\n${tokenToString(cost, playerInfo.player, game)}`;
+                        return `${color}${strs[toLevel.name]}\n${tokenToString(cost, strs)}`;
                     },
                     getIcon(playerInfo) {
                         let toLevel: PickaxeLevel;
@@ -455,10 +459,11 @@ const generateItemShopData: () => Menu = () => ({
                 }, {
                     type: "action",
                     getDisplay(playerInfo, currentTokens, _, game) {
+                        const strs = strings[game.getPlayerLang(playerInfo.player)];
                         let toLevel: AxeLevel;
                         if (playerInfo.axeLevel) {
                             if (!hasNextAxeLevel(playerInfo.axeLevel)) {
-                                return "§hYour axe is\nof the max level.";
+                                return strs.axeMaxLevelString;
                             }
                             toLevel = AXE_LEVELS[playerInfo.axeLevel.level + 1];
                         } else {
@@ -472,7 +477,7 @@ const generateItemShopData: () => Menu = () => ({
                         } else {
                             color = "§4";
                         }
-                        return `${color}${strings[game.getPlayerLang(playerInfo.player)][toLevel.name]}\n${tokenToString(cost, playerInfo.player, game)}`;
+                        return `${color}${strs[toLevel.name]}\n${tokenToString(cost, strs)}`;
                     },
                     getIcon(playerInfo) {
                         let toLevel: AxeLevel;
@@ -499,15 +504,15 @@ const generateItemShopData: () => Menu = () => ({
             title: "Potion Shop",
             getBody: generateSecondMenuGetBody("Buy potions"),
             subMenus: [
-                generateBuyOneItemMenu("Invisible Potion (0:30)", () => ({
+                generateBuyOneItemMenu({ local: "invisiblePotionName" }, () => ({
                     cost: { ironAmount: 0, goldAmount: 0, emeraldAmount: 2, diamondAmount: 0 },
                     item: INVISIBLILITY_POTION_ITEM
                 }), () => "textures/items/potion_bottle_invisibility.png"),
-                generateBuyOneItemMenu("Jump V Potion (0:45)", () => ({
+                generateBuyOneItemMenu({ local: "jumpPotionName" }, () => ({
                     cost: { ironAmount: 0, goldAmount: 0, emeraldAmount: 1, diamondAmount: 0 },
                     item: JUMP_BOOST_POTION_ITEM
                 }), () => "textures/items/potion_bottle_jump.png"),
-                generateBuyOneItemMenu("Speed II Potion (0:45)", () => ({
+                generateBuyOneItemMenu({ local: "speedPotionName" }, () => ({
                     cost: { ironAmount: 0, goldAmount: 0, emeraldAmount: 1, diamondAmount: 0 },
                     item: SPEED_POTION_ITEM
                 }), () => "textures/items/potion_bottle_moveSpeed.png")
@@ -519,19 +524,19 @@ const generateItemShopData: () => Menu = () => ({
             title: "Bow Shop",
             getBody: generateSecondMenuGetBody("Buy bows"),
             subMenus: [
-                generateBuyOneItemMenu("Arrow", () => ({
+                generateBuyOneItemMenu({ local: "arrowName" }, () => ({
                     cost: { ironAmount: 0, goldAmount: 2, emeraldAmount: 0, diamondAmount: 0 },
                     item: ARROW_ITEM
                 }), () => "textures/items/arrow.png"),
-                generateBuyOneItemMenu("Bow", () => ({
+                generateBuyOneItemMenu({ local: "bowName" }, () => ({
                     cost: { ironAmount: 0, goldAmount: 12, emeraldAmount: 0, diamondAmount: 0 },
                     item: BOW_ITEM
                 }), () => "textures/items/bow_standby.png"),
-                generateBuyOneItemMenu("Bow Power I", () => ({
+                generateBuyOneItemMenu({ local: "bowPowerIName" }, () => ({
                     cost: { ironAmount: 0, goldAmount: 20, emeraldAmount: 0, diamondAmount: 0 },
                     item: BOW_POWERI_ITEM
                 }), () => "textures/items/bow_pulling_0.png"),
-                generateBuyOneItemMenu("Bow Power I,Punch I", () => ({
+                generateBuyOneItemMenu({ local: "bowPowerIPunchIName" }, () => ({
                     cost: { ironAmount: 0, goldAmount: 0, emeraldAmount: 6, diamondAmount: 0 },
                     item: BOW_POWERI_PUNCHI_ITEM
                 }), () => "textures/items/bow_pulling_1.png"),
@@ -547,31 +552,31 @@ const generateItemShopData: () => Menu = () => ({
                     cost: { ironAmount: 0, goldAmount: 4, emeraldAmount: 0, diamondAmount: 0 },
                     item: TNT_ITEM
                 }), () => "textures/blocks/tnt_side.png"),
-                generateBuyOneItemMenu("Golden Apple", () => ({
+                generateBuyOneItemMenu({ local: "goldenAppleName" }, () => ({
                     cost: { ironAmount: 0, goldAmount: 3, emeraldAmount: 0, diamondAmount: 0 },
                     item: GOLDEN_APPLE_ITEM
                 }), () => "textures/items/apple_golden.png"),
-                generateBuyOneItemMenu("Ender Pearl", () => ({
+                generateBuyOneItemMenu({ local: "enderPearlName" }, () => ({
                     cost: { ironAmount: 0, goldAmount: 0, emeraldAmount: 4, diamondAmount: 0 },
                     item: ENDER_PEARL_ITEM
                 }), () => "textures/items/ender_pearl.png"),
-                generateBuyOneItemMenu("Bridge Egg", () => ({
+                generateBuyOneItemMenu({ local: "bridgeEggName" }, () => ({
                     cost: { ironAmount: 0, goldAmount: 0, emeraldAmount: 1, diamondAmount: 0 },
                     item: BRIDGE_EGG_ITEM
                 }), () => "textures/items/egg.png"),
-                generateBuyOneItemMenu("Tracker", () => ({
+                generateBuyOneItemMenu({ local: "trackerName" }, () => ({
                     cost: { ironAmount: 0, goldAmount: 2, emeraldAmount: 0, diamondAmount: 0 },
                     item: TRACKER_ITEM
                 }), () => "textures/blocks/deadbush.png"),
-                generateBuyOneItemMenu("Loyal Wolf", () => ({
+                generateBuyOneItemMenu({ local: "loyalWolfName" }, () => ({
                     cost: { ironAmount: 0, goldAmount: 0, emeraldAmount: 4, diamondAmount: 0 },
                     item: LOYAL_WOLF_ITEM
                 }), () => "textures/items/spawn_egg.png"),
-                generateBuyOneItemMenu("Wolf Armor", () => ({
+                generateBuyOneItemMenu({ local: "wolfArmorName" }, () => ({
                     cost: { ironAmount: 0, goldAmount: 0, emeraldAmount: 2, diamondAmount: 0 },
                     item: WOLF_ARMOR_ITEM
                 }), () => "textures/items/wolf_armor.png"),
-                generateBuyOneItemMenu("Rescue Platform", () => ({
+                generateBuyOneItemMenu({ local: "rescuePlatformName" }, () => ({
                     cost: { ironAmount: 0, goldAmount: 0, emeraldAmount: 2, diamondAmount: 0 },
                     item: PLATFORM_ITEM
                 }), () => "textures/items/blaze_rod.png")
@@ -620,7 +625,7 @@ function generateTeamSecondGetDisplay(
         } else {
             color = "§4";
         }
-        return `${color}${name}\n${tokenToString(cost, playerInfo.player, game)}`;
+        return `${color}${name}\n${tokenToString(cost, strings[game.getPlayerLang(playerInfo.player)])}`;
     };
 }
 
@@ -816,14 +821,14 @@ function isTokenSatisfying(a: TokenValue, b: TokenValue) {
     return true;
 }
 
-function tokenToString(t: TokenValue, player: mc.Player, game: BedWarsGame) {
+function tokenToString(t: TokenValue, strs: BedWarsStrings) {
     let result = "";
     const {
         ironName,
         goldName,
         diamondName,
         emeraldName
-    } = strings[game.getPlayerLang(player)];
+    } = strs;
     if (t.ironAmount) {
         result += `${t.ironAmount}${ironName} `;
     }
@@ -957,7 +962,7 @@ async function showMenuForPlayer(menu: Menu, playerInfo: PlayerGameInformation, 
             subMenuDisplays.push(display);
             form.button(display, icon || undefined);
         }
-        if (hasParentMenu) form.button("Back");
+        if (hasParentMenu) form.button(strs.backButtonDisplay);
 
 
         const response = await form.show(playerInfo.player);
@@ -1050,7 +1055,7 @@ function performAction(action: Action, playerInfo: PlayerGameInformation, teamIn
         }
         consumeToken(container, action.cost);
         container.addItem(new mc.ItemStack(MinecraftItemTypes.Shears));
-        player.sendMessage(sprintf(purchaseMessage, "Shears"));
+        player.sendMessage(sprintf(purchaseMessage, strs.shearsName));
         playerInfo.hasShear = true;
         result = true;
     } else if (action.type == ActionType.BuyArmor) {
@@ -1069,7 +1074,7 @@ function performAction(action: Action, playerInfo: PlayerGameInformation, teamIn
         if (!playerInfo.armorDisabled) {
             game.resetArmor(playerInfo);
         }
-        player.sendMessage(sprintf(purchaseMessage, playerInfo.armorLevel.name));
+        player.sendMessage(sprintf(purchaseMessage, strs[playerInfo.armorLevel.name]));
         result = true;
     } else if (action.type == ActionType.UpgradePickaxe) {
         let toLevel: PickaxeLevel;
@@ -1106,7 +1111,7 @@ function performAction(action: Action, playerInfo: PlayerGameInformation, teamIn
         } else {
             container.addItem(toLevel.item);
         }
-        player.sendMessage(sprintf(purchaseMessage, toLevel.name));
+        player.sendMessage(sprintf(purchaseMessage, strs[toLevel.name]));
         playerInfo.pickaxeLevel = toLevel;
         result = true;
     } else if (action.type == ActionType.UpgradeAxe) {
