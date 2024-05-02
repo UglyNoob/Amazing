@@ -1469,7 +1469,7 @@ export class BedWarsGame {
                                     continue;
                                 }
                             }
-                        } else if (isTrackerItem(item) && playerInfo.trackingTarget) {
+                        } else if (isTrackerItem(item) && playerInfo.trackingTarget && mc.system.currentTick % 5 == 0) {
                             const distanceVec = v3.subtract(playerInfo.trackingTarget.player.location, player.location);
                             const viewDirection = player.getViewDirection();
                             const PI = Math.PI;

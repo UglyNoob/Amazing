@@ -114,7 +114,7 @@ strings[Lang.en_US] = {
     languageChangedMessage: "§7Your language have been switched to §6English.",
     trackerFailedToFindTargetMessage: "§cFailed to find any enemy to track!",
     trackerChangeTargetMessage: "§6Now tracking %s%s§6.",
-    trackerTrackingNotification: "§6TRACKING: %s%s §a%dm §6%s",
+    trackerTrackingNotification: "§6TRACKING %s%s §a%d blocks §6§l%s",
 
     redName: "red",
     blueName: "blue",
@@ -205,7 +205,7 @@ strings[Lang.zh_CN] = {
     languageChangedMessage: "§7你的语言已被设置为§6简体中文。",
     trackerFailedToFindTargetMessage: "§c没有可以追踪的敌人!",
     trackerChangeTargetMessage: "§6正在追踪 %s%s§6。",
-    trackerTrackingNotification: "§6追踪: %s%s §a%dm §6%s",
+    trackerTrackingNotification: "§6追踪 %s%s §a%d米 §6§l%s",
 
     redName: "红",
     blueName: "蓝",
