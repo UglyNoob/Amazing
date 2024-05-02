@@ -171,10 +171,11 @@ function generateBuyOneItemMenu(
                 color = "§4";
             }
             const strs = strings[game.getPlayerLang(playerInfo.player)];
+            const evaluatedName = evaluateString(name, strs)
             if (item.amount == 1) {
-                return `${color}${name}\n${tokenToString(cost, strs)}`;
+                return `${color}${evaluatedName}\n${tokenToString(cost, strs)}`;
             } else {
-                return `${color}${name} * ${item.amount}\n${tokenToString(cost, strs)}`;
+                return `${color}${evaluatedName} * ${item.amount}\n${tokenToString(cost, strs)}`;
             }
         },
         getAction(playerInfo) {
