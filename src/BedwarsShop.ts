@@ -207,8 +207,9 @@ function generateBuySwordMenu(toLevel: SwordLevel, cost: TokenValue): Menu {
     return {
         type: "action",
         getDisplay(playerInfo, currentTokens, _, game) {
+            const strs = strings[game.getPlayerLang(playerInfo.player)];
             if (playerInfo.swordLevel.level >= toLevel.level) {
-                return "§h" + toLevel.name;
+                return "§h" + strs[toLevel.name];
             }
             let color: string;
             if (isTokenSatisfying(currentTokens, cost)) {
@@ -216,7 +217,7 @@ function generateBuySwordMenu(toLevel: SwordLevel, cost: TokenValue): Menu {
             } else {
                 color = "§4";
             }
-            return `${color}${toLevel.name}\n${tokenToString(cost, strings[game.getPlayerLang(playerInfo.player)])}`;
+            return `${color}${strs[toLevel.name]}\n${tokenToString(cost, strs)}`;
         },
         icon: toLevel.icon,
         action: {
@@ -1041,7 +1042,7 @@ function performAction(action: Action, playerInfo: PlayerGameInformation, teamIn
         if (!foundSword) {
             container.addItem(action.toLevel.item);
         }
-        player.sendMessage(sprintf(purchaseMessage, action.toLevel.name));
+        player.sendMessage(sprintf(purchaseMessage, strs[action.toLevel.name]));
         playerInfo.swordLevel = action.toLevel;
         result = true;
     } else if (action.type == ActionType.BuyShear) {
@@ -1258,10 +1259,10 @@ function performAction(action: Action, playerInfo: PlayerGameInformation, teamIn
     }
 
     if (result) {
-        player.playSound("mob.endermen.portal");
-        // player.playSound("note.banjo");
+        player.playSound("note.pling");
     } else {
-        player.playSound("note.bass");
+        // player.playSound("note.bass");
+        player.playSound("mob.endermen.portal");
     }
 
     return result;

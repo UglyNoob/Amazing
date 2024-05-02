@@ -61,6 +61,11 @@ export interface BedWarsStrings {
     diamondPickaxeName: string;
     pickaxeMaxLevelString: string;
 
+    woodenSwordName: string;
+    stoneSwordName: string;
+    ironSwordName: string;
+    diamondSwordName: string;
+
     woolName: string;
     hardenedClayName: string;
     blastProofGlassName: string;
@@ -186,6 +191,11 @@ strings[Lang.en_US] = {
     goldenPickaxeName: "Golden Pickaxe",
     diamondPickaxeName: "Diamond Pickaxe",
     pickaxeMaxLevelString: "§hYour pickaxe is\nof the max level.",
+
+    woodenSwordName: "Wooden Sword",
+    stoneSwordName: "Stone Sword",
+    ironSwordName: "Iron Sword",
+    diamondSwordName: "Diamond Sword",
 
     woolName: "Wool",
     hardenedClayName: "Hardened Clay",
@@ -317,6 +327,11 @@ strings[Lang.zh_CN] = {
     goldenPickaxeName: "金稿",
     diamondPickaxeName: "钻石镐",
     pickaxeMaxLevelString: "§h你的稿子已达到最大等级。",
+
+    woodenSwordName: "木剑",
+    stoneSwordName: "石剑",
+    ironSwordName: "铁剑",
+    diamondSwordName: "钻剑",
 
     woolName: "羊毛",
     hardenedClayName: "硬化黏土",

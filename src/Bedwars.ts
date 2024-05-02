@@ -353,7 +353,7 @@ export interface MapInformation {
 
 export interface SwordLevel {
     level: number;
-    name: string;
+    name: keyof BedWarsStrings;
     icon: string;
     item: mc.ItemStack;
 }
@@ -368,22 +368,22 @@ export const SWORD_LEVELS: SwordLevel[] = (() => {
     return [
         {
             level: 0,
-            name: "Wooden Sword",
+            name: "woodenSwordName",
             icon: "textures/items/wood_sword.png",
             item: setupItem(MinecraftItemTypes.WoodenSword)
         }, {
             level: 1,
-            name: "Stone Sword",
+            name: "stoneSwordName",
             icon: "textures/items/stone_sword.png",
             item: setupItem(MinecraftItemTypes.StoneSword)
         }, {
             level: 2,
-            name: "Iron Sword",
+            name: "ironSwordName",
             icon: "textures/items/iron_sword.png",
             item: setupItem(MinecraftItemTypes.IronSword)
         }, {
             level: 3,
-            name: "Diamond Sword",
+            name: "diamondSwordName",
             icon: "textures/items/diamond_sword.png",
             item: setupItem(MinecraftItemTypes.DiamondSword)
         }
