@@ -114,11 +114,49 @@ export interface BedWarsStrings {
     healPoolBody: string;
 
     backButtonDisplay: string;
+    successString: string;
+    actionFailedString: string;
+
     itemShopBody: string;
     itemShopTitle: string;
-    blocksShopTitle: string;
-    blocksShopDisplay: string;
-    blocksShopBody: string;
+    blockShopTitle: string;
+    blockShopDisplay: string;
+    blockShopBody: string;
+    weaponShopTitle: string;
+    weaponShopDisplay: string;
+    weaponShopBody: string;
+    armorsShopTitle: string;
+    armorsShopDisplay: string;
+    armorsShopBody: string;
+    toolShopTitle: string;
+    toolShopDisplay: string;
+    toolShopBody: string;
+    potionShopTitle: string;
+    potionShopDisplay: string;
+    potionShopBody: string;
+    bowShopTitle: string;
+    bowShopDisplay: string;
+    bowShopBody: string;
+    utilityShopTitle: string;
+    utilityShopDisplay: string;
+    utilityShopBody: string;
+
+    teamShopTitle: string;
+    teamShopBody: string;
+    trapShopDisplay: string;
+    trapShopTitle: string;
+    trapShopBody: string;
+    trapReachingMaximumString: string;
+    trapsViewingMenuDisplay: string;
+    trapsViewingMenuTitle: string;
+    trapsViewingMenuBody0: string;
+    trapsViewingMenuBody1: string;
+    firstString: string;
+    secondString: string;
+    thirdString: string;
+    fourthString: string;
+    fifthString: string;
+    noTrapString: string;
 }
 
 // DO NOT CHANGE THE ORDER
@@ -258,42 +296,80 @@ strings[Lang.en_US] = {
     healPoolBody: "§7Create a regeneration field around your base!",
 
     backButtonDisplay: "Back",
+    successString: "§aSuccess!",
+    actionFailedString: "§cAction failed.",
+
     itemShopBody: "Buy items!",
     itemShopTitle: "Bedwars Item Shops",
-    blocksShopBody: "Buy blocks",
-    blocksShopDisplay: "Blocks",
-    blocksShopTitle: "Blocks Shop"
+    blockShopBody: "Buy blocks",
+    blockShopDisplay: "Blocks",
+    blockShopTitle: "Blocks Shop",
+    weaponShopTitle: "Weapon Shop",
+    weaponShopDisplay: "Weapons",
+    weaponShopBody: "Buy weapons.",
+    armorsShopTitle: "Armors Shop",
+    armorsShopDisplay: "Armors",
+    armorsShopBody: "Buy armors.",
+    toolShopTitle: "Tool shop",
+    toolShopDisplay: "Tools",
+    toolShopBody: "Buy tools.",
+    potionShopTitle: "Potion Shop",
+    potionShopDisplay: "Potions",
+    potionShopBody: "Buy potions.",
+    bowShopTitle: "Bow Shop",
+    bowShopDisplay: "Bows",
+    bowShopBody: "Buy bows.",
+    utilityShopTitle: "Utility Shop",
+    utilityShopDisplay: "Utilities",
+    utilityShopBody: "Buy utilities.",
+
+    teamShopTitle: "Team Upgrade",
+    teamShopBody: "Upgrade for the team.",
+    trapShopDisplay: "Traps",
+    trapShopTitle: "Trap Shop",
+    trapShopBody: "Buy some traps for your team.",
+    trapReachingMaximumString: "Your team's traps reach the maximum.",
+    trapsViewingMenuDisplay: "View Your Traps",
+    trapsViewingMenuTitle: "Your Traps",
+    trapsViewingMenuBody0: "§7Your team currently has:\n\n",
+    trapsViewingMenuBody1: "§7Trap #%d: §a%s§7, activates when the %s enemy walks into your base\n",
+    firstString: "first",
+    secondString: "second",
+    thirdString: "third",
+    fourthString: "fourth",
+    fifthString: "fifth",
+    noTrapString: "§cNo Trap"
 };
 
 strings[Lang.zh_CN] = {
-    deathTitle: "§c你死了!",
-    deathSubtitle: "§e你将在 §c%d §e秒后重生!",
-    spectateTitle: "§c你已进入观察者模式!",
+    deathTitle: "§c你死了！",
+    deathSubtitle: "§e你将在 §c%d §e秒后重生！",
+    spectateTitle: "§c你已进入观察者模式！",
     spectateSubtitle: "你的床已被摧毁",
-    respawnTitle: "§a你已重生!",
-    respawnMessage: "§e你已重生!",
-    bedDestroyedTitle: "§c床被摧毁!",
-    victoryTitle: "§6§l胜利!",
-    bedDestroyedSubtitle: "你将无法重生!",
-    teamBedDestroyedMessage: "\n§l床被摧毁 > §r%s%s的床 §7被 %s%s§7 摧毁!\n ",
-    teamEliminationMessage: "\n§l队伍淘汰 > §r%s%s §c已被淘汰!\n ",
-    finalKillMessage: "%(victimColor)s%(victim)s §7被 %(killerColor)s%(killer)s§7 击杀。 §b§l最终击杀!",
+    respawnTitle: "§a你已重生！",
+    respawnMessage: "§e你已重生！",
+    bedDestroyedTitle: "§c床被摧毁！",
+    victoryTitle: "§6§l胜利！",
+    bedDestroyedSubtitle: "你将无法重生！",
+    teamBedDestroyedMessage: "\n§l床被摧毁 > §r%s%s的床 §7被 %s%s§7 摧毁！\n ",
+    teamEliminationMessage: "\n§l队伍淘汰 > §r%s%s §c已被淘汰！\n ",
+    finalKillMessage: "%(victimColor)s%(victim)s §7被 %(killerColor)s%(killer)s§7 击杀。 §b§l最终击杀！",
     breakingBlockInvalidMessage: "§c你不能破坏非玩家放置的方块。",
     killNotification: "§c击杀: %s%s",
     finalKillNotification: "§c最终击杀: %s%s",
     disconnectedMessage: "%s%s §7断开了连接。",
     reconnectionMessage: "%s%s §e重新连接。",
-    placingBlockIllagelMessage: "§c你不能在这里放置方块!",
-    gameEndedMessage: "\n§l游戏结束 > §r%s%s §7胜利!\n",
+    placingBlockIllagelMessage: "§c你不能在这里放置方块！",
+    gameEndedMessage: "\n§l游戏结束 > §r%s%s §7胜利！\n",
     openEnemyChestMessage: "§c你不能打开敌队的箱子。",
     teamPurchaseMessage: "%s%s §a购买了 §6%s",
     purchaseMessage: "§a你购买了 §6%s",
-    trapActivatedTitle: "§c陷阱触发!",
-    alarmTrapSubtitle: "%s%s §7进入了你的基地!",
-    trapActivatedMessage: "§7%s §c被激活了!",
-    activatingTrapWarning: "§7你激活了 §e%s!",
+    trapActivatedTitle: "§c陷阱触发！",
+    alarmTrapSubtitle: "%s%s §7进入了你的基地！",
+    trapActivatedMessage: "§7%s §c被激活了！",
+    activatingTrapWarning: "§7你激活了 §e%s！",
     languageChangedMessage: "§7你的语言已被设置为§6简体中文。",
-    trackerFailedToFindTargetMessage: "§c没有可以追踪的敌人!",
+    trackerFailedToFindTargetMessage: "§c没有可以追踪的敌人！",
     trackerChangeTargetMessage: "§6正在追踪 %s%s§6。",
     trackerTrackingNotification: "§6追踪 %s%s §a%d米 §6§l%s",
 
@@ -360,7 +436,7 @@ strings[Lang.zh_CN] = {
     wolfArmorName: "狼甲",
     rescuePlatformName: "救援平台",
 
-    negativeEffectTrapName: "这是一个陷阱!",
+    negativeEffectTrapName: "这是一个陷阱！",
     negativeEffectTrapDescription: "§7给敌人8秒的失明与缓慢。",
     defensiveTrapName: "反攻陷阱",
     defensiveTrapDescription: "§7给予基地的队友15秒的速度II与跳跃提升II。",
@@ -371,15 +447,15 @@ strings[Lang.zh_CN] = {
 
     sharpenedSwordName: "锋利",
     reinforcedArmorName: "加强盔甲",
-    sharpenedSwordBody: "§7你的队伍永久获得在剑上获得锋利I!",
+    sharpenedSwordBody: "§7你的队伍永久获得在剑上获得锋利I！",
     reinforcedArmorBody: `§7你的队伍永久在所有盔甲上获得保护
 
 §7第1等级: 保护 I, §b需2个钻石
 §7第2等级: 保护 II, §b需4个钻石
 §7第3等级: 保护 III, §b需8个钻石
 §7第4等级: 保护 IV, §b需16个钻石`,
-    ironForgeName: "铁熔炉",
-    ironForgeBody: `§7升级队伍岛屿的资源。
+    ironForgeName: "铁锻炉",
+    ironForgeBody: `§7升级队伍岛屿的资源
 
 §7第1等级: +50%% 资源, §b需2个钻石
 §7第2等级: +100%% 资源, §b需4个钻石
@@ -394,9 +470,47 @@ strings[Lang.zh_CN] = {
     healPoolBody: "§7在基地周围给予你的队伍生命恢复效果",
 
     backButtonDisplay: "返回",
-    itemShopBody: "买点物品!",
+    successString: "§a成功！",
+    actionFailedString: "§c购买失败。",
+
+    itemShopBody: "购买物品。",
     itemShopTitle: "起床战争物品商店",
-    blocksShopBody: "买一些方块！",
-    blocksShopDisplay: "方块",
-    blocksShopTitle: "方块商店"
+    blockShopBody: "买一些方块！",
+    blockShopDisplay: "方块",
+    blockShopTitle: "方块商店",
+    weaponShopTitle: "武器商店",
+    weaponShopDisplay: "武器",
+    weaponShopBody: "购买武器。",
+    armorsShopTitle: "护甲商店",
+    armorsShopDisplay: "护甲",
+    armorsShopBody: "购买护甲。",
+    toolShopTitle: "工具商店",
+    toolShopDisplay: "工具",
+    toolShopBody: "购买工具。",
+    potionShopTitle: "药水商店",
+    potionShopDisplay: "药水",
+    potionShopBody: "购买药水。",
+    bowShopTitle: "弓商店",
+    bowShopDisplay: "弓",
+    bowShopBody: "购买弓与箭。",
+    utilityShopTitle: "杂货商店",
+    utilityShopDisplay: "杂项",
+    utilityShopBody: "购买其他物品。",
+
+    teamShopTitle: "队伍升级",
+    teamShopBody: "为你的队伍升级。",
+    trapShopDisplay: "陷阱",
+    trapShopTitle: "陷阱商店",
+    trapShopBody: "购买陷阱。",
+    trapReachingMaximumString: "你的队伍的陷阱已达到上限。",
+    trapsViewingMenuDisplay: "查看已购买的陷阱",
+    trapsViewingMenuTitle: "队伍陷阱",
+    trapsViewingMenuBody0: "§7你的队伍当前有：\n\n",
+    trapsViewingMenuBody1: "§7陷阱 #%d： §a%s§7，当%s敌人进入你的基地时激活\n",
+    firstString: "第一个",
+    secondString: "第二个",
+    thirdString: "第三个",
+    fourthString: "第四个",
+    fifthString: "第五个",
+    noTrapString: "§c无",
 };

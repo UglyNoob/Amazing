@@ -190,15 +190,15 @@ function generateBuyOneItemMenu(
     };
 }
 
-function generateSecondMenuGetBody(defaultText: string) {
+function generateSecondMenuGetBody(defaultText: string | LocalString) {
     return (playerInfo: PlayerGameInformation) => {
         if (playerInfo.lastActionSucceed == null) {
             return defaultText;
         } else {
             if (playerInfo.lastActionSucceed) {
-                return "Success!";
+                return { local: "successString" } as LocalString;
             } else {
-                return "Failed to perform action.";
+                return { local: "actionFailedString" } as LocalString;
             }
         }
     };
@@ -323,10 +323,10 @@ const generateItemShopData: () => Menu = () => ({
     subMenus: [
         {
             type: "entry",
-            display: { local: "blocksShopDisplay" },
+            display: { local: "blockShopDisplay" },
             icon: "textures/blocks/wool_colored_white.png",
-            title: { local: "blocksShopTitle" },
-            getBody: generateSecondMenuGetBody("Buy blocks"),
+            title: { local: "blockShopTitle" },
+            getBody: generateSecondMenuGetBody({ local: "blockShopBody" }),
             subMenus: [
                 generateBuyOneItemMenu({ local: "woolName" }, playerInfo => ({
                     cost: { ironAmount: 4, goldAmount: 0, emeraldAmount: 0, diamondAmount: 0 },
@@ -359,10 +359,10 @@ const generateItemShopData: () => Menu = () => ({
             ]
         }, {
             type: "entry",
-            display: "Weapons",
+            display: { local: "weaponShopDisplay" },
             icon: "textures/items/iron_sword.png",
-            title: "Weapon Shop",
-            getBody: generateSecondMenuGetBody("Buy weapons"),
+            title: { local: "weaponShopTitle" },
+            getBody: generateSecondMenuGetBody({ local: "weaponShopBody" }),
             subMenus: [
                 generateBuySwordMenu(SWORD_LEVELS[1], { ironAmount: 10, goldAmount: 0, diamondAmount: 0, emeraldAmount: 0 }),
                 generateBuySwordMenu(SWORD_LEVELS[2], { ironAmount: 0, goldAmount: 7, diamondAmount: 0, emeraldAmount: 0 }),
@@ -382,10 +382,10 @@ const generateItemShopData: () => Menu = () => ({
             ]
         }, {
             type: "entry",
-            display: "Armors",
+            display: { local: "armorsShopDisplay" },
             icon: "textures/items/iron_boots.png",
-            title: "Armor Shop",
-            getBody: generateSecondMenuGetBody("Buy armors"),
+            title: { local: "armorsShopTitle" },
+            getBody: generateSecondMenuGetBody({ local: "armorsShopBody" }),
             subMenus: [
                 generateBuyArmorMenu(ARMOR_LEVELS[1], { ironAmount: 30, goldAmount: 0, diamondAmount: 0, emeraldAmount: 0 }),
                 generateBuyArmorMenu(ARMOR_LEVELS[2], { ironAmount: 0, goldAmount: 12, diamondAmount: 0, emeraldAmount: 0 }),
@@ -393,10 +393,10 @@ const generateItemShopData: () => Menu = () => ({
             ]
         }, {
             type: "entry",
-            display: "Tools",
+            display: { local: "toolShopDisplay" },
             icon: "textures/items/stone_pickaxe.png",
-            title: "Tool Shop",
-            getBody: generateSecondMenuGetBody("Buy tools"),
+            title: { local: "toolShopTitle" },
+            getBody: generateSecondMenuGetBody({ local: "toolShopBody" }),
             subMenus: [
                 {
                     type: "action",
@@ -501,10 +501,10 @@ const generateItemShopData: () => Menu = () => ({
             ]
         }, {
             type: "entry",
-            display: "Potions",
+            display: { local: "potionShopDisplay" },
             icon: "textures/items/potion_bottle_invisibility.png",
-            title: "Potion Shop",
-            getBody: generateSecondMenuGetBody("Buy potions"),
+            title: { local: "potionShopTitle" },
+            getBody: generateSecondMenuGetBody({ local: "potionShopBody" }),
             subMenus: [
                 generateBuyOneItemMenu({ local: "invisiblePotionName" }, () => ({
                     cost: { ironAmount: 0, goldAmount: 0, emeraldAmount: 2, diamondAmount: 0 },
@@ -521,10 +521,10 @@ const generateItemShopData: () => Menu = () => ({
             ]
         }, {
             type: "entry",
-            display: "Bows",
+            display: { local: "bowShopDisplay" },
             icon: "textures/items/bow_pulling_2.png",
-            title: "Bow Shop",
-            getBody: generateSecondMenuGetBody("Buy bows"),
+            title: { local: "bowShopTitle" },
+            getBody: generateSecondMenuGetBody({ local: "bowShopBody" }),
             subMenus: [
                 generateBuyOneItemMenu({ local: "arrowName" }, () => ({
                     cost: { ironAmount: 0, goldAmount: 2, emeraldAmount: 0, diamondAmount: 0 },
@@ -545,10 +545,10 @@ const generateItemShopData: () => Menu = () => ({
             ]
         }, {
             type: "entry",
-            display: "Utilities",
+            display: { local: "utilityShopDisplay" },
             icon: "textures/blocks/tnt_side.png",
-            title: "Utility Shop",
-            getBody: generateSecondMenuGetBody("Fancy utilities!"),
+            title: { local: "utilityShopTitle" },
+            getBody: generateSecondMenuGetBody({ local: "utilityShopBody" }),
             subMenus: [
                 generateBuyOneItemMenu("TNT", () => ({
                     cost: { ironAmount: 0, goldAmount: 4, emeraldAmount: 0, diamondAmount: 0 },
@@ -663,16 +663,22 @@ const generateTeamShopData: () => Menu = () => ({
     type: "entry",
     display: "",
     icon: "",
-    title: "Team Upgrade",
-    body: "Team Upgrade",
+    title: { local: "teamShopTitle" },
+    body: { local: "teamShopBody" },
     subMenus: [
         {
             type: "entry",
-            display: "Traps",
+            display: { local: "trapShopDisplay" },
             icon: TRAP_CONSTANTS[TrapType.NegativeEffect].iconPath,
-            getBody: (_, __, teamInfo) => `Buy some traps for your team!${teamInfo.traps.length == MAX_TRAP_COUNT ?
-                "\nYour team's traps have reached the maximum!" : ""}`,
-            title: "Traps Shop",
+            getBody: ({ player }, __, teamInfo, game) => {
+                const strs = strings[game.getPlayerLang(player)];
+                let result = strs.trapShopBody;
+                if (teamInfo.traps.length == MAX_TRAP_COUNT) {
+                    result += `\n${strs.trapReachingMaximumString}`;
+                }
+                return result;
+            },
+            title: { local: "trapShopTitle" },
             subMenus: [
                 generateTrapMenu(TrapType.NegativeEffect),
                 generateTrapMenu(TrapType.Defensive),
@@ -680,19 +686,25 @@ const generateTeamShopData: () => Menu = () => ({
                 generateTrapMenu(TrapType.MinerFatigue),
                 {
                     type: "entry",
-                    display: "Your Traps",
+                    display: { local: "trapsViewingMenuDisplay" },
                     icon: "",
                     getBody({ player }, __, teamInfo, game) {
-                        let result = "§7Your team currently has:\n\n";
-                        const words = ["first", "second", "third"];
                         const strs = strings[game.getPlayerLang(player)];
+                        let result = strs.trapsViewingMenuBody0;
+                        const words = [
+                            strs.firstString,
+                            strs.secondString,
+                            strs.thirdString,
+                            strs.fourthString,
+                            strs.fifthString
+                        ];
                         for (let index = 0; index < MAX_TRAP_COUNT; ++index) {
-                            const trapName = TRAP_CONSTANTS[teamInfo.traps[index]]?.name ?? "§cNo Trap";
-                            result += `§7Trap #${index + 1}: §a${strs[trapName]}§7, activates when the ${words[index]} enemy walks into your base\n`;
+                            const trapName = strs[TRAP_CONSTANTS[teamInfo.traps[index]]?.name] ?? strs.noTrapString;
+                            result += sprintf(strs.trapsViewingMenuBody1, index + 1, trapName, words[index]);
                         }
                         return result;
                     },
-                    title: "Your Traps",
+                    title: { local: "trapsViewingMenuTitle" },
                     subMenus: []
                 }
             ]

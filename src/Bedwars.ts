@@ -1730,14 +1730,14 @@ export class BedWarsGame {
             }
 
             if (!fakePlayer.attackTarget) continue;
-            if (!fakePlayer.previousOnGround && fakePlayer.isOnGround || mc.system.currentTick % randomInt(10, 20) == 0) {
-                const location = Object.assign({}, fakePlayer.attackTarget.player.getHeadLocation());
-                fakePlayer.lookAtLocation(test.relativeLocation(location));
+            if (!fakePlayer.previousOnGround && fakePlayer.isOnGround || mc.system.currentTick % randomInt(7, 10) == 0) {
                 fakePlayer.navigateToEntity(fakePlayer.attackTarget.player);
             }
             if (v3.distance(fakePlayer.location, fakePlayer.attackTarget.player.location) < 2.95) {
-                fakePlayer.stopMoving();
-                if (mc.system.currentTick % randomInt(4, 6) == 0) {
+                if (mc.system.currentTick % randomInt(2, 3) == 0) {
+                    fakePlayer.stopMoving();
+                    const location = Object.assign({}, fakePlayer.attackTarget.player.getHeadLocation());
+                    fakePlayer.lookAtLocation(test.relativeLocation(location));
                     fakePlayer.attack();
                 }
             }
