@@ -2480,6 +2480,7 @@ mc.world.beforeEvents.chatSend.subscribe(async event => {
         minimalPlayer = Number(settingResponse.formValues![0]);
         if(minimalPlayer < 0 || !Number.isInteger(minimalPlayer)) {
             event.sender.sendMessage(`§c"${settingResponse.formValues![0]}" is not a valid number, or a valid player count.`);
+            return;
         }
     } else if (event.message == "SPECIAL CODE") {
         await sleep(0);
