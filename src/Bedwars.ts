@@ -1912,7 +1912,7 @@ export class BedWarsGame {
             victim.applyKnockback(x, z, 0.7, 0.3);
         }
         if (victim instanceof SimulatedPlayer) {
-            if (!victim.attackTarget) {
+            if (!victim.attackTarget && victimInfo.team != hurterInfo.team) {
                 victim.attackTarget = hurterInfo;
             }
         }
@@ -2443,9 +2443,12 @@ mc.world.beforeEvents.chatSend.subscribe(async event => {
     }
     let map: MapInformation;
     let originLocation: mc.Vector3;
+    let minimalPlayer: number;
     const maps: [MapInformation, mc.Vector3][] = [];
     if (event.message == "start") {
         if (!event.sender.isOp()) return;
+        await sleep(0);
+
         const form = new ActionFormData();
         form.body("Choose the map you are in.");
         form.button("Garden");
@@ -2458,10 +2461,9 @@ mc.world.beforeEvents.chatSend.subscribe(async event => {
         maps.push([mapEastwood, { x: 0, y: 0, z: 0 }]);
         form.button("Varyth(voidless)");
         maps.push([mapVaryth, { x: 0, y: 0, z: 0 }]);
-        let response: ActionFormResponse;
-        await sleep(0);
 
         event.sender.sendMessage("Please close the chat menu to see the bedwars wizard.");
+        let response: ActionFormResponse;
         while (true) {
             response = await form.show(event.sender);
             if (response.cancelationReason != FormCancelationReason.UserBusy) break;
@@ -2469,6 +2471,16 @@ mc.world.beforeEvents.chatSend.subscribe(async event => {
         }
         if (response.canceled) return;
         [map, originLocation] = maps[response.selection!];
+        
+        const settingForm = new ModalFormData();
+        settingForm.textField("Minimal players of each team:", "Players count...", "1");
+        const settingResponse = await settingForm.show(event.sender);
+        if(settingResponse.canceled) return;
+
+        minimalPlayer = Number(settingResponse.formValues![0]);
+        if(minimalPlayer < 0 || !Number.isInteger(minimalPlayer)) {
+            event.sender.sendMessage(`§c"${settingResponse.formValues![0]}" is not a valid number, or a valid player count.`);
+        }
     } else if (event.message == "SPECIAL CODE") {
         await sleep(0);
         const container = event.sender.getComponent("inventory")!.container!;
@@ -2518,7 +2530,7 @@ mc.world.beforeEvents.chatSend.subscribe(async event => {
         ++teamPlayerCount[teamIndex];
         teamIndex = switchTeam(teamIndex);
     }
-    const maxPlayer = Math.max(1, ...teamPlayerCount);
+    const maxPlayer = Math.max(minimalPlayer, ...teamPlayerCount);
     for (teamIndex = 0; teamIndex < teams.length; ++teamIndex) {
         for (let i = 0; i < maxPlayer - teamPlayerCount[teamIndex]; ++i) {
             const p = globalThis.test.spawnSimulatedPlayer(event.sender.location as any, "a");

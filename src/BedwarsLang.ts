@@ -427,7 +427,7 @@ strings[Lang.zh_CN] = {
     arrowName: "箭",
     bowName: "弓",
     bowPowerIName: "弓 力量I",
-    bowPowerIPunchIName: "弓 力量I,冲击I",
+    bowPowerIPunchIName: "弓 力量I，冲击I",
     goldenAppleName: "金苹果",
     enderPearlName: "末影珍珠",
     bridgeEggName: "搭桥蛋",
@@ -450,22 +450,22 @@ strings[Lang.zh_CN] = {
     sharpenedSwordBody: "§7你的队伍永久获得在剑上获得锋利I！",
     reinforcedArmorBody: `§7你的队伍永久在所有盔甲上获得保护
 
-§7第1等级: 保护 I, §b需2个钻石
-§7第2等级: 保护 II, §b需4个钻石
-§7第3等级: 保护 III, §b需8个钻石
-§7第4等级: 保护 IV, §b需16个钻石`,
+§7第1等级： 保护 I， §b需2个钻石
+§7第2等级： 保护 II， §b需4个钻石
+§7第3等级： 保护 III， §b需8个钻石
+§7第4等级： 保护 IV， §b需16个钻石`,
     ironForgeName: "铁锻炉",
     ironForgeBody: `§7升级队伍岛屿的资源
 
-§7第1等级: +50%% 资源, §b需2个钻石
-§7第2等级: +100%% 资源, §b需4个钻石
-§7第3等级: 产生绿宝石, §b需6个钻石
-§7第4等级: +200%% 资源, §b需8个钻石`,
+§7第1等级： +50%% 资源， §b需2个钻石
+§7第2等级： +100%% 资源， §b需4个钻石
+§7第3等级： 产生绿宝石， §b需6个钻石
+§7第4等级： +200%% 资源， §b需8个钻石`,
     maniacMinerName: "疯狂矿工",
     maniacMinerBody: `§7你的队伍获得永久急迫
 
-§7第1等级: 急迫 I, §b需2个钻石
-§7第2等级: 急迫 II, §b需4个钻石`,
+§7第1等级： 急迫 I， §b需2个钻石
+§7第2等级： 急迫 II， §b需4个钻石`,
     healPoolName: "治疗池",
     healPoolBody: "§7在基地周围给予你的队伍生命恢复效果",
 
