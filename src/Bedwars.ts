@@ -139,10 +139,12 @@ const SETTINGS_ITEM = (() => {
 function isSettingsItem(item: mc.ItemStack) {
     return SETTINGS_ITEM.getLore()[1] == item.getLore()[1];
 }
+const OWNER_SYM = Symbol("owner of tamed entity");
 
 declare module '@minecraft/server' {
     interface Entity {
         [BRIDGE_EGG_OWNER_SYMBOL]?: PlayerGameInformation;
+        [OWNER_SYM]?: PlayerGameInformation;
     }
 }
 declare module '@minecraft/server-gametest' {
@@ -253,7 +255,7 @@ export const TEAM_CONSTANTS: Record<TeamType, {
     TEAM_CONSTANTS[TeamType.Yellow] = {
         name: "yellow",
         localName: "yellowName",
-        colorPrefix: "§g",
+        colorPrefix: "§e",
         woolName: MinecraftItemTypes.YellowWool,
         woolIconPath: "textures/blocks/wool_colored_yellow.png",
         glassName: MinecraftBlockTypes.YellowStainedGlass,
@@ -799,7 +801,7 @@ export class BedWarsGame {
     }
 
     setPlayer(player: mc.Player, teamType: TeamType) {
-        if (this.map.teams.find(t => t.type == teamType) == undefined) throw new Error(`No such team(${TEAM_CONSTANTS[teamType].name}).`);
+        if (this.map.teams.find(t => t.type == teamType) == undefined) throw new Error(`No such team(${ TEAM_CONSTANTS[teamType].name }).`);
 
         const playerInfo = this.players.get(player.name);
         if (playerInfo) {
@@ -855,7 +857,7 @@ export class BedWarsGame {
                 if (teamChestContainer) {
                     teamChestContainer.clearAll();
                 } else {
-                    throw new Error(`Team chest of team ${TEAM_CONSTANTS[teamType].name} does not exist at ${v3.toString(teamChestLocation)}`);
+                    throw new Error(`Team chest of team ${ TEAM_CONSTANTS[teamType].name } does not exist at ${ v3.toString(teamChestLocation) }`);
                 }
             }
 
@@ -920,7 +922,7 @@ export class BedWarsGame {
         for (const [teamType, { state }] of this.teams) {
             ++index;
             const t = TEAM_CONSTANTS[teamType];
-            let result = `${t.colorPrefix}${t.name.charAt(0).toUpperCase()} §r${capitalize(t.name)}: `;
+            let result = `${ t.colorPrefix }${ t.name.charAt(0).toUpperCase() } §r${ capitalize(t.name) }: `;
             switch (state) {
                 case TeamState.BedAlive:
                     // result += "§a✔";
@@ -936,7 +938,7 @@ export class BedWarsGame {
                         if (playerInfo.team != teamType) continue;
                         if (this.isPlayerPlaying(playerInfo)) ++aliveCount;
                     }
-                    result += `§a${aliveCount}`;
+                    result += `§a${ aliveCount }`;
             }
             this.scoreObj.setScore(result, index);
         }
@@ -948,7 +950,7 @@ export class BedWarsGame {
         if (secondsStr.length == 1) secondsStr = "0" + secondsStr;
         let minutesStr = minutes.toString();
         if (minutesStr.length == 1) minutesStr = "0" + minutesStr;
-        this.scoreObj.setScore(`§a${minutesStr}:${secondsStr}`, index);
+        this.scoreObj.setScore(`§a${ minutesStr }:${ secondsStr }`, index);
     }
 
     private respawnPlayer(playerInfo: PlayerGameInformation) {
@@ -1435,6 +1437,9 @@ export class BedWarsGame {
                     continue;
                 }
                 // player.onScreenDisplay.setActionBar(String(TEAM_CONSTANTS[playerInfo.teamAreaEntered!]?.name)); // DEBUG
+                if (mc.system.currentTick % 20 == 0) {
+                    this.resetNameTag(playerInfo);
+                }
                 const equipment = player.getComponent("equippable")!;
                 for (const slotName of [mc.EquipmentSlot.Head, mc.EquipmentSlot.Chest, mc.EquipmentSlot.Legs, mc.EquipmentSlot.Feet, mc.EquipmentSlot.Mainhand]) {
                     const item = equipment.getEquipment(slotName);
@@ -1569,10 +1574,10 @@ export class BedWarsGame {
                 for (const loc of gen.indicatorLocations) {
                     const sign = this.dimension.getBlock(loc)?.getComponent("sign");
                     if (!sign) {
-                        throw new Error(`Generator indicator does not exist at ${v3.toString(loc)}.`);
+                        throw new Error(`Generator indicator does not exist at ${ v3.toString(loc) }.`);
                     }
                     sign.setWaxed(true);
-                    [mc.SignSide.Front, mc.SignSide.Back].forEach(signSide => sign.setText(`§eSpawns in §c${gen.remainingCooldown / 20} §eseconds`, signSide));
+                    [mc.SignSide.Front, mc.SignSide.Back].forEach(signSide => sign.setText(`§eSpawns in §c${ gen.remainingCooldown / 20 } §eseconds`, signSide));
                 }
             }
             if (gen.remainingCooldown > 0) {
@@ -1875,6 +1880,9 @@ export class BedWarsGame {
         if (event.damageSource.cause == mc.EntityDamageCause.entityAttack &&
             event.damageSource.damagingEntity instanceof mc.Player) {
             killerInfo = this.players.get(event.damageSource.damagingEntity.name);
+            if (killerInfo && killerInfo.team == victimInfo.team) {
+                killerInfo = undefined;
+            }
         } else if (victimInfo.lastHurtBy) {
             killerInfo = victimInfo.lastHurtBy;
         }
@@ -1883,27 +1891,45 @@ export class BedWarsGame {
 
     private resetNameTag(playerInfo: PlayerGameInformation) {
         const health = playerInfo.player.getComponent("health")!.currentValue.toFixed(0);
-        playerInfo.player.nameTag = `${TEAM_CONSTANTS[playerInfo.team].colorPrefix}${playerInfo.name}\n§c§l♡ ${health}`;
+        playerInfo.player.nameTag = `${ TEAM_CONSTANTS[playerInfo.team].colorPrefix }${ playerInfo.name }\n§c§l♡ ${ health }`;
     }
 
     afterEntityHurt(event: mc.EntityHurtAfterEvent) {
         if (this.state != GameState.started) return;
 
-        if (!(event.hurtEntity instanceof mc.Player)) return;
-        if (!(event.damageSource.damagingEntity instanceof mc.Player)) return;
         const victim = event.hurtEntity;
-        const hurter = event.damageSource.damagingEntity;
+        if (!(victim instanceof mc.Player)) return;
         const victimInfo = this.players.get(victim.name);
-        const hurterInfo = this.players.get(hurter.name);
         if (!victimInfo) return;
         this.resetNameTag(victimInfo);
+
+        const hurter = event.damageSource.damagingEntity;
+        if (!hurter) return;
+        if (!(hurter instanceof mc.Player)) {
+            if (hurter[OWNER_SYM]) { // the hurter is a tamed entity
+                const ownerInfo = hurter[OWNER_SYM];
+                if (ownerInfo.team == victimInfo.team) {
+                    // workaround for disabling in-team damage
+                    const health = victim.getComponent("health")!;
+                    health.setCurrentValue(health.currentValue + event.damage);
+                } else {
+                    victimInfo.lastHurtBy = hurter[OWNER_SYM];
+                }
+            } else {
+                victimInfo.lastHurtBy = undefined;
+            }
+            return;
+        }
+        const hurterInfo = this.players.get(hurter.name);
         if (!hurterInfo) return;
+
         if (victimInfo.team == hurterInfo.team) {
             // workaround for disabling in-team damage
             const health = victim.getComponent("health")!;
             health.setCurrentValue(health.currentValue + event.damage);
             return;
         }
+        victimInfo.lastHurtBy = hurterInfo;
 
         const attackingItem = hurter.getComponent("equippable")!.getEquipment(mc.EquipmentSlot.Mainhand);
         if (attackingItem && isKnockBackStickItem(attackingItem)) {
@@ -1918,15 +1944,17 @@ export class BedWarsGame {
         }
     }
     afterEntityHitEntity(event: mc.EntityHitEntityAfterEvent) {
-        if (this.state != GameState.started) return;
+        /*if (this.state != GameState.started) return;
+        const hurter = event.damagingEntity;
+        const victim = event.hitEntity;
         let victimInfo: PlayerGameInformation | undefined;
         let hurterInfo: PlayerGameInformation | undefined;
 
-        if (event.hitEntity instanceof mc.Player) {
-            victimInfo = this.players.get(event.hitEntity.name);
+        if (victim instanceof mc.Player) {
+            victimInfo = this.players.get(victim.name);
         }
-        if (event.damagingEntity instanceof mc.Player) {
-            hurterInfo = this.players.get(event.damagingEntity.name);
+        if (hurter instanceof mc.Player) {
+            hurterInfo = this.players.get(hurter.name);
         }
 
         if (victimInfo) {
@@ -1935,9 +1963,7 @@ export class BedWarsGame {
                     // TOWAIT TODO
                     return;
                 }
-                victimInfo.lastHurtBy = hurterInfo;
             } else {
-                victimInfo.lastHurtBy = undefined;
             }
         }
         if (hurterInfo) {
@@ -1946,6 +1972,7 @@ export class BedWarsGame {
                 this.resetArmor(hurterInfo);
             }
         }
+        */
     }
     afterProjectileHitEntity(event: mc.ProjectileHitEntityAfterEvent) {
         if (event.dimension != this.dimension) return;
@@ -2325,6 +2352,7 @@ export class BedWarsGame {
             const wolf = this.dimension.spawnEntity(MinecraftEntityTypes.Wolf, playerInfo.player.location);
             // tame() method would make the wolf tamed to the nearest player
             wolf.getComponent("tameable")!.tame();
+            wolf[OWNER_SYM] = playerInfo;
             // wolf.teleport(wolfLocation);
             consumeMainHandItem(playerInfo.player);
         } else if (isTrackerItem(event.itemStack)) {
@@ -2370,7 +2398,7 @@ export class BedWarsGame {
         if (!senderInfo) return;
 
         event.cancel = true;
-        mc.world.sendMessage(`<${TEAM_CONSTANTS[senderInfo.team].colorPrefix}${sender.name}§r> ${event.message}`);
+        mc.world.sendMessage(`<${ TEAM_CONSTANTS[senderInfo.team].colorPrefix }${ sender.name }§r> ${ event.message }`);
     }
 };
 
@@ -2471,15 +2499,15 @@ mc.world.beforeEvents.chatSend.subscribe(async event => {
         }
         if (response.canceled) return;
         [map, originLocation] = maps[response.selection!];
-        
+
         const settingForm = new ModalFormData();
         settingForm.textField("Minimal players of each team:", "Players count...", "1");
         const settingResponse = await settingForm.show(event.sender);
-        if(settingResponse.canceled) return;
+        if (settingResponse.canceled) return;
 
         minimalPlayer = Number(settingResponse.formValues![0]);
-        if(minimalPlayer < 0 || !Number.isInteger(minimalPlayer)) {
-            event.sender.sendMessage(`§c"${settingResponse.formValues![0]}" is not a valid number, or a valid player count.`);
+        if (minimalPlayer < 0 || !Number.isInteger(minimalPlayer)) {
+            event.sender.sendMessage(`§c"${ settingResponse.formValues![0] }" is not a valid number, or a valid player count.`);
             return;
         }
     } else if (event.message == "SPECIAL CODE") {
