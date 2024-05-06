@@ -1891,7 +1891,7 @@ export class BedWarsGame {
 
     private resetNameTag(playerInfo: PlayerGameInformation) {
         const health = playerInfo.player.getComponent("health")!.currentValue.toFixed(0);
-        playerInfo.player.nameTag = `${ TEAM_CONSTANTS[playerInfo.team].colorPrefix }${ playerInfo.name }\n§c§l♡ ${ health }`;
+        playerInfo.player.nameTag = `${ TEAM_CONSTANTS[playerInfo.team].colorPrefix }${ playerInfo.name }\n§c${ health }`;
     }
 
     afterEntityHurt(event: mc.EntityHurtAfterEvent) {
@@ -1935,7 +1935,7 @@ export class BedWarsGame {
         if (attackingItem && isKnockBackStickItem(attackingItem)) {
             const x = victim.location.x - hurter.location.x;
             const z = victim.location.z - hurter.location.z;
-            victim.applyKnockback(x, z, 0.7, 0.3);
+            victim.applyKnockback(x, z, 1, 0.3);
         }
         if (victim instanceof SimulatedPlayer) {
             if (!victim.attackTarget && victimInfo.team != hurterInfo.team) {
@@ -2385,9 +2385,8 @@ export class BedWarsGame {
         }
     }
 
-    afterWeatherChange(event: mc.WeatherChangeAfterEvent) {
+    afterWeatherChange(_: mc.WeatherChangeAfterEvent) {
         if (this.state != GameState.started) return;
-        if (mc.world.getDimension(event.dimension) != this.dimension) return;
         this.dimension.setWeather(mc.WeatherType.Clear);
     }
 
@@ -2472,6 +2471,7 @@ mc.world.beforeEvents.chatSend.subscribe(async event => {
     let map: MapInformation;
     let originLocation: mc.Vector3;
     let minimalPlayer: number;
+    let fillBlankTeams: boolean;
     const maps: [MapInformation, mc.Vector3][] = [];
     if (event.message == "start") {
         if (!event.sender.isOp()) return;
@@ -2502,6 +2502,7 @@ mc.world.beforeEvents.chatSend.subscribe(async event => {
 
         const settingForm = new ModalFormData();
         settingForm.textField("Minimal players of each team:", "Players count...", "1");
+        settingForm.toggle("Fill blank teams with simulated players", true);
         const settingResponse = await settingForm.show(event.sender);
         if (settingResponse.canceled) return;
 
@@ -2510,6 +2511,7 @@ mc.world.beforeEvents.chatSend.subscribe(async event => {
             event.sender.sendMessage(`§c"${ settingResponse.formValues![0] }" is not a valid number, or a valid player count.`);
             return;
         }
+        fillBlankTeams = settingResponse.formValues![1] as boolean;
     } else if (event.message == "SPECIAL CODE") {
         await sleep(0);
         const container = event.sender.getComponent("inventory")!.container!;
@@ -2561,6 +2563,7 @@ mc.world.beforeEvents.chatSend.subscribe(async event => {
     }
     const maxPlayer = Math.max(minimalPlayer, ...teamPlayerCount);
     for (teamIndex = 0; teamIndex < teams.length; ++teamIndex) {
+        if (!fillBlankTeams && teamPlayerCount[teamIndex] == 0) continue;
         for (let i = 0; i < maxPlayer - teamPlayerCount[teamIndex]; ++i) {
             const p = globalThis.test.spawnSimulatedPlayer(event.sender.location as any, "a");
             game.setPlayer(p as any, teams[teamIndex]);

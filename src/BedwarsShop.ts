@@ -41,6 +41,10 @@ import { PLATFORM_ITEM } from "./RescuePlatform.js";
 import { sprintf } from "sprintf-js";
 import { BedWarsStrings, strings } from "./BedwarsLang.js";
 
+const TOKEN_ENOUGH_COLOR = "§2";
+const TOKEN_NOT_ENOUGH_COLOR = "§4";
+const NOT_AVAILABLE_COLOR = "§s";
+
 export interface TokenValue {
     ironAmount: number;
     goldAmount: number;
@@ -166,9 +170,9 @@ function generateBuyOneItemMenu(
             const item = action.item;
             let color: string;
             if (isTokenSatisfying(tokens, cost)) {
-                color = "§a§l";
+                color = TOKEN_ENOUGH_COLOR;
             } else {
-                color = "§4";
+                color = TOKEN_NOT_ENOUGH_COLOR;
             }
             const strs = strings[game.getPlayerLang(playerInfo.player)];
             const evaluatedName = evaluateString(name, strs);
@@ -209,13 +213,13 @@ function generateBuySwordMenu(toLevel: SwordLevel, cost: TokenValue): Menu {
         getDisplay(playerInfo, currentTokens, _, game) {
             const strs = strings[game.getPlayerLang(playerInfo.player)];
             if (playerInfo.swordLevel.level >= toLevel.level) {
-                return "§h" + strs[toLevel.name];
+                return NOT_AVAILABLE_COLOR + strs[toLevel.name];
             }
             let color: string;
             if (isTokenSatisfying(currentTokens, cost)) {
-                color = "§a§l";
+                color = TOKEN_ENOUGH_COLOR;
             } else {
-                color = "§4";
+                color = TOKEN_NOT_ENOUGH_COLOR;
             }
             return `${ color }${ strs[toLevel.name] }\n${ tokenToString(cost, strs) }`;
         },
@@ -233,13 +237,13 @@ function generateBuyArmorMenu(toLevel: ArmorLevel, cost: TokenValue): Menu {
         getDisplay(playerInfo, currentTokens, _, game) {
             const strs = strings[game.getPlayerLang(playerInfo.player)];
             if (playerInfo.armorLevel.level >= toLevel.level) {
-                return "§h" + strs[toLevel.name];
+                return NOT_AVAILABLE_COLOR + strs[toLevel.name];
             }
             let color: string;
             if (isTokenSatisfying(currentTokens, cost)) {
-                color = "§a§l";
+                color = TOKEN_ENOUGH_COLOR;
             } else {
-                color = "§4";
+                color = TOKEN_NOT_ENOUGH_COLOR;
             }
             return `${ color }${ strs[toLevel.name] }\n${ tokenToString(cost, strs) }`;
         },
@@ -403,14 +407,14 @@ const generateItemShopData: () => Menu = () => ({
                     getDisplay(playerInfo, tokens, _, game) {
                         const strs = strings[game.getPlayerLang(playerInfo.player)];
                         if (playerInfo.hasShear) {
-                            return strs.itemAlreadyHaveString;
+                            return NOT_AVAILABLE_COLOR + strs.itemAlreadyHaveString;
                         }
                         const cost = SHEARS_COST;
                         let color: string;
                         if (isTokenSatisfying(tokens, cost)) {
-                            color = "§a§l";
+                            color = TOKEN_ENOUGH_COLOR;
                         } else {
-                            color = "§4";
+                            color = TOKEN_NOT_ENOUGH_COLOR;
                         }
                         return `${ color }${ strs.shearsName }\n${ tokenToString(cost, strs) }`;
                     },
@@ -426,7 +430,7 @@ const generateItemShopData: () => Menu = () => ({
                         let toLevel: PickaxeLevel;
                         if (playerInfo.pickaxeLevel) {
                             if (!hasNextPickaxeLevel(playerInfo.pickaxeLevel)) {
-                                return strs.pickaxeMaxLevelString;
+                                return NOT_AVAILABLE_COLOR + strs.pickaxeMaxLevelString;
                             }
                             toLevel = PICKAXE_LEVELS[playerInfo.pickaxeLevel.level + 1];
                         } else {
@@ -436,9 +440,9 @@ const generateItemShopData: () => Menu = () => ({
                         const cost = toLevel.toCurrentLevelCost;
                         let color: string;
                         if (isTokenSatisfying(currentTokens, cost)) {
-                            color = "§a§l";
+                            color = TOKEN_ENOUGH_COLOR;
                         } else {
-                            color = "§4";
+                            color = TOKEN_NOT_ENOUGH_COLOR;
                         }
                         return `${ color }${ strs[toLevel.name] }\n${ tokenToString(cost, strs) }`;
                     },
@@ -465,7 +469,7 @@ const generateItemShopData: () => Menu = () => ({
                         let toLevel: AxeLevel;
                         if (playerInfo.axeLevel) {
                             if (!hasNextAxeLevel(playerInfo.axeLevel)) {
-                                return strs.axeMaxLevelString;
+                                return NOT_AVAILABLE_COLOR + strs.axeMaxLevelString;
                             }
                             toLevel = AXE_LEVELS[playerInfo.axeLevel.level + 1];
                         } else {
@@ -475,9 +479,9 @@ const generateItemShopData: () => Menu = () => ({
                         const cost = toLevel.toCurrentLevelCost;
                         let color: string;
                         if (isTokenSatisfying(currentTokens, cost)) {
-                            color = "§a§l";
+                            color = TOKEN_ENOUGH_COLOR;
                         } else {
-                            color = "§4";
+                            color = TOKEN_NOT_ENOUGH_COLOR;
                         }
                         return `${ color }${ strs[toLevel.name] }\n${ tokenToString(cost, strs) }`;
                     },
@@ -604,7 +608,7 @@ function isTrapBought(trap: TrapType, teamInfo: TeamGameInformation) {
 
 function generateTeamFirstGetDisplay(text: keyof BedWarsStrings, available: (teamInfo: TeamGameInformation) => boolean) {
     return (playerInfo: PlayerGameInformation, __: any, teamInfo: TeamGameInformation, game: BedWarsGame) => {
-        let color = "§h";
+        let color = NOT_AVAILABLE_COLOR;
         if (available(teamInfo)) {
             color = "";
         }
@@ -618,14 +622,14 @@ function generateTeamSecondGetDisplay(
     return (playerInfo: PlayerGameInformation, currentTokens: TokenValue, teamInfo: TeamGameInformation, game: BedWarsGame) => {
         const name = getName(teamInfo, playerInfo, game);
         if (!available(teamInfo)) {
-            return `§h${ name }`;
+            return `${ NOT_AVAILABLE_COLOR }${ name }`;
         }
         let color: string;
         const cost = getCost(teamInfo);
         if (isTokenSatisfying(currentTokens, cost)) {
-            color = "§a§l";
+            color = TOKEN_ENOUGH_COLOR;
         } else {
-            color = "§4";
+            color = TOKEN_NOT_ENOUGH_COLOR;
         }
         return `${ color }${ name }\n${ tokenToString(cost, strings[game.getPlayerLang(playerInfo.player)]) }`;
     };
