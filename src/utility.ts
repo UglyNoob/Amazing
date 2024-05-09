@@ -193,11 +193,11 @@ export function vectorSize(vec: mc.Vector3) {
 }
 export function getAngle(x: number, z: number) {
     const mag = Math.sqrt(x * x + z * z);
-    x /= mag;
+    // x /= mag;
     z /= mag;
     let result = Math.asin(z);
-    if(x < 0) {
-        if(z > 0) {
+    if (x < 0) {
+        if (z > 0) {
             result = Math.PI - result;
         } else {
             result = -Math.PI - result;
@@ -296,7 +296,7 @@ export function randomInt(a: number, b: number) {
     return Math.floor(Math.random() * (b - a + 1)) + a;
 }
 
-export function shuffle(array: any[]) {
+export function shuffle(array: unknown[]) {
     for (let i = array.length - 1; i >= 1; --i) {
         let swapIndex = randomInt(0, i);
         let temp = array[swapIndex];

@@ -10,7 +10,7 @@ import { isLocationPartOfAnyPlatforms } from './RescuePlatform.js';
 import { SimulatedPlayer } from '@minecraft/server-gametest';
 import { mapGarden, mapSteamPunk, mapWaterfall, mapEastwood, mapVaryth } from './BedwarsMaps.js';
 import { ActionFormData, ActionFormResponse, FormCancelationReason, ModalFormData } from '@minecraft/server-ui';
-import { BedWarsStrings, Lang, strings } from './BedwarsLang.js';
+import { Strings, Lang, fixPlayerSettings, getPlayerLang, setPlayerLang, strings } from './Lang.js';
 
 const RESPAWN_TIME = 100; // in ticks
 const TRACKER_CHANGE_TARGET_COOLDOWN = 10; // in ticks
@@ -192,7 +192,7 @@ export enum TeamType {
 }
 export const TEAM_CONSTANTS: Record<TeamType, {
     name: string;
-    localName: keyof BedWarsStrings;
+    localName: keyof Strings;
     colorPrefix: string;
     woolName: string;
     woolIconPath: string;
@@ -355,7 +355,7 @@ export interface MapInformation {
 
 export interface SwordLevel {
     level: number;
-    name: keyof BedWarsStrings;
+    name: keyof Strings;
     icon: string;
     item: mc.ItemStack;
 }
@@ -394,7 +394,7 @@ export const SWORD_LEVELS: SwordLevel[] = (() => {
 
 export interface PickaxeLevel {
     level: number;
-    name: keyof BedWarsStrings;
+    name: keyof Strings;
     icon: string;
     item: mc.ItemStack;
     toCurrentLevelCost: TokenValue;
@@ -472,7 +472,7 @@ export function hasPrevPickaxeLevel(level: PickaxeLevel) {
 
 export interface AxeLevel {
     level: number;
-    name: keyof BedWarsStrings;
+    name: keyof Strings;
     icon: string;
     item: mc.ItemStack;
     toCurrentLevelCost: TokenValue;
@@ -549,7 +549,7 @@ export function hasPrevAxeLevel(level: AxeLevel) {
 
 export interface ArmorLevel {
     level: number;
-    name: keyof BedWarsStrings;
+    name: keyof Strings;
     icon: string;
     leggings: mc.ItemStack;
     boots: mc.ItemStack;
@@ -601,8 +601,8 @@ export enum TrapType {
 }
 
 export const TRAP_CONSTANTS: Record<TrapType, {
-    name: keyof BedWarsStrings;
-    description: keyof BedWarsStrings;
+    name: keyof Strings;
+    description: keyof Strings;
     iconPath: string;
 }> = Object.create(null);
 
@@ -673,6 +673,7 @@ export interface PlayerGameInformation {
     killCount: number;
     deathCount: number;
     finalKillCount: number;
+    bedDestroyedCount: number;
     deathTime: number; // global tick
     deathLocation: mc.Vector3;
     deathRotaion: mc.Vector2;
@@ -699,6 +700,9 @@ export interface PlayerGameInformation {
     teamAreaEntered?: TeamType;
     trackerChangeTargetCooldown: number;
     trackingTarget?: PlayerGameInformation;
+    actionbar: ActionbarManager;
+    basicNotificationD: number;
+    trackerNotificationD?: number;
 }
 
 export const MAX_IRON_FORGE_LEVEL = 4;
@@ -803,12 +807,12 @@ export class BedWarsGame {
     setPlayer(player: mc.Player, teamType: TeamType) {
         if (this.map.teams.find(t => t.type == teamType) == undefined) throw new Error(`No such team(${ TEAM_CONSTANTS[teamType].name }).`);
 
-        const playerInfo = this.players.get(player.name);
+        let playerInfo = this.players.get(player.name);
         if (playerInfo) {
             playerInfo.team = teamType;
             return;
         }
-        this.players.set(player.name, {
+        playerInfo = {
             name: player.name,
             state: PlayerState.Alive,
             player,
@@ -816,6 +820,7 @@ export class BedWarsGame {
             killCount: 0,
             deathCount: 0,
             finalKillCount: 0,
+            bedDestroyedCount: 0,
             deathLocation: { x: 0, y: 0, z: 0 },
             deathTime: 0,
             deathRotaion: { x: 0, y: 0 },
@@ -828,8 +833,12 @@ export class BedWarsGame {
             fireBallCooldown: 0,
             armorDisabled: false,
             armorToEnablingTicks: 0,
-            trackerChangeTargetCooldown: 0
-        });
+            trackerChangeTargetCooldown: 0,
+            actionbar: new ActionbarManager(player),
+            basicNotificationD: 0
+        };
+        this.players.set(player.name, playerInfo);
+        playerInfo.basicNotificationD = playerInfo.actionbar.add("");
     }
 
     start() {
@@ -846,7 +855,7 @@ export class BedWarsGame {
             container.setItem(8, SETTINGS_ITEM);
             this.respawnPlayer(playerInfo);
             this.setupSpawnPoint(playerInfo.player);
-            this.fixPlayerSettings(playerInfo);
+            fixPlayerSettings(playerInfo.player);
         }
         for (const gen of this.generators) {
             gen.remainingCooldown = gen.interval;
@@ -901,17 +910,6 @@ export class BedWarsGame {
         this.dimension.runCommand("gamerule recipesunlock true");
         this.dimension.runCommand("gamerule showrecipemessages false");
         this.dimension.runCommand("gamerule dolimitedcrafting true");
-    }
-
-    getPlayerLang(player: mc.Player) {
-        return player.getDynamicProperty("LANG_PREFERENCE") as Lang;
-    }
-
-    private setPlayerLang(player: mc.Player, lang: Lang) {
-        player.setDynamicProperty("LANG_PREFERENCE", lang);
-    }
-    private fixPlayerSettings(playerInfo: PlayerGameInformation) {
-        playerInfo.player.getDynamicProperty("LANG_PREFERENCE") ?? playerInfo.player.setDynamicProperty("LANG_PREFERENCE", Lang.en_US);
     }
 
     private updateScoreboard() {
@@ -1139,7 +1137,7 @@ export class BedWarsGame {
                 teamPlayerInfo.player.addEffect(MinecraftEffectTypes.Speed, 300, { amplifier: 1 });
                 teamPlayerInfo.player.addEffect(MinecraftEffectTypes.JumpBoost, 300, { amplifier: 1 });
             }
-            const strs = strings[this.getPlayerLang(teamPlayerInfo.player)];
+            const strs = strings[getPlayerLang(teamPlayerInfo.player)];
             const {
                 trapActivatedTitle,
                 alarmTrapSubtitle,
@@ -1156,7 +1154,7 @@ export class BedWarsGame {
             teamPlayerInfo.player.sendMessage(sprintf(trapActivatedMessage, strs[TRAP_CONSTANTS[trapType].name]));
         }
         player.playSound("mob.wither.spawn");
-        const strs = strings[this.getPlayerLang(player)];
+        const strs = strings[getPlayerLang(player)];
         player.sendMessage(sprintf(strs.activatingTrapWarning, strs[TRAP_CONSTANTS[trapType].name]));
     }
     /**
@@ -1224,7 +1222,7 @@ export class BedWarsGame {
                 const { localName, colorPrefix } = TEAM_CONSTANTS[teamType];
                 for (const { player, state } of this.players.values()) {
                     if (state == PlayerState.Offline) continue;
-                    const str = strings[this.getPlayerLang(player)];
+                    const str = strings[getPlayerLang(player)];
 
                     player.sendMessage(sprintf(str.teamEliminationMessage, colorPrefix, capitalize(str[localName])));
                 }
@@ -1252,7 +1250,7 @@ export class BedWarsGame {
             const t = TEAM_CONSTANTS[aliveTeam];
             for (const playerInfo of this.players.values()) {
                 if (playerInfo.state == PlayerState.Offline) continue;
-                const str = strings[this.getPlayerLang(playerInfo.player)];
+                const str = strings[getPlayerLang(playerInfo.player)];
                 const { gameEndedMessage, victoryTitle } = str;
                 playerInfo.player.sendMessage(sprintf(gameEndedMessage, t.colorPrefix, capitalize(str[t.localName])));
                 if (playerInfo.team != aliveTeam) continue;
@@ -1270,20 +1268,20 @@ export class BedWarsGame {
             }
         }
     }
-    private broadcast(stringName: keyof BedWarsStrings, ...params: any[]) {
+    private broadcast(stringName: keyof Strings, ...params: any[]) {
         for (const { player, state } of this.players.values()) {
             if (state == PlayerState.Offline) continue;
-            const string = strings[this.getPlayerLang(player)][stringName];
+            const string = strings[getPlayerLang(player)][stringName];
 
             player.sendMessage(vsprintf(string, params));
         }
     }
 
-    teamBroadcast(teamType: TeamType, stringName: keyof BedWarsStrings, ...params: any[]) {
+    teamBroadcast(teamType: TeamType, stringName: keyof Strings, ...params: any[]) {
         for (const playerInfo of this.players.values()) {
             if (playerInfo.team != teamType) continue;
             if (playerInfo.state == PlayerState.Offline) continue;
-            const string = strings[this.getPlayerLang(playerInfo.player)][stringName];
+            const string = strings[getPlayerLang(playerInfo.player)][stringName];
 
             playerInfo.player.sendMessage(vsprintf(string, params));
         }
@@ -1304,6 +1302,7 @@ export class BedWarsGame {
         if (this.state != GameState.started) return;
 
         for (const playerInfo of this.players.values()) {
+            const strs = strings[getPlayerLang(playerInfo.player)];
             const {
                 deathTitle,
                 deathSubtitle,
@@ -1311,8 +1310,12 @@ export class BedWarsGame {
                 spectateSubtitle,
                 respawnTitle,
                 respawnMessage,
-                trackerTrackingNotification
-            } = strings[this.getPlayerLang(playerInfo.player)];
+                trackerTrackingNotification,
+                teamInformationNotification,
+                killCountNotification,
+                finalKillCountNotification,
+                bedDestroyedCountNotification
+            } = strs;
             if (playerInfo.state == PlayerState.Offline) {
                 const player = getPlayerByName(playerInfo.name);
                 if (!player) continue;
@@ -1416,65 +1419,70 @@ export class BedWarsGame {
                         fadeOutDuration: 20,
                     });
                 }
-            } else if (playerInfo.state == PlayerState.Alive) {
-                if (player.location.y <= this.originPos.y + this.map.voidY) { // The player falls to the void
-                    setGameMode(player, mc.GameMode.spectator);
-                    this.onPlayerDieOrOffline(playerInfo, playerInfo.lastHurtBy);
+            }
+            if (playerInfo.state != PlayerState.Alive) continue;
 
-                    const isTeamBedAlive = this.teams.get(playerInfo.team)!.state == TeamState.BedAlive;
-                    player.onScreenDisplay.setTitle(deathTitle, {
-                        subtitle: isTeamBedAlive ? sprintf(deathSubtitle, RESPAWN_TIME / 20) : undefined,
-                        fadeInDuration: 0,
-                        stayDuration: 30,
-                        fadeOutDuration: 20
-                    });
-                    if (isTeamBedAlive) {
-                        playerInfo.state = PlayerState.Respawning;
-                    } else {
-                        playerInfo.state = PlayerState.Spectating;
+            if (player.location.y <= this.originPos.y + this.map.voidY) { // The player falls to the void
+                setGameMode(player, mc.GameMode.spectator);
+                this.onPlayerDieOrOffline(playerInfo, playerInfo.lastHurtBy);
+
+                const isTeamBedAlive = this.teams.get(playerInfo.team)!.state == TeamState.BedAlive;
+                player.onScreenDisplay.setTitle(deathTitle, {
+                    subtitle: isTeamBedAlive ? sprintf(deathSubtitle, RESPAWN_TIME / 20) : undefined,
+                    fadeInDuration: 0,
+                    stayDuration: 30,
+                    fadeOutDuration: 20
+                });
+                if (isTeamBedAlive) {
+                    playerInfo.state = PlayerState.Respawning;
+                } else {
+                    playerInfo.state = PlayerState.Spectating;
+                }
+                player.dimension.spawnEntity(MinecraftEntityTypes.LightningBolt, player.location);
+                continue;
+            }
+            // player.onScreenDisplay.setActionBar(String(TEAM_CONSTANTS[playerInfo.teamAreaEntered!]?.name)); // DEBUG
+            let trackerWorking = false;
+
+            if (mc.system.currentTick % 20 == 0) {
+                this.resetNameTag(playerInfo);
+            }
+            const equipment = player.getComponent("equippable")!;
+            for (const slotName of [mc.EquipmentSlot.Head, mc.EquipmentSlot.Chest, mc.EquipmentSlot.Legs, mc.EquipmentSlot.Feet, mc.EquipmentSlot.Mainhand]) {
+                const item = equipment.getEquipment(slotName);
+                if (!item) continue;
+                if (slotName == mc.EquipmentSlot.Mainhand) {
+                    let erase = false;
+                    // clean items
+                    if ([
+                        MinecraftItemTypes.GlassBottle,
+                        MinecraftItemTypes.CraftingTable,
+                    ].includes(item.typeId as MinecraftItemTypes)) {
+                        erase = true;
                     }
-                    player.dimension.spawnEntity(MinecraftEntityTypes.LightningBolt, player.location);
-                    continue;
-                }
-                // player.onScreenDisplay.setActionBar(String(TEAM_CONSTANTS[playerInfo.teamAreaEntered!]?.name)); // DEBUG
-                if (mc.system.currentTick % 20 == 0) {
-                    this.resetNameTag(playerInfo);
-                }
-                const equipment = player.getComponent("equippable")!;
-                for (const slotName of [mc.EquipmentSlot.Head, mc.EquipmentSlot.Chest, mc.EquipmentSlot.Legs, mc.EquipmentSlot.Feet, mc.EquipmentSlot.Mainhand]) {
-                    const item = equipment.getEquipment(slotName);
-                    if (!item) continue;
-                    if (slotName == mc.EquipmentSlot.Mainhand) {
-                        let erase = false;
-                        // clean items
-                        if ([
-                            MinecraftItemTypes.GlassBottle,
-                            MinecraftItemTypes.CraftingTable,
-                        ].includes(item.typeId as MinecraftItemTypes)) {
-                            erase = true;
-                        }
-                        if (item.typeId == MinecraftItemTypes.Shears && !playerInfo.hasShear) {
-                            erase = true;
-                        }
-                        if (erase) {
-                            equipment.getEquipmentSlot(slotName).setItem();
-                            continue;
-                        }
-                        if (itemEqual(item, playerInfo.swordLevel.item)) {
-                            const teamInfo = this.teams.get(playerInfo.team)!;
-                            if (teamInfo.hasSharpness) {
-                                const enchantment = item.getComponent("enchantable")!;
-                                const existedEnch = enchantment.getEnchantment(MinecraftEnchantmentTypes.Sharpness);
-                                if (!existedEnch) {
-                                    enchantment.addEnchantment({
-                                        type: mc.EnchantmentTypes.get(MinecraftEnchantmentTypes.Sharpness)!,
-                                        level: SHARPNESS_ENCHANMENT_LEVEL
-                                    });
-                                    equipment.setEquipment(slotName, item);
-                                    continue;
-                                }
+                    if (item.typeId == MinecraftItemTypes.Shears && !playerInfo.hasShear) {
+                        erase = true;
+                    }
+                    if (erase) {
+                        equipment.getEquipmentSlot(slotName).setItem();
+                        continue;
+                    }
+                    if (itemEqual(item, playerInfo.swordLevel.item)) {
+                        const teamInfo = this.teams.get(playerInfo.team)!;
+                        if (teamInfo.hasSharpness) {
+                            const enchantment = item.getComponent("enchantable")!;
+                            const existedEnch = enchantment.getEnchantment(MinecraftEnchantmentTypes.Sharpness);
+                            if (!existedEnch) {
+                                enchantment.addEnchantment({
+                                    type: mc.EnchantmentTypes.get(MinecraftEnchantmentTypes.Sharpness)!,
+                                    level: SHARPNESS_ENCHANMENT_LEVEL
+                                });
+                                equipment.setEquipment(slotName, item);
                             }
-                        } else if (isTrackerItem(item) && playerInfo.trackingTarget && mc.system.currentTick % 5 == 0) {
+                        }
+                    } else if (playerInfo.trackingTarget && isTrackerItem(item)) {
+                        trackerWorking = true;
+                        if (mc.system.currentTick % 5 == 0) {
                             const distanceVec = v3.subtract(playerInfo.trackingTarget.player.location, player.location);
                             const viewDirection = player.getViewDirection();
                             const PI = Math.PI;
@@ -1498,76 +1506,101 @@ export class BedWarsGame {
                             } else {
                                 directionString = "↖";
                             }
-                            player.onScreenDisplay.setActionBar(sprintf(trackerTrackingNotification,
-                                TEAM_CONSTANTS[playerInfo.trackingTarget.team].colorPrefix,
-                                playerInfo.trackingTarget.name,
-                                v3.magnitude(distanceVec).toFixed(0),
-                                directionString
-                            ));
-                        }
-                    } else { // Armors
-                        const teamInfo = this.teams.get(playerInfo.team)!;
-                        if (teamInfo.protectionLevel > 0) {
-                            const enchantment = item.getComponent("enchantable")!;
-                            const existedEnch = enchantment.getEnchantment(MinecraftEnchantmentTypes.Protection);
-                            if (!existedEnch || existedEnch.level != teamInfo.protectionLevel) {
-                                enchantment.addEnchantment({
-                                    type: mc.EnchantmentTypes.get(MinecraftEnchantmentTypes.Protection)!,
-                                    level: teamInfo.protectionLevel
-                                });
-                                equipment.setEquipment(slotName, item);
-                                continue;
+                            if (playerInfo.trackerNotificationD == null) {
+                                playerInfo.trackerNotificationD = playerInfo.actionbar.add("");
                             }
+                            playerInfo.actionbar.changeText(
+                                playerInfo.trackerNotificationD,
+                                sprintf(trackerTrackingNotification,
+                                    TEAM_CONSTANTS[playerInfo.trackingTarget.team].colorPrefix,
+                                    playerInfo.trackingTarget.name,
+                                    v3.magnitude(distanceVec).toFixed(0),
+                                    directionString)
+                            );
                         }
                     }
-                    const com = item.getComponent("durability");
-                    if (!com) continue;
-                    if (com.damage > 20) {
-                        com.damage = 0;
-                        equipment.setEquipment(slotName, item);
-                    }
-                };
-                if (playerInfo.bridgeEggCooldown > 0) --playerInfo.bridgeEggCooldown;
-                if (playerInfo.fireBallCooldown > 0) --playerInfo.fireBallCooldown;
-                if (playerInfo.trackerChangeTargetCooldown > 0) --playerInfo.trackerChangeTargetCooldown;
-                if (playerInfo.armorToEnablingTicks > 0) {
-                    --playerInfo.armorToEnablingTicks;
-                } else { // enable the armor
-                    if (playerInfo.armorDisabled) {
-                        playerInfo.armorDisabled = false;
-                        this.resetArmor(playerInfo);
-                    }
-                }
-
-                let playerWithinTeamArea = false;
-                for (const teamInfo of this.teams.values()) {
-                    const teamMapInfo = this.map.teams.filter(t => t.type == teamInfo.type)[0];
-                    const islandArea = this.fixOrigin(teamMapInfo.islandArea);
-                    if (!vectorWithinArea(player.location, islandArea)) continue;
-                    playerWithinTeamArea = true;
-                    if (playerInfo.team == teamInfo.type) {
-                        playerInfo.teamAreaEntered = playerInfo.team;
-                        if (teamInfo.healPoolEnabled) {
-                            playerInfo.player.addEffect(MinecraftEffectTypes.Regeneration, 20, {
-                                amplifier: 0,
-                                showParticles: false
+                } else { // Armors
+                    const teamInfo = this.teams.get(playerInfo.team)!;
+                    if (teamInfo.protectionLevel > 0) {
+                        const enchantment = item.getComponent("enchantable")!;
+                        const existedEnch = enchantment.getEnchantment(MinecraftEnchantmentTypes.Protection);
+                        if (!existedEnch || existedEnch.level != teamInfo.protectionLevel) {
+                            enchantment.addEnchantment({
+                                type: mc.EnchantmentTypes.get(MinecraftEnchantmentTypes.Protection)!,
+                                level: teamInfo.protectionLevel
                             });
+                            equipment.setEquipment(slotName, item);
+                            continue;
                         }
-                        continue;
-                    } else {
-                        if (playerInfo.teamAreaEntered == teamInfo.type) continue;
-                        playerInfo.teamAreaEntered = teamInfo.type;
-                        if (teamInfo.state == TeamState.Dead) continue;
-
-                        // the player activates a team's trap
-                        this.activateTrap(playerInfo, teamInfo);
                     }
-
                 }
-                if (!playerWithinTeamArea) {
-                    playerInfo.teamAreaEntered = undefined;
+                const com = item.getComponent("durability");
+                if (!com) continue;
+                if (com.damage > 20) {
+                    com.damage = 0;
+                    equipment.setEquipment(slotName, item);
+                }
+            };
+            if (playerInfo.bridgeEggCooldown > 0) --playerInfo.bridgeEggCooldown;
+            if (playerInfo.fireBallCooldown > 0) --playerInfo.fireBallCooldown;
+            if (playerInfo.trackerChangeTargetCooldown > 0) --playerInfo.trackerChangeTargetCooldown;
+            if (playerInfo.armorToEnablingTicks > 0) {
+                --playerInfo.armorToEnablingTicks;
+            } else { // enable the armor
+                if (playerInfo.armorDisabled) {
+                    playerInfo.armorDisabled = false;
+                    this.resetArmor(playerInfo);
                 }
             }
+
+            let playerWithinTeamArea = false;
+            for (const teamInfo of this.teams.values()) {
+                const teamMapInfo = this.map.teams.filter(t => t.type == teamInfo.type)[0];
+                const islandArea = this.fixOrigin(teamMapInfo.islandArea);
+                if (!vectorWithinArea(player.location, islandArea)) continue;
+                playerWithinTeamArea = true;
+                if (playerInfo.team == teamInfo.type) {
+                    playerInfo.teamAreaEntered = playerInfo.team;
+                    if (teamInfo.healPoolEnabled) {
+                        playerInfo.player.addEffect(MinecraftEffectTypes.Regeneration, 20, {
+                            amplifier: 0,
+                            showParticles: false
+                        });
+                    }
+                    continue;
+                } else {
+                    if (playerInfo.teamAreaEntered == teamInfo.type) continue;
+                    playerInfo.teamAreaEntered = teamInfo.type;
+                    if (teamInfo.state == TeamState.Dead) continue;
+
+                    // the player activates a team's trap
+                    this.activateTrap(playerInfo, teamInfo);
+                }
+
+            }
+            if (!playerWithinTeamArea) {
+                playerInfo.teamAreaEntered = undefined;
+            }
+            if (!trackerWorking && playerInfo.trackerNotificationD != null) {
+                playerInfo.actionbar.remove(playerInfo.trackerNotificationD);
+                playerInfo.trackerNotificationD = undefined;
+            }
+            switch (Math.floor(mc.system.currentTick % 240 / 60)) {
+                case 0:
+                    const t = TEAM_CONSTANTS[playerInfo.team];
+                    playerInfo.actionbar.changeText(playerInfo.basicNotificationD, sprintf(teamInformationNotification, t.colorPrefix, capitalize(strs[t.localName])));
+                    break;
+                case 1:
+                    playerInfo.actionbar.changeText(playerInfo.basicNotificationD, sprintf(killCountNotification, playerInfo.killCount));
+                    break;
+                case 2:
+                    playerInfo.actionbar.changeText(playerInfo.basicNotificationD, sprintf(finalKillCountNotification, playerInfo.finalKillCount));
+                    break;
+                case 3:
+                    playerInfo.actionbar.changeText(playerInfo.basicNotificationD, sprintf(bedDestroyedCountNotification, playerInfo.bedDestroyedCount));
+                    break;
+            }
+            playerInfo.actionbar.tick();
         }
         for (const gen of this.generators) {
             if (gen.indicatorLocations && gen.remainingCooldown % 20 == 0) {
@@ -1769,16 +1802,16 @@ export class BedWarsGame {
             victimInfo.deathRotaion = victimInfo.player.getRotation();
             victimInfo.state = PlayerState.dead;
         }
-        let killerStrings: BedWarsStrings | null = null;
-        killerInfo && (killerStrings = strings[this.getPlayerLang(killerInfo?.player)]);
+        let killerStrings: Strings | null = null;
+        killerInfo && (killerStrings = strings[getPlayerLang(killerInfo?.player)]);
 
         if (this.teams.get(victimInfo.team)!.state == TeamState.BedAlive) {
             if (killerInfo) {
                 ++killerInfo.killCount;
-                killerInfo.player.onScreenDisplay.setActionBar(sprintf(
+                killerInfo.actionbar.add(sprintf(
                     killerStrings!.killNotification,
                     TEAM_CONSTANTS[victimInfo.team].colorPrefix,
-                    victimInfo.name));
+                    victimInfo.name), 60);
             }
         } else { // FINAL KILL
             if (killerInfo) {
@@ -1789,13 +1822,13 @@ export class BedWarsGame {
                     victimColor: TEAM_CONSTANTS[victimInfo.team].colorPrefix,
                     victim: victimInfo.name
                 });
-                killerInfo.player.onScreenDisplay.setActionBar(sprintf(
+                killerInfo.actionbar.add(sprintf(
                     killerStrings!.finalKillNotification,
                     TEAM_CONSTANTS[victimInfo.team].colorPrefix,
-                    victimInfo.name));
+                    victimInfo.name), 60);
             }
             if (!victimOffline) {
-                const { spectateTitle, spectateSubtitle } = strings[this.getPlayerLang(victimInfo.player)];
+                const { spectateTitle, spectateSubtitle } = strings[getPlayerLang(victimInfo.player)];
                 victimInfo.player.onScreenDisplay.setTitle(spectateTitle, {
                     subtitle: spectateSubtitle,
                     fadeInDuration: 0,
@@ -2014,7 +2047,7 @@ export class BedWarsGame {
             for (const team of this.map.teams) {
                 if (v3.equals(event.block.location, this.fixOrigin(team.teamChestLocation))) {
                     if (playerInfo.team != team.type) {
-                        playerInfo.player.sendMessage(strings[this.getPlayerLang(playerInfo.player)].openEnemyChestMessage);
+                        playerInfo.player.sendMessage(strings[getPlayerLang(playerInfo.player)].openEnemyChestMessage);
                         event.cancel = true;
                     }
                     break;
@@ -2098,12 +2131,14 @@ export class BedWarsGame {
             if (!destroyedTeam) {
                 break TeamBedDestroyed;
             }
-            if (this.teams.get(destroyedTeam.type)!.state != TeamState.BedAlive) break TeamBedDestroyed;
+            const destroyedTeamInfo = this.teams.get(destroyedTeam.type)!;
+            if (destroyedTeamInfo.state != TeamState.BedAlive) break TeamBedDestroyed;
             event.cancel = true;
 
             if (!destroyerInfo) return;
             if (destroyedTeam.type == destroyerInfo.team) return;
-            this.teams.get(destroyedTeam.type)!.state = TeamState.BedDestoryed;
+            destroyedTeamInfo.state = TeamState.BedDestoryed;
+            ++destroyerInfo.bedDestroyedCount;
             await sleep(0);
 
             /* Clear the bed */
@@ -2118,7 +2153,7 @@ export class BedWarsGame {
             /* Inform all the players */
             for (const playerInfo of this.players.values()) {
                 if (playerInfo.state == PlayerState.Offline) continue;
-                const str = strings[this.getPlayerLang(playerInfo.player)];
+                const str = strings[getPlayerLang(playerInfo.player)];
                 const {
                     bedDestroyedSubtitle,
                     bedDestroyedTitle,
@@ -2151,7 +2186,7 @@ export class BedWarsGame {
             // The location doesn't appear in the tracker.
             event.cancel = true;
 
-            destroyerInfo.player.sendMessage(strings[this.getPlayerLang(destroyerInfo.player)].breakingBlockInvalidMessage);
+            destroyerInfo.player.sendMessage(strings[getPlayerLang(destroyerInfo.player)].breakingBlockInvalidMessage);
         }
     }
 
@@ -2221,7 +2256,7 @@ export class BedWarsGame {
             if (!vectorWithinArea(event.block.location, this.fixOrigin(this.map.playableArea))) {
                 playerInfo.player.sendMessage("§cYou can't place block outside the map!");
             } else {
-                playerInfo.player.sendMessage(strings[this.getPlayerLang(playerInfo.player)].placingBlockIllagelMessage);
+                playerInfo.player.sendMessage(strings[getPlayerLang(playerInfo.player)].placingBlockIllagelMessage);
             }
             return;
         }
@@ -2306,7 +2341,7 @@ export class BedWarsGame {
                     newTarget = potentialInfo;
                 }
             }
-            const strs = strings[this.getPlayerLang(playerInfo.player)];
+            const strs = strings[getPlayerLang(playerInfo.player)];
             let soundEffect: string;
             if (newTarget) {
                 soundEffect = "random.orb";
@@ -2323,14 +2358,14 @@ export class BedWarsGame {
     }
     private async openSettingsMenu(player: mc.Player) {
         const menu = new ModalFormData();
-        const pervLang = this.getPlayerLang(player);
+        const pervLang = getPlayerLang(player);
         menu.dropdown("Languages", ["English", "简体中文"], pervLang);
         const response = await menu.show(player);
 
         if (response.canceled) return;
         const chosenLang = response.formValues![0] as Lang;
         if (chosenLang != pervLang) {
-            this.setPlayerLang(player, chosenLang);
+            setPlayerLang(player, chosenLang);
             player.playSound("note.banjo");
             player.sendMessage(strings[chosenLang].languageChangedMessage);
         }
@@ -2400,6 +2435,87 @@ export class BedWarsGame {
         mc.world.sendMessage(`<${ TEAM_CONSTANTS[senderInfo.team].colorPrefix }${ sender.name }§r> ${ event.message }`);
     }
 };
+
+interface NotificationUpdate {
+    descriptor: number;
+    text: string;
+}
+
+class ActionbarManager {
+    private instances: Map<number, {
+        text: string;
+        lifeTime?: number;
+    }>;
+    private player: mc.Player;
+    private flushCooldown: number;
+
+    constructor(player: mc.Player) {
+        this.instances = new Map();
+        this.player = player;
+        this.flushCooldown = 0;
+    }
+
+    private getInstance(descriptor: number) {
+        const instance = this.instances.get(descriptor);
+        if (!instance) {
+            throw new Error(`Can't find the instance of descriptor "${ descriptor }".`);
+        }
+        return instance;
+    }
+
+    add(text: string, lifeTime?: number) {
+        let newd = 0;
+        while (this.instances.get(newd)) {
+            ++newd;
+        }
+        this.instances.set(newd, {
+            text,
+            lifeTime
+        });
+        this.flushCooldown = 0;
+        return newd;
+    }
+
+    changeText(descriptor: number, text: string) {
+        this.getInstance(descriptor).text = text;
+        this.flushCooldown = 0;
+    }
+
+    remove(descriptor: number) {
+        this.getInstance(descriptor).lifeTime = 0;
+    }
+
+    tick() {
+        let flush = false;
+        if (this.flushCooldown == 0) {
+            flush = true;
+        } else {
+            --this.flushCooldown;
+        }
+        for (const [descriptor, instance] of this.instances) {
+            if (instance.lifeTime != null) {
+                if (instance.lifeTime == 0) {
+                    this.instances.delete(descriptor);
+                    flush = true;
+                    continue;
+                }
+                --instance.lifeTime;
+            }
+        }
+
+        if (!flush) return;
+        let result = "";
+        for (const instance of this.instances.values()) {
+            if (result == "") {
+                result = instance.text;
+            } else {
+                result += "\n" + instance.text;
+            }
+        }
+        this.player.onScreenDisplay.setActionBar(result);
+        this.flushCooldown = 10;
+    }
+}
 
 class BlockPlacementTracker {
     static readonly DEFAULT_BUCKET_SIZE = 25;
@@ -2551,6 +2667,7 @@ mc.world.beforeEvents.chatSend.subscribe(async event => {
         scoreboardObjective: mc.world.scoreboard.getObjective("GAME") ?? mc.world.scoreboard.addObjective("GAME", "§e§lBED WARS")
     });
     const realPlayers = players.filter(p => !(p instanceof SimulatedPlayer));
+    shuffle(realPlayers);
     const fakePlayers = players.filter(p => p instanceof SimulatedPlayer);
     let teamPlayerCount: number[] = [];
     for (let i = 0; i < teams.length; ++i) teamPlayerCount.push(0);

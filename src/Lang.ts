@@ -1,4 +1,5 @@
-export interface BedWarsStrings {
+import * as mc from "@minecraft/server";
+export interface Strings {
     deathTitle: string;
     deathSubtitle: string;
     spectateTitle: string;
@@ -29,6 +30,10 @@ export interface BedWarsStrings {
     trackerFailedToFindTargetMessage: string;
     trackerChangeTargetMessage: string;
     trackerTrackingNotification: string;
+    teamInformationNotification: string;
+    killCountNotification: string;
+    finalKillCountNotification: string;
+    bedDestroyedCountNotification: string;
 
     redName: string;
     blueName: string;
@@ -157,6 +162,9 @@ export interface BedWarsStrings {
     fourthString: string;
     fifthString: string;
     noTrapString: string;
+
+    platformCooldownNotification: string;
+    platformFailedToDeployNotification: string;
 }
 
 // DO NOT CHANGE THE ORDER
@@ -165,7 +173,7 @@ export enum Lang {
     zh_CN
 }
 
-export const strings: Record<Lang, BedWarsStrings> = Object.create(null);
+export const strings: Record<Lang, Strings> = Object.create(null);
 
 strings[Lang.en_US] = {
     deathTitle: "§cYOU DIED!",
@@ -198,6 +206,10 @@ strings[Lang.en_US] = {
     trackerFailedToFindTargetMessage: "§cFailed to find any enemy to track!",
     trackerChangeTargetMessage: "§6Now tracking %s%s§6.",
     trackerTrackingNotification: "§6TRACKING %s%s §a%d blocks §6§l%s",
+    teamInformationNotification: "§7Your Team: %s%s",
+    killCountNotification: "§7Kills: §a%d",
+    finalKillCountNotification: "§7Final Kills: §a%d",
+    bedDestroyedCountNotification: "§7Destroyed Beds: §a%d",
 
     redName: "red",
     blueName: "blue",
@@ -338,7 +350,10 @@ strings[Lang.en_US] = {
     thirdString: "third",
     fourthString: "fourth",
     fifthString: "fifth",
-    noTrapString: "§cNo Trap"
+    noTrapString: "§cNo Trap",
+
+    platformCooldownNotification: "§cPlease wait for §g%s §cseconds",
+    platformFailedToDeployNotification: "§cCannot deploy platform here"
 };
 
 strings[Lang.zh_CN] = {
@@ -372,6 +387,10 @@ strings[Lang.zh_CN] = {
     trackerFailedToFindTargetMessage: "§c没有可以追踪的敌人！",
     trackerChangeTargetMessage: "§6正在追踪 %s%s§6。",
     trackerTrackingNotification: "§6追踪 %s%s §a%d米 §6§l%s",
+    teamInformationNotification: "§7你的队伍：%s%s队",
+    killCountNotification: "§7击杀数：§a%d",
+    finalKillCountNotification: "§7最终击杀数：§a%d",
+    bedDestroyedCountNotification: "§7摧毁床数：§a%d",
 
     redName: "红",
     blueName: "蓝",
@@ -513,4 +532,21 @@ strings[Lang.zh_CN] = {
     fourthString: "第四个",
     fifthString: "第五个",
     noTrapString: "§c无",
+
+    platformCooldownNotification: "§c请等待§g%s§c秒",
+    platformFailedToDeployNotification: "§c无法在这里放置救援平台"
 };
+
+
+export function getPlayerLang(player: mc.Player) {
+    return player.getDynamicProperty("LANG_PREFERENCE") as Lang;
+}
+
+export function setPlayerLang(player: mc.Player, lang: Lang) {
+    player.setDynamicProperty("LANG_PREFERENCE", lang);
+}
+
+export function fixPlayerSettings(player: mc.Player) {
+    player.getDynamicProperty("LANG_PREFERENCE") ?? player.setDynamicProperty("LANG_PREFERENCE", Lang.en_US);
+}
+

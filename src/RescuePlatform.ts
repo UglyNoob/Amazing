@@ -3,6 +3,8 @@ import * as mc from '@minecraft/server';
 import { consumeMainHandItem } from './utility.js';
 import { MinecraftBlockTypes } from '@minecraft/vanilla-data';
 import { Vector3Utils as v3 } from '@minecraft/math';
+import { sprintf } from 'sprintf-js';
+import { getPlayerLang, strings } from './Lang.js';
 
 export const PLATFORM_ITEM = (function () {
     const item = new mc.ItemStack("minecraft:blaze_rod", 1);
@@ -128,9 +130,10 @@ mc.world.beforeEvents.itemUse.subscribe(event => {
     if (!isItemRescuePlatform(event.itemStack)) return;
     const player = event.source;
     const cooldown = player[platformCooldownSymbol];
+
     if (cooldown > 0) {
         mc.system.run(() => {
-            player.onScreenDisplay.setActionBar(`§cPlease wait for §g${ (cooldown / 20).toFixed(1) } §cseconds`);
+            player.onScreenDisplay.setActionBar(sprintf(strings[getPlayerLang(player)].platformCooldownNotification, (cooldown / 20).toFixed(1)));
         });
         return;
     }
@@ -142,7 +145,7 @@ mc.world.beforeEvents.itemUse.subscribe(event => {
     mc.system.run(() => {
         const alivePlatform = tryAddingPlatform(platformLoc, player.dimension);
         if (!alivePlatform) {
-            player.onScreenDisplay.setActionBar("§cCannot deploy platform here");
+            player.onScreenDisplay.setActionBar(sprintf(strings[getPlayerLang(player)].platformFailedToDeployNotification));
             return;
         }
         player.teleport(toLocation);
