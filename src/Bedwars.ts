@@ -1585,7 +1585,7 @@ export class BedWarsGame {
                 playerInfo.actionbar.remove(playerInfo.trackerNotificationD);
                 playerInfo.trackerNotificationD = undefined;
             }
-            switch (Math.floor(mc.system.currentTick % 240 / 60)) {
+            switch (Math.floor((mc.system.currentTick - this.startTime) % 240 / 60)) {
                 case 0:
                     const t = TEAM_CONSTANTS[playerInfo.team];
                     playerInfo.actionbar.changeText(playerInfo.basicNotificationD, sprintf(teamInformationNotification, t.colorPrefix, capitalize(strs[t.localName])));
@@ -1816,6 +1816,7 @@ export class BedWarsGame {
         } else { // FINAL KILL
             if (killerInfo) {
                 ++killerInfo.finalKillCount;
+                ++killerInfo.killCount;
                 this.broadcast("finalKillMessage", {
                     killerColor: TEAM_CONSTANTS[killerInfo.team].colorPrefix,
                     killer: killerInfo.name,
