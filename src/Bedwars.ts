@@ -1585,20 +1585,23 @@ export class BedWarsGame {
                 playerInfo.actionbar.remove(playerInfo.trackerNotificationD);
                 playerInfo.trackerNotificationD = undefined;
             }
-            switch (Math.floor((mc.system.currentTick - this.startTime) % 240 / 60)) {
-                case 0:
-                    const t = TEAM_CONSTANTS[playerInfo.team];
-                    playerInfo.actionbar.changeText(playerInfo.basicNotificationD, sprintf(teamInformationNotification, t.colorPrefix, capitalize(strs[t.localName])));
-                    break;
-                case 1:
-                    playerInfo.actionbar.changeText(playerInfo.basicNotificationD, sprintf(killCountNotification, playerInfo.killCount));
-                    break;
-                case 2:
-                    playerInfo.actionbar.changeText(playerInfo.basicNotificationD, sprintf(finalKillCountNotification, playerInfo.finalKillCount));
-                    break;
-                case 3:
-                    playerInfo.actionbar.changeText(playerInfo.basicNotificationD, sprintf(bedDestroyedCountNotification, playerInfo.bedDestroyedCount));
-                    break;
+            if ((mc.system.currentTick - this.startTime) % 80 == 0) {
+                const t = TEAM_CONSTANTS[playerInfo.team];
+                let result = sprintf(teamInformationNotification, t.colorPrefix, capitalize(strs[t.localName])) + " ";
+                switch ((mc.system.currentTick - this.startTime) % 240) {
+                    case 0:
+                        result += sprintf(killCountNotification, playerInfo.killCount);
+                        playerInfo.actionbar.changeText(playerInfo.basicNotificationD, result);
+                        break;
+                    case 80:
+                        result += sprintf(finalKillCountNotification, playerInfo.finalKillCount);
+                        playerInfo.actionbar.changeText(playerInfo.basicNotificationD, result);
+                        break;
+                    case 160:
+                        result += sprintf(bedDestroyedCountNotification, playerInfo.bedDestroyedCount);
+                        playerInfo.actionbar.changeText(playerInfo.basicNotificationD, result);
+                        break;
+                }
             }
             playerInfo.actionbar.tick();
         }
@@ -2437,11 +2440,6 @@ export class BedWarsGame {
     }
 };
 
-interface NotificationUpdate {
-    descriptor: number;
-    text: string;
-}
-
 class ActionbarManager {
     private instances: Map<number, {
         text: string;
@@ -2514,7 +2512,7 @@ class ActionbarManager {
             }
         }
         this.player.onScreenDisplay.setActionBar(result);
-        this.flushCooldown = 10;
+        this.flushCooldown = 20;
     }
 }
 

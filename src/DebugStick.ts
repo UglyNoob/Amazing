@@ -95,6 +95,7 @@ mc.world.beforeEvents.playerInteractWithBlock.subscribe(async event => {
     if (!player[PLAYER_DEBUG_MODE_SYM]) return;
     if (event.itemStack && isItemDebugStick(event.itemStack)) return;
     if (player[DEBUG_MODE_COOLDOWN_SYM] > 0) return;
+    if (player.isSneaking) return;
     event.cancel = true;
     player[DEBUG_MODE_COOLDOWN_SYM] = DEBUG_COOLDOWN;
 
