@@ -834,7 +834,7 @@ export class BedWarsGame {
             armorDisabled: false,
             armorToEnablingTicks: 0,
             trackerChangeTargetCooldown: 0,
-            actionbar: new ActionbarManager(player),
+            actionbar: new ActionbarManager(),
             basicNotificationD: 0
         };
         this.players.set(player.name, playerInfo);
@@ -1131,6 +1131,7 @@ export class BedWarsGame {
         }
         const teamMapInfo = this.map.teams.filter(t => t.type == teamInfo.type)[0];
         for (const teamPlayerInfo of this.players.values()) {
+            if (teamPlayerInfo.state == PlayerState.Offline) continue;
             if (teamPlayerInfo.team != teamInfo.type) continue;
             const islandArea = this.fixOrigin(teamMapInfo.islandArea);
             if (isDefensiveTrap && vectorWithinArea(teamPlayerInfo.player.location, islandArea)) {
@@ -1302,25 +1303,17 @@ export class BedWarsGame {
         if (this.state != GameState.started) return;
 
         for (const playerInfo of this.players.values()) {
-            const strs = strings[getPlayerLang(playerInfo.player)];
-            const {
-                deathTitle,
-                deathSubtitle,
-                spectateTitle,
-                spectateSubtitle,
-                respawnTitle,
-                respawnMessage,
-                trackerTrackingNotification,
-                teamInformationNotification,
-                killCountNotification,
-                finalKillCountNotification,
-                bedDestroyedCountNotification
-            } = strs;
             if (playerInfo.state == PlayerState.Offline) {
                 const player = getPlayerByName(playerInfo.name);
                 if (!player) continue;
                 // the player comes online
                 playerInfo.player = player;
+                const {
+                    deathTitle,
+                    deathSubtitle,
+                    spectateTitle,
+                    spectateSubtitle
+                } = strings[getPlayerLang(player)];
                 setGameMode(player, mc.GameMode.spectator);
                 player.teleport(playerInfo.deathLocation, { rotation: playerInfo.deathRotaion });
                 playerInfo.deathTime = mc.system.currentTick;
@@ -1356,6 +1349,18 @@ export class BedWarsGame {
                 this.onPlayerDieOrOffline(playerInfo, playerInfo.lastHurtBy);
                 continue;
             }
+            const strs = strings[getPlayerLang(playerInfo.player)];
+            const {
+                deathTitle,
+                deathSubtitle,
+                respawnTitle,
+                respawnMessage,
+                trackerTrackingNotification,
+                teamInformationNotification,
+                killCountNotification,
+                finalKillCountNotification,
+                bedDestroyedCountNotification
+            } = strs;
             player.runCommand("recipe take @s *");
             this.setupSpawnPoint(player);
 
@@ -1603,7 +1608,7 @@ export class BedWarsGame {
                         break;
                 }
             }
-            playerInfo.actionbar.tick();
+            playerInfo.actionbar.tick(player);
         }
         for (const gen of this.generators) {
             if (gen.indicatorLocations && gen.remainingCooldown % 20 == 0) {
@@ -1735,8 +1740,9 @@ export class BedWarsGame {
         // Simulated players AI
         const teamIslandEnemies: Map<TeamType, PlayerGameInformation[]> = new Map();
         for (const playerInfo of this.players.values()) {
-            const teamAreaEntered = playerInfo.teamAreaEntered;
             if (playerInfo.state != PlayerState.Alive) continue;
+
+            const teamAreaEntered = playerInfo.teamAreaEntered;
             if (teamAreaEntered != undefined && teamAreaEntered != playerInfo.team) {
                 const players = teamIslandEnemies.get(teamAreaEntered);
                 if (players) {
@@ -1747,6 +1753,7 @@ export class BedWarsGame {
             }
         }
         for (const fakePlayerInfo of this.players.values()) {
+            if (fakePlayerInfo.state == PlayerState.Offline) continue;
             if (!(fakePlayerInfo.player instanceof SimulatedPlayer)) continue;
             const fakePlayer = fakePlayerInfo.player;
             const victims = teamIslandEnemies.get(fakePlayerInfo.team)?.sort((a, b) =>
@@ -1754,7 +1761,7 @@ export class BedWarsGame {
             );
             let updateTarget = false;
             if (!fakePlayer.attackTarget ||
-                (v3.distance(fakePlayer.location, fakePlayer.attackTarget.player.location) >= 12 ||
+                (v3.distance(fakePlayer.location, fakePlayer.attackTarget.player.location) >= 30 ||
                     fakePlayer.attackTarget.state != PlayerState.Alive)) {
                 updateTarget = true;
             }
@@ -1946,9 +1953,11 @@ export class BedWarsGame {
             if (hurter[OWNER_SYM]) { // the hurter is a tamed entity
                 const ownerInfo = hurter[OWNER_SYM];
                 if (ownerInfo.team == victimInfo.team) {
-                    // workaround for disabling in-team damage
-                    const health = victim.getComponent("health")!;
-                    health.setCurrentValue(health.currentValue + event.damage);
+                    if (hurter.typeId != "minecraft:tnt") {
+                        // workaround for disabling in-team damage
+                        const health = victim.getComponent("health")!;
+                        health.setCurrentValue(health.currentValue + event.damage);
+                    }
                 } else {
                     victimInfo.lastHurtBy = hurter[OWNER_SYM];
                 }
@@ -2242,7 +2251,7 @@ export class BedWarsGame {
         if (event.permutationBeingPlaced.type.id == MinecraftBlockTypes.Tnt) {
             event.cancel = true;
             await sleep(0);
-            playerInfo.player.dimension.spawnEntity(MinecraftEntityTypes.Tnt, event.block.bottomCenter());
+            playerInfo.player.dimension.spawnEntity(MinecraftEntityTypes.Tnt, event.block.bottomCenter())[OWNER_SYM] = playerInfo;
             // consume tnt
             consumeMainHandItem(playerInfo.player);
             return;
@@ -2445,12 +2454,10 @@ class ActionbarManager {
         text: string;
         lifeTime?: number;
     }>;
-    private player: mc.Player;
     private flushCooldown: number;
 
-    constructor(player: mc.Player) {
+    constructor() {
         this.instances = new Map();
-        this.player = player;
         this.flushCooldown = 0;
     }
 
@@ -2484,7 +2491,7 @@ class ActionbarManager {
         this.getInstance(descriptor).lifeTime = 0;
     }
 
-    tick() {
+    tick(player: mc.Player) {
         let flush = false;
         if (this.flushCooldown == 0) {
             flush = true;
@@ -2511,7 +2518,7 @@ class ActionbarManager {
                 result += "\n" + instance.text;
             }
         }
-        this.player.onScreenDisplay.setActionBar(result);
+        player.onScreenDisplay.setActionBar(result);
         this.flushCooldown = 20;
     }
 }

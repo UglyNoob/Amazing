@@ -152,8 +152,6 @@ export interface Strings {
     trapShopTitle: string;
     trapShopBody: string;
     trapReachingMaximumString: string;
-    trapsViewingMenuDisplay: string;
-    trapsViewingMenuTitle: string;
     trapsViewingMenuBody0: string;
     trapsViewingMenuBody1: string;
     firstString: string;
@@ -341,8 +339,6 @@ strings[Lang.en_US] = {
     trapShopTitle: "Trap Shop",
     trapShopBody: "Buy some traps for your team.",
     trapReachingMaximumString: "Your team's traps reach the maximum.",
-    trapsViewingMenuDisplay: "View Your Traps",
-    trapsViewingMenuTitle: "Your Traps",
     trapsViewingMenuBody0: "§7Your team currently has:\n\n",
     trapsViewingMenuBody1: "§7Trap #%d: §a%s§7, activates when the %s enemy walks into your base\n",
     firstString: "first",
@@ -522,8 +518,6 @@ strings[Lang.zh_CN] = {
     trapShopTitle: "陷阱商店",
     trapShopBody: "购买陷阱。",
     trapReachingMaximumString: "你的队伍的陷阱已达到上限。",
-    trapsViewingMenuDisplay: "查看已购买的陷阱",
-    trapsViewingMenuTitle: "队伍陷阱",
     trapsViewingMenuBody0: "§7你的队伍当前有：\n\n",
     trapsViewingMenuBody1: "§7陷阱 #%d： §a%s§7，当%s敌人进入你的基地时激活\n",
     firstString: "第一个",
@@ -539,7 +533,12 @@ strings[Lang.zh_CN] = {
 
 
 export function getPlayerLang(player: mc.Player) {
-    return player.getDynamicProperty("LANG_PREFERENCE") as Lang;
+    let result = player.getDynamicProperty("LANG_PREFERENCE") as Lang;
+    if (result == null) {
+        player.setDynamicProperty("LANG_PREFERENCE", Lang.en_US);
+        result = Lang.en_US;
+    }
+    return result;
 }
 
 export function setPlayerLang(player: mc.Player, lang: Lang) {

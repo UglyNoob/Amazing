@@ -575,15 +575,15 @@ const generateItemShopData: () => Menu = () => ({
                     item: TRACKER_ITEM
                 }), () => "textures/blocks/deadbush.png"),
                 generateBuyOneItemMenu({ local: "loyalWolfName" }, () => ({
-                    cost: { ironAmount: 0, goldAmount: 0, emeraldAmount: 4, diamondAmount: 0 },
+                    cost: { ironAmount: 0, goldAmount: 0, emeraldAmount: 3, diamondAmount: 0 },
                     item: LOYAL_WOLF_ITEM
                 }), () => "textures/items/spawn_egg.png"),
                 generateBuyOneItemMenu({ local: "wolfArmorName" }, () => ({
-                    cost: { ironAmount: 0, goldAmount: 0, emeraldAmount: 2, diamondAmount: 0 },
+                    cost: { ironAmount: 0, goldAmount: 0, emeraldAmount: 5, diamondAmount: 0 },
                     item: WOLF_ARMOR_ITEM
                 }), () => "textures/items/wolf_armor.png"),
                 generateBuyOneItemMenu({ local: "rescuePlatformName" }, () => ({
-                    cost: { ironAmount: 0, goldAmount: 0, emeraldAmount: 2, diamondAmount: 0 },
+                    cost: { ironAmount: 0, goldAmount: 0, emeraldAmount: 1, diamondAmount: 0 },
                     item: PLATFORM_ITEM
                 }), () => "textures/items/blaze_rod.png")
             ]
@@ -680,6 +680,19 @@ const generateTeamShopData: () => Menu = () => ({
                 if (teamInfo.traps.length == MAX_TRAP_COUNT) {
                     result += `\n${ strs.trapReachingMaximumString }`;
                 }
+                result += "\n\n";
+                result += strs.trapsViewingMenuBody0;
+                const words = [
+                    strs.firstString,
+                    strs.secondString,
+                    strs.thirdString,
+                    strs.fourthString,
+                    strs.fifthString
+                ];
+                for (let index = 0; index < MAX_TRAP_COUNT; ++index) {
+                    const trapName = strs[TRAP_CONSTANTS[teamInfo.traps[index]]?.name] ?? strs.noTrapString;
+                    result += sprintf(strs.trapsViewingMenuBody1, index + 1, trapName, words[index]);
+                }
                 return result;
             },
             title: { local: "trapShopTitle" },
@@ -687,30 +700,7 @@ const generateTeamShopData: () => Menu = () => ({
                 generateTrapMenu(TrapType.NegativeEffect),
                 generateTrapMenu(TrapType.Defensive),
                 generateTrapMenu(TrapType.Alarm),
-                generateTrapMenu(TrapType.MinerFatigue),
-                {
-                    type: "entry",
-                    display: { local: "trapsViewingMenuDisplay" },
-                    icon: "",
-                    getBody({ player }, __, teamInfo) {
-                        const strs = strings[getPlayerLang(player)];
-                        let result = strs.trapsViewingMenuBody0;
-                        const words = [
-                            strs.firstString,
-                            strs.secondString,
-                            strs.thirdString,
-                            strs.fourthString,
-                            strs.fifthString
-                        ];
-                        for (let index = 0; index < MAX_TRAP_COUNT; ++index) {
-                            const trapName = strs[TRAP_CONSTANTS[teamInfo.traps[index]]?.name] ?? strs.noTrapString;
-                            result += sprintf(strs.trapsViewingMenuBody1, index + 1, trapName, words[index]);
-                        }
-                        return result;
-                    },
-                    title: { local: "trapsViewingMenuTitle" },
-                    subMenus: []
-                }
+                generateTrapMenu(TrapType.MinerFatigue)
             ]
         }, {
             type: "entry",
