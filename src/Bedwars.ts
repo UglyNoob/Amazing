@@ -1103,9 +1103,8 @@ export class BedWarsGame {
     }
 
     private activateTrap(playerInfo: PlayerGameInformation, teamInfo: TeamGameInformation) {
-        if (teamInfo.traps.length == 0) return;
-
-        const trapType = teamInfo.traps.shift()!;
+        const trapType = teamInfo.traps.shift();
+        if (trapType == null) return;
         const player = playerInfo.player;
         let isDefensiveTrap = false;
         let isAlarmTrap = false;
@@ -1223,9 +1222,9 @@ export class BedWarsGame {
                 const { localName, colorPrefix } = TEAM_CONSTANTS[teamType];
                 for (const { player, state } of this.players.values()) {
                     if (state == PlayerState.Offline) continue;
-                    const str = strings[getPlayerLang(player)];
+                    const strs = strings[getPlayerLang(player)];
 
-                    player.sendMessage(sprintf(str.teamEliminationMessage, colorPrefix, capitalize(str[localName])));
+                    player.sendMessage(sprintf(strs.teamEliminationMessage, colorPrefix, capitalize(strs[localName])));
                 }
                 const teamMapInfo = this.map.teams.find(t => t.type == teamType)!;
                 const bedLocation = this.fixOrigin(teamMapInfo.bedLocation);
@@ -1425,170 +1424,170 @@ export class BedWarsGame {
                     });
                 }
             }
-            if (playerInfo.state != PlayerState.Alive) continue;
+            if (playerInfo.state == PlayerState.Alive) {
+                if (player.location.y <= this.originPos.y + this.map.voidY) { // The player falls to the void
+                    setGameMode(player, mc.GameMode.spectator);
+                    this.onPlayerDieOrOffline(playerInfo, playerInfo.lastHurtBy);
 
-            if (player.location.y <= this.originPos.y + this.map.voidY) { // The player falls to the void
-                setGameMode(player, mc.GameMode.spectator);
-                this.onPlayerDieOrOffline(playerInfo, playerInfo.lastHurtBy);
-
-                const isTeamBedAlive = this.teams.get(playerInfo.team)!.state == TeamState.BedAlive;
-                player.onScreenDisplay.setTitle(deathTitle, {
-                    subtitle: isTeamBedAlive ? sprintf(deathSubtitle, RESPAWN_TIME / 20) : undefined,
-                    fadeInDuration: 0,
-                    stayDuration: 30,
-                    fadeOutDuration: 20
-                });
-                if (isTeamBedAlive) {
-                    playerInfo.state = PlayerState.Respawning;
-                } else {
-                    playerInfo.state = PlayerState.Spectating;
+                    const isTeamBedAlive = this.teams.get(playerInfo.team)!.state == TeamState.BedAlive;
+                    player.onScreenDisplay.setTitle(deathTitle, {
+                        subtitle: isTeamBedAlive ? sprintf(deathSubtitle, RESPAWN_TIME / 20) : undefined,
+                        fadeInDuration: 0,
+                        stayDuration: 30,
+                        fadeOutDuration: 20
+                    });
+                    if (isTeamBedAlive) {
+                        playerInfo.state = PlayerState.Respawning;
+                    } else {
+                        playerInfo.state = PlayerState.Spectating;
+                    }
+                    player.dimension.spawnEntity(MinecraftEntityTypes.LightningBolt, player.location);
+                    continue;
                 }
-                player.dimension.spawnEntity(MinecraftEntityTypes.LightningBolt, player.location);
-                continue;
-            }
-            // player.onScreenDisplay.setActionBar(String(TEAM_CONSTANTS[playerInfo.teamAreaEntered!]?.name)); // DEBUG
-            let trackerWorking = false;
+                // player.onScreenDisplay.setActionBar(String(TEAM_CONSTANTS[playerInfo.teamAreaEntered!]?.name)); // DEBUG
+                let trackerWorking = false;
 
-            if (mc.system.currentTick % 20 == 0) {
-                this.resetNameTag(playerInfo);
-            }
-            const equipment = player.getComponent("equippable")!;
-            for (const slotName of [mc.EquipmentSlot.Head, mc.EquipmentSlot.Chest, mc.EquipmentSlot.Legs, mc.EquipmentSlot.Feet, mc.EquipmentSlot.Mainhand]) {
-                const item = equipment.getEquipment(slotName);
-                if (!item) continue;
-                if (slotName == mc.EquipmentSlot.Mainhand) {
-                    let erase = false;
-                    // clean items
-                    if ([
-                        MinecraftItemTypes.GlassBottle,
-                        MinecraftItemTypes.CraftingTable,
-                    ].includes(item.typeId as MinecraftItemTypes)) {
-                        erase = true;
-                    }
-                    if (item.typeId == MinecraftItemTypes.Shears && !playerInfo.hasShear) {
-                        erase = true;
-                    }
-                    if (erase) {
-                        equipment.getEquipmentSlot(slotName).setItem();
-                        continue;
-                    }
-                    if (itemEqual(item, playerInfo.swordLevel.item)) {
-                        const teamInfo = this.teams.get(playerInfo.team)!;
-                        if (teamInfo.hasSharpness) {
-                            const enchantment = item.getComponent("enchantable")!;
-                            const existedEnch = enchantment.getEnchantment(MinecraftEnchantmentTypes.Sharpness);
-                            if (!existedEnch) {
-                                enchantment.addEnchantment({
-                                    type: mc.EnchantmentTypes.get(MinecraftEnchantmentTypes.Sharpness)!,
-                                    level: SHARPNESS_ENCHANMENT_LEVEL
-                                });
-                                equipment.setEquipment(slotName, item);
-                            }
+                if (mc.system.currentTick % 20 == 0) {
+                    this.resetNameTag(playerInfo);
+                }
+                const equipment = player.getComponent("equippable")!;
+                for (const slotName of [mc.EquipmentSlot.Head, mc.EquipmentSlot.Chest, mc.EquipmentSlot.Legs, mc.EquipmentSlot.Feet, mc.EquipmentSlot.Mainhand]) {
+                    const item = equipment.getEquipment(slotName);
+                    if (!item) continue;
+                    if (slotName == mc.EquipmentSlot.Mainhand) {
+                        let erase = false;
+                        // clean items
+                        if ([
+                            MinecraftItemTypes.GlassBottle,
+                            MinecraftItemTypes.CraftingTable,
+                        ].includes(item.typeId as MinecraftItemTypes)) {
+                            erase = true;
                         }
-                    } else if (playerInfo.trackingTarget && isTrackerItem(item)) {
-                        trackerWorking = true;
-                        if (mc.system.currentTick % 5 == 0) {
-                            const distanceVec = v3.subtract(playerInfo.trackingTarget.player.location, player.location);
-                            const viewDirection = player.getViewDirection();
-                            const PI = Math.PI;
-                            let angle = getAngle(distanceVec.x, distanceVec.z) - getAngle(viewDirection.x, viewDirection.z);
-                            if (angle < 0) angle += PI * 2;
-                            let directionString: string;
-                            if (angle <= PI / 8 || angle >= PI * 15 / 8) {
-                                directionString = "↑";
-                            } else if (angle <= PI * 3 / 8) {
-                                directionString = "↗";
-                            } else if (angle <= PI * 5 / 8) {
-                                directionString = "→";
-                            } else if (angle <= PI * 7 / 8) {
-                                directionString = "↘";
-                            } else if (angle <= PI * 9 / 8) {
-                                directionString = "↓";
-                            } else if (angle <= PI * 11 / 8) {
-                                directionString = "↙";
-                            } else if (angle <= PI * 13 / 8) {
-                                directionString = "←";
-                            } else {
-                                directionString = "↖";
-                            }
-                            if (playerInfo.trackerNotificationD == null) {
-                                playerInfo.trackerNotificationD = playerInfo.actionbar.add("");
-                            }
-                            playerInfo.actionbar.changeText(
-                                playerInfo.trackerNotificationD,
-                                sprintf(trackerTrackingNotification,
-                                    TEAM_CONSTANTS[playerInfo.trackingTarget.team].colorPrefix,
-                                    playerInfo.trackingTarget.name,
-                                    v3.magnitude(distanceVec).toFixed(0),
-                                    directionString)
-                            );
+                        if (item.typeId == MinecraftItemTypes.Shears && !playerInfo.hasShear) {
+                            erase = true;
                         }
-                    }
-                } else { // Armors
-                    const teamInfo = this.teams.get(playerInfo.team)!;
-                    if (teamInfo.protectionLevel > 0) {
-                        const enchantment = item.getComponent("enchantable")!;
-                        const existedEnch = enchantment.getEnchantment(MinecraftEnchantmentTypes.Protection);
-                        if (!existedEnch || existedEnch.level != teamInfo.protectionLevel) {
-                            enchantment.addEnchantment({
-                                type: mc.EnchantmentTypes.get(MinecraftEnchantmentTypes.Protection)!,
-                                level: teamInfo.protectionLevel
-                            });
-                            equipment.setEquipment(slotName, item);
+                        if (erase) {
+                            equipment.getEquipmentSlot(slotName).setItem();
                             continue;
                         }
+                        if (itemEqual(item, playerInfo.swordLevel.item)) {
+                            const teamInfo = this.teams.get(playerInfo.team)!;
+                            if (teamInfo.hasSharpness) {
+                                const enchantment = item.getComponent("enchantable")!;
+                                const existedEnch = enchantment.getEnchantment(MinecraftEnchantmentTypes.Sharpness);
+                                if (!existedEnch) {
+                                    enchantment.addEnchantment({
+                                        type: mc.EnchantmentTypes.get(MinecraftEnchantmentTypes.Sharpness)!,
+                                        level: SHARPNESS_ENCHANMENT_LEVEL
+                                    });
+                                    equipment.setEquipment(slotName, item);
+                                }
+                            }
+                        } else if (playerInfo.trackingTarget && isTrackerItem(item)) {
+                            trackerWorking = true;
+                            if (mc.system.currentTick % 5 == 0) {
+                                const distanceVec = v3.subtract(playerInfo.trackingTarget.player.location, player.location);
+                                const viewDirection = player.getViewDirection();
+                                const PI = Math.PI;
+                                let angle = getAngle(distanceVec.x, distanceVec.z) - getAngle(viewDirection.x, viewDirection.z);
+                                if (angle < 0) angle += PI * 2;
+                                let directionString: string;
+                                if (angle <= PI / 8 || angle >= PI * 15 / 8) {
+                                    directionString = "↑";
+                                } else if (angle <= PI * 3 / 8) {
+                                    directionString = "↗";
+                                } else if (angle <= PI * 5 / 8) {
+                                    directionString = "→";
+                                } else if (angle <= PI * 7 / 8) {
+                                    directionString = "↘";
+                                } else if (angle <= PI * 9 / 8) {
+                                    directionString = "↓";
+                                } else if (angle <= PI * 11 / 8) {
+                                    directionString = "↙";
+                                } else if (angle <= PI * 13 / 8) {
+                                    directionString = "←";
+                                } else {
+                                    directionString = "↖";
+                                }
+                                if (playerInfo.trackerNotificationD == null) {
+                                    playerInfo.trackerNotificationD = playerInfo.actionbar.add("");
+                                }
+                                playerInfo.actionbar.changeText(
+                                    playerInfo.trackerNotificationD,
+                                    sprintf(trackerTrackingNotification,
+                                        TEAM_CONSTANTS[playerInfo.trackingTarget.team].colorPrefix,
+                                        playerInfo.trackingTarget.name,
+                                        v3.magnitude(distanceVec).toFixed(0),
+                                        directionString)
+                                );
+                            }
+                        }
+                    } else { // Armors
+                        const teamInfo = this.teams.get(playerInfo.team)!;
+                        if (teamInfo.protectionLevel > 0) {
+                            const enchantment = item.getComponent("enchantable")!;
+                            const existedEnch = enchantment.getEnchantment(MinecraftEnchantmentTypes.Protection);
+                            if (!existedEnch || existedEnch.level != teamInfo.protectionLevel) {
+                                enchantment.addEnchantment({
+                                    type: mc.EnchantmentTypes.get(MinecraftEnchantmentTypes.Protection)!,
+                                    level: teamInfo.protectionLevel
+                                });
+                                equipment.setEquipment(slotName, item);
+                                continue;
+                            }
+                        }
+                    }
+                    const com = item.getComponent("durability");
+                    if (!com) continue;
+                    if (com.damage > 20) {
+                        com.damage = 0;
+                        equipment.setEquipment(slotName, item);
+                    }
+                };
+                if (playerInfo.bridgeEggCooldown > 0) --playerInfo.bridgeEggCooldown;
+                if (playerInfo.fireBallCooldown > 0) --playerInfo.fireBallCooldown;
+                if (playerInfo.trackerChangeTargetCooldown > 0) --playerInfo.trackerChangeTargetCooldown;
+                if (playerInfo.armorToEnablingTicks > 0) {
+                    --playerInfo.armorToEnablingTicks;
+                } else { // enable the armor
+                    if (playerInfo.armorDisabled) {
+                        playerInfo.armorDisabled = false;
+                        this.resetArmor(playerInfo);
                     }
                 }
-                const com = item.getComponent("durability");
-                if (!com) continue;
-                if (com.damage > 20) {
-                    com.damage = 0;
-                    equipment.setEquipment(slotName, item);
-                }
-            };
-            if (playerInfo.bridgeEggCooldown > 0) --playerInfo.bridgeEggCooldown;
-            if (playerInfo.fireBallCooldown > 0) --playerInfo.fireBallCooldown;
-            if (playerInfo.trackerChangeTargetCooldown > 0) --playerInfo.trackerChangeTargetCooldown;
-            if (playerInfo.armorToEnablingTicks > 0) {
-                --playerInfo.armorToEnablingTicks;
-            } else { // enable the armor
-                if (playerInfo.armorDisabled) {
-                    playerInfo.armorDisabled = false;
-                    this.resetArmor(playerInfo);
-                }
-            }
 
-            let playerWithinTeamArea = false;
-            for (const teamInfo of this.teams.values()) {
-                const teamMapInfo = this.map.teams.filter(t => t.type == teamInfo.type)[0];
-                const islandArea = this.fixOrigin(teamMapInfo.islandArea);
-                if (!vectorWithinArea(player.location, islandArea)) continue;
-                playerWithinTeamArea = true;
-                if (playerInfo.team == teamInfo.type) {
-                    playerInfo.teamAreaEntered = playerInfo.team;
-                    if (teamInfo.healPoolEnabled) {
-                        playerInfo.player.addEffect(MinecraftEffectTypes.Regeneration, 20, {
-                            amplifier: 0,
-                            showParticles: false
-                        });
+                let playerWithinTeamArea = false;
+                for (const teamInfo of this.teams.values()) {
+                    const teamMapInfo = this.map.teams.filter(t => t.type == teamInfo.type)[0];
+                    const islandArea = this.fixOrigin(teamMapInfo.islandArea);
+                    if (!vectorWithinArea(player.location, islandArea)) continue;
+                    playerWithinTeamArea = true;
+                    if (playerInfo.team == teamInfo.type) {
+                        playerInfo.teamAreaEntered = playerInfo.team;
+                        if (teamInfo.healPoolEnabled) {
+                            playerInfo.player.addEffect(MinecraftEffectTypes.Regeneration, 20, {
+                                amplifier: 0,
+                                showParticles: false
+                            });
+                        }
+                        continue;
+                    } else {
+                        if (playerInfo.teamAreaEntered == teamInfo.type) continue;
+                        playerInfo.teamAreaEntered = teamInfo.type;
+                        if (teamInfo.state == TeamState.Dead) continue;
+
+                        // the player activates a team's trap
+                        this.activateTrap(playerInfo, teamInfo);
                     }
-                    continue;
-                } else {
-                    if (playerInfo.teamAreaEntered == teamInfo.type) continue;
-                    playerInfo.teamAreaEntered = teamInfo.type;
-                    if (teamInfo.state == TeamState.Dead) continue;
 
-                    // the player activates a team's trap
-                    this.activateTrap(playerInfo, teamInfo);
                 }
-
-            }
-            if (!playerWithinTeamArea) {
-                playerInfo.teamAreaEntered = undefined;
-            }
-            if (!trackerWorking && playerInfo.trackerNotificationD != null) {
-                playerInfo.actionbar.remove(playerInfo.trackerNotificationD);
-                playerInfo.trackerNotificationD = undefined;
+                if (!playerWithinTeamArea) {
+                    playerInfo.teamAreaEntered = undefined;
+                }
+                if (!trackerWorking && playerInfo.trackerNotificationD != null) {
+                    playerInfo.actionbar.remove(playerInfo.trackerNotificationD);
+                    playerInfo.trackerNotificationD = undefined;
+                }
             }
             if ((mc.system.currentTick - this.startTime) % 80 == 0) {
                 const t = TEAM_CONSTANTS[playerInfo.team];
@@ -1609,6 +1608,7 @@ export class BedWarsGame {
                 }
             }
             playerInfo.actionbar.tick(player);
+
         }
         for (const gen of this.generators) {
             if (gen.indicatorLocations && gen.remainingCooldown % 20 == 0) {
@@ -1714,9 +1714,9 @@ export class BedWarsGame {
                 { x: 0, y: 0, z: 1 },
             ].forEach(_pos => {
                 const location = v3.add(baseLocation, _pos);
-                const preExistingBlock = this.dimension.getBlock(location);
+                const existingBlock = this.dimension.getBlock(location);
                 if (this.isBlockLocationPlayerPlacable(location) &&
-                    (!preExistingBlock || preExistingBlock.type.id == MinecraftBlockTypes.Air)) {
+                    (!existingBlock || existingBlock.type.id == MinecraftBlockTypes.Air)) {
                     this.dimension.fillBlocks(location, location, TEAM_CONSTANTS[ownerInfo.team].woolName);
                     ownerInfo.placement.push(location);
                 }
@@ -1779,13 +1779,13 @@ export class BedWarsGame {
 
             if (!fakePlayer.attackTarget) continue;
             if (!fakePlayer.previousOnGround && fakePlayer.isOnGround || mc.system.currentTick % randomInt(7, 10) == 0) {
-                fakePlayer.navigateToEntity(fakePlayer.attackTarget.player);
+                fakePlayer.navigateToEntity(fakePlayer.attackTarget.player as any);
             }
             if (v3.distance(fakePlayer.location, fakePlayer.attackTarget.player.location) < 2.95) {
                 if (mc.system.currentTick % randomInt(2, 3) == 0) {
                     fakePlayer.stopMoving();
                     const location = Object.assign({}, fakePlayer.attackTarget.player.getHeadLocation());
-                    fakePlayer.lookAtLocation(test.relativeLocation(location));
+                    fakePlayer.lookAtLocation(test.relativeLocation(location as any));
                     fakePlayer.attack();
                 }
             }
@@ -1795,7 +1795,7 @@ export class BedWarsGame {
 
     /**
      * This method defines actions to be performed right after the player dies or come offline
-     * , and does not include all actions to get the player back to the game
+     * , and does not include all actions to get the player back into the game
      */
     private onPlayerDieOrOffline(victimInfo: PlayerGameInformation, killerInfo?: PlayerGameInformation) {
         victimInfo.deathTime = mc.system.currentTick;

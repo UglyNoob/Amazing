@@ -24,17 +24,6 @@ export function getPlayerByName(name: string): mc.Player | undefined {
     return mc.world.getPlayers({ name })[0];
 }
 
-export function calculateDistance(vector1: mc.Vector3, vector2: mc.Vector3) {
-    let dx = vector1.x - vector2.x;
-    let dy = vector1.y - vector2.y;
-    let dz = vector1.z - vector2.z;
-    return Math.sqrt(dx * dx + dy * dy + dz * dz);
-}
-
-export function realTypeof(value: any) {
-    return value === null ? 'null' : typeof value;
-}
-
 export function getGameMode(player: mc.Player): mc.GameMode {
     if (player.getGameMode) return player.getGameMode();
     for (let gameMode of Object.values(mc.GameMode)) {
@@ -58,7 +47,9 @@ function isPrimitive(value: any) {
 function getObjectName(obj: object) {
     return obj?.constructor?.name ?? "Object";
 }
-
+function realTypeof(value: any) {
+    return value === null ? 'null' : typeof value;
+}
 /**
  * @param {mc.Player} player The player to show the object to
  * @param {any} object The value to show
@@ -187,9 +178,6 @@ export function vectorAdd(...vecs: mc.Vector3[]): mc.Vector3 {
         result.z += vec.z;
     }
     return result;
-}
-export function vectorSize(vec: mc.Vector3) {
-    return Math.sqrt(vec.x * vec.x + vec.y * vec.y + vec.z * vec.z);
 }
 export function getAngle(x: number, z: number) {
     const mag = Math.sqrt(x * x + z * z);
