@@ -35,6 +35,10 @@ export interface Strings {
     finalKillCountNotification: string;
     bedDestroyedCountNotification: string;
 
+    teamChatPrefix: string;
+    globalChatPrefix: string;
+    spectatorChatPrefix: string;
+
     redName: string;
     blueName: string;
     yellowName: string;
@@ -208,6 +212,10 @@ strings[Lang.en_US] = {
     killCountNotification: "§7Kills: §a%d",
     finalKillCountNotification: "§7Final Kills: §a%d",
     bedDestroyedCountNotification: "§7Destroyed Beds: §a%d",
+
+    teamChatPrefix: "§3[TEAM]§r",
+    globalChatPrefix: "§6[GLOBAL]§r",
+    spectatorChatPrefix: "§1[SPECTATOR]§r",
 
     redName: "red",
     blueName: "blue",
@@ -387,6 +395,10 @@ strings[Lang.zh_CN] = {
     killCountNotification: "§7击杀数：§a%d",
     finalKillCountNotification: "§7最终击杀数：§a%d",
     bedDestroyedCountNotification: "§7摧毁床数：§a%d",
+
+    teamChatPrefix: "§3[队伍]§r",
+    globalChatPrefix: "§6[全局]§r",
+    spectatorChatPrefix: "§1[观察者]§r",
 
     redName: "红",
     blueName: "蓝",

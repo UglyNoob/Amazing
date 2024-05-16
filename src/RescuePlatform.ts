@@ -1,12 +1,12 @@
 import * as mc from '@minecraft/server';
 
-import { consumeMainHandItem } from './utility.js';
+import { consumeMainHandItem, sleep } from './utility.js';
 import { MinecraftBlockTypes } from '@minecraft/vanilla-data';
 import { Vector3Utils as v3 } from '@minecraft/math';
 import { sprintf } from 'sprintf-js';
 import { getPlayerLang, strings } from './Lang.js';
 
-export const PLATFORM_ITEM = (function () {
+export const PLATFORM_ITEM = (() => {
     const item = new mc.ItemStack("minecraft:blaze_rod", 1);
     item.nameTag = "§r§2Rescue Platform";
     item.setLore(["", "§r§eSave you from the void"]);
@@ -126,15 +126,14 @@ function removePlatform(platform: AlivePlatform) {
     }
 }
 
-mc.world.beforeEvents.itemUse.subscribe(event => {
+mc.world.beforeEvents.itemUse.subscribe(async event => {
     if (!isItemRescuePlatform(event.itemStack)) return;
     const player = event.source;
     const cooldown = player[platformCooldownSymbol];
 
     if (cooldown > 0) {
-        mc.system.run(() => {
-            player.onScreenDisplay.setActionBar(sprintf(strings[getPlayerLang(player)].platformCooldownNotification, (cooldown / 20).toFixed(1)));
-        });
+        await sleep(0);
+        player.onScreenDisplay.setActionBar(sprintf(strings[getPlayerLang(player)].platformCooldownNotification, (cooldown / 20).toFixed(1)));
         return;
     }
     const platformLoc = player.location;
@@ -142,18 +141,18 @@ mc.world.beforeEvents.itemUse.subscribe(event => {
     platformLoc.y = Math.floor(platformLoc.y) - 1;
     platformLoc.z = Math.floor(platformLoc.z) - 2;
     const toLocation = player.location;
-    mc.system.run(() => {
-        const alivePlatform = tryAddingPlatform(platformLoc, player.dimension);
-        if (!alivePlatform) {
-            player.onScreenDisplay.setActionBar(sprintf(strings[getPlayerLang(player)].platformFailedToDeployNotification));
-            return;
-        }
-        player.teleport(toLocation);
-        consumeMainHandItem(player);
 
-        alivePlatforms.push(alivePlatform);
-        player[platformCooldownSymbol] = PLATFORM_COOLDOWN;
-    });
+    await sleep(0);
+    const alivePlatform = tryAddingPlatform(platformLoc, player.dimension);
+    if (!alivePlatform) {
+        player.onScreenDisplay.setActionBar(sprintf(strings[getPlayerLang(player)].platformFailedToDeployNotification));
+        return;
+    }
+    player.teleport(toLocation);
+    consumeMainHandItem(player);
+
+    alivePlatforms.push(alivePlatform);
+    player[platformCooldownSymbol] = PLATFORM_COOLDOWN;
 });
 
 mc.world.beforeEvents.playerBreakBlock.subscribe(event => {
