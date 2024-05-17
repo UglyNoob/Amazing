@@ -167,6 +167,16 @@ export interface Strings {
 
     platformCooldownNotification: string;
     platformFailedToDeployNotification: string;
+
+    bedwarsSettingTitle: string;
+
+    teleportMenuTitle: string;
+    teleportMenuBody: string;
+    unableToUseTeleportMenuMessage: string;
+    noAvailablePlayerToTeleportMessage: string;
+    closeChatMenuMessage: string;
+    teleportTargetDeadMessage: string;
+    teleportCommandNotification: string;
 }
 
 // DO NOT CHANGE THE ORDER
@@ -357,7 +367,17 @@ strings[Lang.en_US] = {
     noTrapString: "§cNo Trap",
 
     platformCooldownNotification: "§cPlease wait for §g%s §cseconds",
-    platformFailedToDeployNotification: "§cCannot deploy platform here"
+    platformFailedToDeployNotification: "§cCannot deploy platform here",
+
+    bedwarsSettingTitle: "Bedwars Settings",
+
+    teleportMenuTitle: "Teleport",
+    teleportMenuBody: "Choose a player to teleport to",
+    unableToUseTeleportMenuMessage: "§cOnly spectators are able to use this command.",
+    noAvailablePlayerToTeleportMessage: "§cThere is no players to teleport to currently.",
+    closeChatMenuMessage: "§6Please close the chat menu.",
+    teleportTargetDeadMessage: "%s §6is not alive. Teleporting you to the death location...",
+    teleportCommandNotification: '§6Type "#tp" to teleport to other players.'
 };
 
 strings[Lang.zh_CN] = {
@@ -540,7 +560,17 @@ strings[Lang.zh_CN] = {
     noTrapString: "§c无",
 
     platformCooldownNotification: "§c请等待§g%s§c秒",
-    platformFailedToDeployNotification: "§c无法在这里放置救援平台"
+    platformFailedToDeployNotification: "§c无法在这里放置救援平台",
+
+    bedwarsSettingTitle: "起床战争设置",
+
+    teleportMenuTitle: "传送菜单",
+    teleportMenuBody: "选择要传送的玩家",
+    unableToUseTeleportMenuMessage: "§c只有观察者能使用此指令。",
+    noAvailablePlayerToTeleportMessage: "§c当前五可以传送的玩家。",
+    closeChatMenuMessage: "§6请关闭聊天窗口。",
+    teleportTargetDeadMessage: "%s §6已死亡，传送至死亡地点。",
+    teleportCommandNotification: '§6输入“#tp”以传送至其他玩家'
 };
 
 

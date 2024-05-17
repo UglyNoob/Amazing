@@ -1296,12 +1296,15 @@ export class BedWarsGame {
         }
     }
 
-    private showSpectateTitle(player: mc.Player) {
+    private makePlayerSpectator(playerInfo: PlayerGameInformation) {
         const {
             spectateTitle,
-            spectateSubtitle
-        } = strings[getPlayerLang(player)];
-        player.onScreenDisplay.setTitle(spectateTitle, {
+            spectateSubtitle,
+            teleportCommandNotification
+        } = strings[getPlayerLang(playerInfo.player)];
+        playerInfo.state = PlayerState.Spectating;
+        playerInfo.actionbar.add(teleportCommandNotification);
+        playerInfo.player.onScreenDisplay.setTitle(spectateTitle, {
             subtitle: spectateSubtitle,
             fadeInDuration: 0,
             stayDuration: 50,
@@ -1326,8 +1329,7 @@ export class BedWarsGame {
                 if (teamInfo.state == TeamState.BedAlive) {
                     playerInfo.state = PlayerState.Respawning;
                 } else {
-                    playerInfo.state = PlayerState.Spectating;
-                    this.showSpectateTitle(player);
+                    this.makePlayerSpectator(playerInfo); //TODO
                 }
                 this.broadcast("reconnectionMessage", TEAM_CONSTANTS[playerInfo.team].colorPrefix, playerInfo.name);
             }
@@ -1350,7 +1352,7 @@ export class BedWarsGame {
                 finalKillCountNotification,
                 bedDestroyedCountNotification
             } = strs;
-            player.runCommand("recipe take @s *");
+            player.runCommandAsync("recipe take @s *");
             this.setupSpawnPoint(player);
 
             if (player.dimension != this.dimension) {
@@ -1364,8 +1366,7 @@ export class BedWarsGame {
                 if (teamInfo.state == TeamState.BedAlive) {
                     playerInfo.state = PlayerState.Respawning;
                 } else {
-                    playerInfo.state = PlayerState.Spectating;
-                    this.showSpectateTitle(player);
+                    this.makePlayerSpectator(playerInfo);
                 }
             }
 
@@ -1376,8 +1377,7 @@ export class BedWarsGame {
                 if (teamInfo.state == TeamState.BedAlive) {
                     playerInfo.state = PlayerState.Respawning;
                 } else {
-                    playerInfo.state = PlayerState.Spectating;
-                    this.showSpectateTitle(player);
+                    this.makePlayerSpectator(playerInfo);
                 }
             }
             if (playerInfo.state == PlayerState.Alive &&
@@ -1388,8 +1388,7 @@ export class BedWarsGame {
                 if (teamInfo.state == TeamState.BedAlive) {
                     playerInfo.state = PlayerState.Respawning;
                 } else {
-                    playerInfo.state = PlayerState.Spectating;
-                    this.showSpectateTitle(player);
+                    this.makePlayerSpectator(playerInfo);
                 }
                 player.dimension.spawnEntity(MinecraftEntityTypes.LightningBolt, player.location);
             }
@@ -2329,7 +2328,9 @@ export class BedWarsGame {
     }
     private async openSettingsMenu(player: mc.Player) {
         const menu = new ModalFormData();
+
         const pervLang = getPlayerLang(player);
+        menu.title(strings[pervLang].bedwarsSettingTitle);
         menu.dropdown("Languages", ["English", "简体中文"], pervLang);
         const response = await menu.show(player);
 
@@ -2396,14 +2397,70 @@ export class BedWarsGame {
         this.dimension.setWeather(mc.WeatherType.Clear);
     }
 
+    private async openTeleportMenu(playerInfo: PlayerGameInformation) {
+        const form = new ActionFormData();
+        const players = Array.from(this.players.values())
+            .filter(({ state }) => state == PlayerState.Alive)
+            .sort(({ team: a }, { team: b }) => a == b ? 0 : a == playerInfo.team ? -1 : b == playerInfo.team ? 1 : a - b);
+        const {
+            noAvailablePlayerToTeleportMessage,
+            teleportMenuTitle,
+            teleportMenuBody,
+            closeChatMenuMessage,
+            teleportTargetDeadMessage
+        } = strings[getPlayerLang(playerInfo.player)];
+
+        if (players.length == 0) {
+            playerInfo.player.sendMessage(noAvailablePlayerToTeleportMessage);
+            return;
+        }
+        form.title(teleportMenuTitle);
+        form.body(teleportMenuBody);
+        for (const iPlayerInfo of players) {
+            form.button(`${ TEAM_CONSTANTS[iPlayerInfo.team].colorPrefix }${ iPlayerInfo.name }`);
+        }
+        playerInfo.player.sendMessage(closeChatMenuMessage);
+        let response: ActionFormResponse;
+        while (true) {
+            response = await form.show(playerInfo.player);
+            if (response.cancelationReason != FormCancelationReason.UserBusy) break;
+            await sleep(5);
+        }
+        if (response.canceled) return;
+        const {
+            player: selectedPlayer,
+            state,
+            team,
+            deathLocation,
+            deathRotaion
+        } = players[response.selection!];
+        if (state == PlayerState.Alive) {
+            playerInfo.player.teleport(selectedPlayer.location, { rotation: selectedPlayer.getRotation() });
+        } else {
+            playerInfo.player.sendMessage(sprintf(teleportTargetDeadMessage, TEAM_CONSTANTS[team].colorPrefix + selectedPlayer.name));
+            playerInfo.player.teleport(deathLocation, { rotation: deathRotaion });
+        }
+    }
+
     beforeChatSend(event: mc.ChatSendBeforeEvent) {
         if (this.state != GameState.started) return;
         const sender = event.sender;
         const senderInfo = this.players.get(sender.name);
         if (!senderInfo) return;
 
+        const {
+            unableToUseTeleportMenuMessage
+        } = strings[getPlayerLang(sender)];
+
         event.cancel = true;
-        if (event.message == "DESTROY BED") { //DEBUG
+        if (event.message == "#tp") {
+            if (senderInfo.state != PlayerState.Spectating) {
+                sender.sendMessage(unableToUseTeleportMenuMessage);
+                return;
+            }
+            mc.system.run(() => this.openTeleportMenu(senderInfo));
+            return;
+        } else if (event.message == "DESTROY BED") { //DEBUG
             const loc = this.map.teams.filter(t => t.type == senderInfo.team)[0].bedLocation[0];
             let destroyer: mc.Player | null = null;
             for (const playerInfo of this.players.values()) {
