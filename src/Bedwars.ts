@@ -2359,6 +2359,7 @@ export class BedWarsGame {
             const wolf = this.dimension.spawnEntity(MinecraftEntityTypes.Wolf, playerInfo.player.location);
             // tame() method would make the wolf tamed to the nearest player
             wolf.getComponent("tameable")!.tame();
+            wolf.triggerEvent("minecraft:ageable_grow_up");
             wolf[OWNER_SYM] = playerInfo;
             // wolf.teleport(wolfLocation);
             consumeMainHandItem(playerInfo.player);
@@ -2656,23 +2657,22 @@ mc.world.beforeEvents.chatSend.subscribe(async event => {
     let originLocation: mc.Vector3;
     let minimalPlayer: number;
     let fillBlankTeams: boolean;
-    const maps: [MapInformation, mc.Vector3][] = [];
     if (event.message == "start") {
         if (!event.sender.isOp()) return;
         await sleep(0);
 
         const form = new ActionFormData();
+        const maps: [string, MapInformation, mc.Vector3][] = [
+            ["Garden", mapGarden, { x: -104, y: 54, z: -65 }],
+            ["Steampunk", mapSteamPunk, { x: 0, y: 0, z: 0 }],
+            ["Waterfall", mapWaterfall, { x: 0, y: 0, z: 0 }],
+            ["Eastwood", mapEastwood, { x: 0, y: 0, z: 0 }],
+            ["Varyth(voidless)", mapVaryth, { x: 0, y: 0, z: 0 }]
+        ];
         form.body("Choose the map you are in.");
-        form.button("Garden");
-        maps.push([mapGarden, { x: -104, y: 54, z: -65 }]);
-        form.button("Steampunk");
-        maps.push([mapSteamPunk, { x: 0, y: 0, z: 0 }]);
-        form.button("Waterfall");
-        maps.push([mapWaterfall, { x: 0, y: 0, z: 0 }]);
-        form.button("Eastwood");
-        maps.push([mapEastwood, { x: 0, y: 0, z: 0 }]);
-        form.button("Varyth(voidless)");
-        maps.push([mapVaryth, { x: 0, y: 0, z: 0 }]);
+        for (const [name] of maps) {
+            form.button(name);
+        }
 
         event.sender.sendMessage("Please close the chat menu to see the bedwars wizard.");
         let response: ActionFormResponse;
@@ -2682,9 +2682,11 @@ mc.world.beforeEvents.chatSend.subscribe(async event => {
             await sleep(5);
         }
         if (response.canceled) return;
-        [map, originLocation] = maps[response.selection!];
+        let title: string;
+        [title, map, originLocation] = maps[response.selection!];
 
         const settingForm = new ModalFormData();
+        settingForm.title(title);
         settingForm.textField("Minimal players of each team:", "Players count...", "1");
         settingForm.toggle("Fill blank teams with simulated players", true);
         const settingResponse = await settingForm.show(event.sender);
