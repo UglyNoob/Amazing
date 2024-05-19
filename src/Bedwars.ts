@@ -2283,6 +2283,7 @@ export class BedWarsGame {
 
             const location = playerInfo.player.getHeadLocation();
             const fireBall = this.dimension.spawnEntity(MinecraftEntityTypes.Fireball, location);
+            fireBall.triggerEvent("Amazing:Amazingify");
             fireBall.getComponent("projectile")!.owner = playerInfo.player;
             fireBall.applyImpulse(v3.normalize(playerInfo.player.getViewDirection()));
             fireBall.setDynamicProperty(FIREBALL_GAMEID_PROP, this.id);
