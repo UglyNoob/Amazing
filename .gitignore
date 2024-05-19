@@ -2,6 +2,7 @@ node_modules/
 scripts/
 out/
 .vscode/
+.prettierrc
 
 pnpm-lock.yaml
 package-lock.json

@@ -178,6 +178,10 @@ GENERATOR_CONSTANTS[GeneratorType.Emerald] = {
     protectedArea: [{ x: 0, y: 0, z: 0 }, { x: 1, y: 3, z: 1 }],
     producingArea: [{ x: 0, y: 1, z: 0 }, { x: 1, y: 2, z: 1 }]
 };
+/**
+ * In case there will be more teams
+ * remember to modify player.json
+ */
 export enum TeamType {
     Red,
     Blue,
@@ -803,8 +807,10 @@ export class BedWarsGame {
     }
 
     setPlayer(player: mc.Player, teamType: TeamType) {
-        if (this.map.teams.find(t => t.type == teamType) == undefined) throw new Error(`No such team(${ TEAM_CONSTANTS[teamType].name }).`);
+        if (this.map.teams.find(t => t.type == teamType) == undefined) throw new Error(`No such team(${TEAM_CONSTANTS[teamType].name}).`);
 
+        player.getTags().filter(s => s.startsWith("team")).forEach(s => player.removeTag(s));
+        player.addTag(`team${teamType}`);
         let playerInfo = this.players.get(player.name);
         if (playerInfo) {
             playerInfo.team = teamType;
@@ -864,7 +870,7 @@ export class BedWarsGame {
                 if (teamChestContainer) {
                     teamChestContainer.clearAll();
                 } else {
-                    throw new Error(`Team chest of team ${ TEAM_CONSTANTS[teamType].name } does not exist at ${ v3.toString(teamChestLocation) }`);
+                    throw new Error(`Team chest of team ${TEAM_CONSTANTS[teamType].name} does not exist at ${v3.toString(teamChestLocation)}`);
                 }
             }
 
@@ -918,7 +924,7 @@ export class BedWarsGame {
         for (const [teamType, { state }] of this.teams) {
             ++index;
             const t = TEAM_CONSTANTS[teamType];
-            let result = `${ t.colorPrefix }${ t.name.charAt(0).toUpperCase() } §r${ capitalize(t.name) }: `;
+            let result = `${t.colorPrefix}${t.name.charAt(0).toUpperCase()} §r${capitalize(t.name)}: `;
             switch (state) {
                 case TeamState.BedAlive:
                     // result += "§a✔";
@@ -934,7 +940,7 @@ export class BedWarsGame {
                         if (playerInfo.team != teamType) continue;
                         if (this.isPlayerPlaying(playerInfo)) ++aliveCount;
                     }
-                    result += `§a${ aliveCount }`;
+                    result += `§a${aliveCount}`;
             }
             this.scoreObj.setScore(result, index);
         }
@@ -946,7 +952,7 @@ export class BedWarsGame {
         if (secondsStr.length == 1) secondsStr = "0" + secondsStr;
         let minutesStr = minutes.toString();
         if (minutesStr.length == 1) minutesStr = "0" + minutesStr;
-        this.scoreObj.setScore(`§a${ minutesStr }:${ secondsStr }`, index);
+        this.scoreObj.setScore(`§a${minutesStr}:${secondsStr}`, index);
     }
 
     private respawnPlayer(playerInfo: PlayerGameInformation) {
@@ -1583,10 +1589,10 @@ export class BedWarsGame {
                 for (const loc of gen.indicatorLocations) {
                     const sign = this.dimension.getBlock(loc)?.getComponent("sign");
                     if (!sign) {
-                        throw new Error(`Generator indicator does not exist at ${ v3.toString(loc) }.`);
+                        throw new Error(`Generator indicator does not exist at ${v3.toString(loc)}.`);
                     }
                     sign.setWaxed(true);
-                    [mc.SignSide.Front, mc.SignSide.Back].forEach(signSide => sign.setText(`§eSpawns in §c${ gen.remainingCooldown / 20 } §eseconds`, signSide));
+                    [mc.SignSide.Front, mc.SignSide.Back].forEach(signSide => sign.setText(`§eSpawns in §c${gen.remainingCooldown / 20} §eseconds`, signSide));
                 }
             }
             if (gen.remainingCooldown > 0) {
@@ -1892,7 +1898,7 @@ export class BedWarsGame {
 
     private resetNameTag(playerInfo: PlayerGameInformation) {
         const health = playerInfo.player.getComponent("health")!.currentValue.toFixed(0);
-        playerInfo.player.nameTag = `${ TEAM_CONSTANTS[playerInfo.team].colorPrefix }${ playerInfo.name }\n§c${ health }`;
+        playerInfo.player.nameTag = `${TEAM_CONSTANTS[playerInfo.team].colorPrefix}${playerInfo.name}\n§c${health}`;
     }
 
     afterEntityHurt(event: mc.EntityHurtAfterEvent) {
@@ -1947,35 +1953,6 @@ export class BedWarsGame {
         }
     }
     afterEntityHitEntity(event: mc.EntityHitEntityAfterEvent) {
-        /*if (this.state != GameState.started) return;
-        const hurter = event.damagingEntity;
-        const victim = event.hitEntity;
-        let victimInfo: PlayerGameInformation | undefined;
-        let hurterInfo: PlayerGameInformation | undefined;
-
-        if (victim instanceof mc.Player) {
-            victimInfo = this.players.get(victim.name);
-        }
-        if (hurter instanceof mc.Player) {
-            hurterInfo = this.players.get(hurter.name);
-        }
-
-        if (victimInfo) {
-            if (hurterInfo) {
-                if (hurterInfo.team == victimInfo.team) {
-                    // TOWAIT TODO
-                    return;
-                }
-            } else {
-            }
-        }
-        if (hurterInfo) {
-            if (hurterInfo.armorDisabled) {
-                hurterInfo.armorDisabled = false;
-                this.resetArmor(hurterInfo);
-            }
-        }
-        */
     }
     afterProjectileHitEntity(event: mc.ProjectileHitEntityAfterEvent) {
         if (event.dimension != this.dimension) return;
@@ -2283,7 +2260,7 @@ export class BedWarsGame {
 
             const location = playerInfo.player.getHeadLocation();
             const fireBall = this.dimension.spawnEntity(MinecraftEntityTypes.Fireball, location);
-            fireBall.triggerEvent("Amazing:Amazingify");
+            fireBall.addTag(`team${playerInfo.team}`);
             fireBall.getComponent("projectile")!.owner = playerInfo.player;
             fireBall.applyImpulse(v3.normalize(playerInfo.player.getViewDirection()));
             fireBall.setDynamicProperty(FIREBALL_GAMEID_PROP, this.id);
@@ -2361,6 +2338,7 @@ export class BedWarsGame {
             // tame() method would make the wolf tamed to the nearest player
             wolf.getComponent("tameable")!.tame();
             wolf.triggerEvent("minecraft:ageable_grow_up");
+            wolf.addTag(`team${playerInfo.team}`);
             wolf[OWNER_SYM] = playerInfo;
             // wolf.teleport(wolfLocation);
             consumeMainHandItem(playerInfo.player);
@@ -2419,7 +2397,7 @@ export class BedWarsGame {
         form.title(teleportMenuTitle);
         form.body(teleportMenuBody);
         for (const iPlayerInfo of players) {
-            form.button(`${ TEAM_CONSTANTS[iPlayerInfo.team].colorPrefix }${ iPlayerInfo.name }`);
+            form.button(`${TEAM_CONSTANTS[iPlayerInfo.team].colorPrefix}${iPlayerInfo.name}`);
         }
         playerInfo.player.sendMessage(closeChatMenuMessage);
         let response: ActionFormResponse;
@@ -2498,7 +2476,7 @@ export class BedWarsGame {
             message = message.slice(1);
         }
 
-        message = `<${ TEAM_CONSTANTS[senderInfo.team].colorPrefix }${ sender.name }§r> ${ message }`;
+        message = `<${TEAM_CONSTANTS[senderInfo.team].colorPrefix}${sender.name}§r> ${message}`;
         for (const playerInfo of this.players.values()) {
             if (!globalChat && playerInfo.team != senderInfo.team) continue;
             if (playerInfo.state == PlayerState.Offline) continue;
@@ -2508,7 +2486,7 @@ export class BedWarsGame {
                 globalChatPrefix,
                 spectatorChatPrefix
             } = strings[getPlayerLang(playerInfo.player)];
-            playerInfo.player.sendMessage(`${ spectate ? spectatorChatPrefix : "" }${ globalChat ? globalChatPrefix : teamChatPrefix }${ message }`);
+            playerInfo.player.sendMessage(`${spectate ? spectatorChatPrefix : ""}${globalChat ? globalChatPrefix : teamChatPrefix}${message}`);
         }
     }
 };
@@ -2528,7 +2506,7 @@ class ActionbarManager {
     private getInstance(descriptor: number) {
         const instance = this.instances.get(descriptor);
         if (!instance) {
-            throw new Error(`Can't find the instance of descriptor "${ descriptor }".`);
+            throw new Error(`Can't find the instance of descriptor "${descriptor}".`);
         }
         return instance;
     }
@@ -2695,7 +2673,7 @@ mc.world.beforeEvents.chatSend.subscribe(async event => {
 
         minimalPlayer = Number(settingResponse.formValues![0]);
         if (minimalPlayer < 0 || !Number.isInteger(minimalPlayer)) {
-            event.sender.sendMessage(`§c"${ settingResponse.formValues![0] }" is not a valid number, or a valid player count.`);
+            event.sender.sendMessage(`§c"${settingResponse.formValues![0]}" is not a valid number, or a valid player count.`);
             return;
         }
         fillBlankTeams = settingResponse.formValues![1] as boolean;
