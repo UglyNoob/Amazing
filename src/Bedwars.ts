@@ -1,6 +1,6 @@
 import { Vector3Utils as v3 } from '@minecraft/math';
 import * as mc from '@minecraft/server';
-import { itemEqual, Area, sleep, vectorAdd, vectorWithinArea, containerIterator, capitalize, getPlayerByName, consumeMainHandItem, makeItem, shuffle, randomInt, setGameMode, analyzeTime, vectorCompare, raycastHits, quickFind, getAngle } from './utility.js';
+import { itemEqual, Area, sleep, vectorAdd, vectorWithinArea, containerIterator, capitalize, getPlayerByName, consumeMainHandItem, makeItem, shuffle, randomInt, setGameMode, analyzeTime, vectorCompare, raycastHits, quickFind, getAngle, smallest } from './utility.js';
 import { setupGameTest } from './GameTest.js';
 import { MinecraftBlockTypes, MinecraftEffectTypes, MinecraftEnchantmentTypes, MinecraftEntityTypes, MinecraftItemTypes } from '@minecraft/vanilla-data';
 
@@ -138,11 +138,16 @@ const SETTINGS_ITEM = (() => {
 function isSettingsItem(item: mc.ItemStack) {
     return SETTINGS_ITEM.getLore()[1] == item.getLore()[1];
 }
-const OWNER_SYM = Symbol("owner of tamed entity");
+const OWNER_SYM = Symbol("owner of the entity");
+const SITTING_SYM = Symbol("is wolf sitting");
+
+const WOLF_GUARDING_DISTANCE = 10;
+const WOLF_GUARDING_INTERVAL = 100; // in ticks
 
 declare module '@minecraft/server' {
     interface Entity {
         [OWNER_SYM]?: PlayerGameInformation;
+        [SITTING_SYM]?: boolean;
     }
 }
 declare module '@minecraft/server-gametest' {
@@ -196,6 +201,7 @@ export const TEAM_CONSTANTS: Record<TeamType, {
     name: string;
     localName: keyof Strings;
     colorPrefix: string;
+    color: mc.PaletteColor;
     woolName: string;
     woolIconPath: string;
     glassName: string;
@@ -219,6 +225,7 @@ export const TEAM_CONSTANTS: Record<TeamType, {
         name: "blue",
         localName: "blueName",
         colorPrefix: "§9",
+        color: mc.PaletteColor.Blue,
         woolName: MinecraftItemTypes.BlueWool,
         woolIconPath: "textures/blocks/wool_colored_blue.png",
         glassName: MinecraftBlockTypes.BlueStainedGlass,
@@ -232,6 +239,7 @@ export const TEAM_CONSTANTS: Record<TeamType, {
         name: "green",
         localName: "greenName",
         colorPrefix: "§a",
+        color: mc.PaletteColor.Green,
         woolName: MinecraftItemTypes.GreenWool,
         woolIconPath: "textures/blocks/wool_colored_green.png",
         glassName: MinecraftBlockTypes.GreenStainedGlass,
@@ -245,6 +253,7 @@ export const TEAM_CONSTANTS: Record<TeamType, {
         name: "red",
         localName: "redName",
         colorPrefix: "§c",
+        color: mc.PaletteColor.Red,
         woolName: MinecraftItemTypes.RedWool,
         woolIconPath: "textures/blocks/wool_colored_red.png",
         glassName: MinecraftBlockTypes.RedStainedGlass,
@@ -258,6 +267,7 @@ export const TEAM_CONSTANTS: Record<TeamType, {
         name: "yellow",
         localName: "yellowName",
         colorPrefix: "§e",
+        color: mc.PaletteColor.Yellow,
         woolName: MinecraftItemTypes.YellowWool,
         woolIconPath: "textures/blocks/wool_colored_yellow.png",
         glassName: MinecraftBlockTypes.YellowStainedGlass,
@@ -271,6 +281,7 @@ export const TEAM_CONSTANTS: Record<TeamType, {
         name: "pink",
         localName: "pinkName",
         colorPrefix: "§d",
+        color: mc.PaletteColor.Pink,
         woolName: MinecraftItemTypes.PinkWool,
         woolIconPath: "textures/blocks/wool_colored_pink.png",
         glassName: MinecraftBlockTypes.PinkStainedGlass,
@@ -284,6 +295,7 @@ export const TEAM_CONSTANTS: Record<TeamType, {
         name: "gray",
         localName: "grayName",
         colorPrefix: "§8",
+        color: mc.PaletteColor.Gray,
         woolName: MinecraftItemTypes.GrayWool,
         woolIconPath: "textures/blocks/wool_colored_gray.png",
         glassName: MinecraftBlockTypes.GrayStainedGlass,
@@ -297,6 +309,7 @@ export const TEAM_CONSTANTS: Record<TeamType, {
         name: "cyan",
         localName: "cyanName",
         colorPrefix: "§3",
+        color: mc.PaletteColor.Cyan,
         woolName: MinecraftItemTypes.CyanWool,
         woolIconPath: "textures/blocks/wool_colored_cyan.png",
         glassName: MinecraftBlockTypes.CyanStainedGlass,
@@ -310,6 +323,7 @@ export const TEAM_CONSTANTS: Record<TeamType, {
         name: "white",
         localName: "whiteName",
         colorPrefix: "§f",
+        color: mc.PaletteColor.White,
         woolName: MinecraftItemTypes.WhiteWool,
         woolIconPath: "textures/blocks/wool_colored_white.png",
         glassName: MinecraftBlockTypes.WhiteStainedGlass,
@@ -1710,6 +1724,36 @@ export class BedWarsGame {
                 fireBall.kill();
             }
         }
+        for (const windCharge of this.dimension.getEntities({
+            type: "minecraft:wind_charge_projectile"
+        })) {
+            if (!vectorWithinArea(windCharge.location, this.fixOrigin(this.map.playableArea))) {
+                windCharge.kill();
+            }
+        }
+        if (mc.system.currentTick % WOLF_GUARDING_INTERVAL == 0) {
+            for (const wolf of this.dimension.getEntities({ type: "minecraft:wolf" })) {
+                if (!wolf[OWNER_SYM]) continue;
+                const ownerInfo = wolf[OWNER_SYM];
+                const sitting = wolf[SITTING_SYM]!;
+                if (!sitting) continue;
+
+                const launchLocation = Object.assign({}, wolf.location);
+                launchLocation.y += 0.5;
+                const targetInfo = smallest(Array.from(this.players.values()).filter(p => p.state == PlayerState.Alive && p.team != ownerInfo.team), (a, b) => {
+                    return v3.distance(a.player.getHeadLocation(), launchLocation) - v3.distance(b.player.getHeadLocation(), launchLocation);
+                });
+                if (targetInfo && v3.distance(targetInfo.player.getHeadLocation(), launchLocation) <= WOLF_GUARDING_DISTANCE) {
+                    const arrow = this.dimension.spawnEntity(MinecraftEntityTypes.Arrow, launchLocation);
+                    arrow.getComponent("projectile")!.owner = wolf;
+                    arrow.addTag(`team${ownerInfo.team}`);
+                    arrow.applyImpulse(v3.scale(v3.normalize(v3.subtract(targetInfo.player.getHeadLocation(), launchLocation)), 1.5));
+                }
+            }
+        }
+        for(const arrow of this.dimension.getEntities({type: "minecraft:arrow"})) {
+            if(arrow.isOnGround) arrow.kill();
+        }
 
         // Simulated players AI
         const teamIslandEnemies: Map<TeamType, PlayerGameInformation[]> = new Map();
@@ -2337,16 +2381,21 @@ export class BedWarsGame {
             const wolf = this.dimension.spawnEntity(MinecraftEntityTypes.Wolf, playerInfo.player.location);
             // tame() method would make the wolf tamed to the nearest player
             wolf.getComponent("tameable")!.tame();
+
+            wolf.triggerEvent("Amazing:wolf_spawned");
             wolf.triggerEvent("minecraft:ageable_grow_up");
             wolf.addTag(`team${playerInfo.team}`);
             wolf[OWNER_SYM] = playerInfo;
+            wolf[SITTING_SYM] = false;
             // wolf.teleport(wolfLocation);
             consumeMainHandItem(playerInfo.player);
+            await sleep(0);
+            wolf.getComponent("color")!.value = TEAM_CONSTANTS[playerInfo.team].color;
         } else if (isTrackerItem(event.itemStack)) {
             event.cancel = true;
         }
     }
-    afterItemCompleteUse(event: mc.ItemCompleteUseAfterEvent) {
+    async afterItemCompleteUse(event: mc.ItemCompleteUseAfterEvent) {
         if (this.state != GameState.started) return;
 
         if (!(event.source instanceof mc.Player)) return;
@@ -2369,6 +2418,32 @@ export class BedWarsGame {
             playerInfo.player.addEffect(MinecraftEffectTypes.Speed, SPEED_DURATION, {
                 amplifier: 1
             });
+        }/* else if (event.itemStack.typeId == MinecraftItemTypes.Bow) {
+            await sleep(0);
+            // find the array shot
+            const arrowEntity = smallest(this.dimension.getEntities({ type: "arrow" })
+                .filter(e => !e.getTags().find(t => t.startsWith("team"))), (a, b) => {
+                    return v3.distance(playerInfo.player.location, a.location) - v3.distance(playerInfo.player.location, b.location);
+                });
+            if (!arrowEntity) return;
+            arrowEntity.addTag(`team${playerInfo.team}`);
+        }*/
+    }
+
+    afterScriptEventReceive(event: mc.ScriptEventCommandMessageAfterEvent) {
+        if (game.state != GameState.started) return;
+
+        if (event.id != "Amazing:Wolf") return;
+
+        const wolf = event.sourceEntity!;
+        const ownerInfo = wolf[OWNER_SYM]!;
+        const strs = strings[getPlayerLang(ownerInfo.player)];
+        if (event.message == "wolf_sit") {
+            ownerInfo.actionbar.add(strs.wolfStartGuardingNotification, 20);
+            wolf[SITTING_SYM] = true;
+        } else if (event.message == "wolf_stand") {
+            ownerInfo.actionbar.add(strs.wolfStopGuardingNotification, 20);
+            wolf[SITTING_SYM] = false;
         }
     }
 
@@ -2802,6 +2877,11 @@ mc.world.afterEvents.entityHurt.subscribe(event => {
 mc.world.afterEvents.weatherChange.subscribe(event => {
     if (game) {
         game.afterWeatherChange(event);
+    }
+});
+mc.system.afterEvents.scriptEventReceive.subscribe(event => {
+    if (game) {
+        game.afterScriptEventReceive(event);
     }
 });
 mc.system.runInterval(() => {

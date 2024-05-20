@@ -34,6 +34,8 @@ export interface Strings {
     killCountNotification: string;
     finalKillCountNotification: string;
     bedDestroyedCountNotification: string;
+    wolfStartGuardingNotification: string;
+    wolfStopGuardingNotification: string;
 
     teamChatPrefix: string;
     globalChatPrefix: string;
@@ -222,6 +224,8 @@ strings[Lang.en_US] = {
     killCountNotification: "§7Kills: §a%d",
     finalKillCountNotification: "§7Final Kills: §a%d",
     bedDestroyedCountNotification: "§7Destroyed Beds: §a%d",
+    wolfStartGuardingNotification: "§6Your wolf is now guarding",
+    wolfStopGuardingNotification: "§7Your wolf stops guarding",
 
     teamChatPrefix: "§3[TEAM]§r",
     globalChatPrefix: "§6[GLOBAL]§r",
@@ -415,6 +419,8 @@ strings[Lang.zh_CN] = {
     killCountNotification: "§7击杀数：§a%d",
     finalKillCountNotification: "§7最终击杀数：§a%d",
     bedDestroyedCountNotification: "§7摧毁床数：§a%d",
+    wolfStartGuardingNotification: "§6你的狼正在防守。",
+    wolfStopGuardingNotification: "§7你的狼已停止防守。",
 
     teamChatPrefix: "§3[队伍]§r",
     globalChatPrefix: "§6[全局]§r",

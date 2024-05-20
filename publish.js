@@ -1,7 +1,6 @@
 #! /usr/bin/env node
 import * as fs from 'node:fs/promises';
 
-
 async function main() {
     await fs.rm("out", {force: true, recursive: true});
     await fs.mkdir("out/AmazingBP/scripts", { recursive: true });
@@ -17,6 +16,7 @@ async function main() {
         for(const fileName of await fs.readdir(folderName, {
             recursive: true
         })) {
+            if(fileName.startsWith(".")) continue;
             const path = folderName + "/" + fileName;
             console.log(path);
             const directory = (await fs.stat(path)).isDirectory();

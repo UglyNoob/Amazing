@@ -575,11 +575,11 @@ const generateItemShopData: () => Menu = () => ({
                     item: TRACKER_ITEM
                 }), () => "textures/blocks/deadbush.png"),
                 generateBuyOneItemMenu({ local: "loyalWolfName" }, () => ({
-                    cost: { ironAmount: 0, goldAmount: 0, emeraldAmount: 3, diamondAmount: 0 },
+                    cost: { ironAmount: 0, goldAmount: 0, emeraldAmount: 4, diamondAmount: 0 },
                     item: LOYAL_WOLF_ITEM
                 }), () => "textures/items/spawn_egg.png"),
                 generateBuyOneItemMenu({ local: "wolfArmorName" }, () => ({
-                    cost: { ironAmount: 0, goldAmount: 0, emeraldAmount: 5, diamondAmount: 0 },
+                    cost: { ironAmount: 0, goldAmount: 0, emeraldAmount: 4, diamondAmount: 0 },
                     item: WOLF_ARMOR_ITEM
                 }), () => "textures/items/wolf_armor.png"),
                 generateBuyOneItemMenu({ local: "rescuePlatformName" }, () => ({

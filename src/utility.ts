@@ -425,6 +425,15 @@ export function quickFind<T>(array: T[], element: T, compareFn: (a: T, b: T) => 
     return null;
 }
 
+export function smallest<T>(array: T[], compareFn: (a: T, b: T) => number) {
+    if(array.length == 0) return null;
+    let result = array[0];
+    for(const element of array) {
+        if(compareFn(result, element) > 0) result = element;
+    }
+    return result;
+}
+
 interface RBTreeNode<T> {
     parent: RBTreeNode<T>;
     left: RBTreeNode<T>;
