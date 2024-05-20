@@ -16,8 +16,8 @@ export const mapGarden: MapInformation = {
     teams: [
         {
             type: TeamType.Red,
-            itemShopLocation: { x: 95 + 104, y: 80 - 54, z: 8 + 65 },
-            teamShopLocation: { x: 95 + 104, y: 80 - 54, z: -8 + 65 },
+            itemShopLocation: { x: 95.5 + 104, y: 79 - 54, z: 8.5 + 65 },
+            teamShopLocation: { x: 95.5 + 104, y: 79 - 54, z: -7.5 + 65 },
             islandArea: [{ x: 70 + 104, y: 69 - 54, z: -17 + 65 }, { x: 106 + 104, y: 92 - 54, z: 16 + 65 }],
             protectedArea: [{ x: 92 + 104, y: 79 - 54, z: -3 + 65 }, { x: 97 + 104, y: 84 - 54, z: 4 + 65 }],
             teamGenerator: {
@@ -32,8 +32,8 @@ export const mapGarden: MapInformation = {
             teamChestLocation: { x: 91 + 104, y: 79 - 54, z: 4 + 65 },
         }, {
             type: TeamType.Blue,
-            itemShopLocation: { x: -95 + 104, y: 80 - 54, z: -8 + 65 },
-            teamShopLocation: { x: -95 + 104, y: 80 - 54, z: 8 + 65 },
+            itemShopLocation: { x: -94.5 + 104, y: 79 - 54, z: -8 + 65.5 },
+            teamShopLocation: { x: -94.5 + 104, y: 79 - 54, z: 8 + 65.5 },
             islandArea: [{ x: -106 + 104, y: 69 - 54, z: -17 + 65 }, { x: -70 + 104, y: 92 - 54, z: 16 + 65 }],
             protectedArea: [{ x: -96 + 104, y: 79 - 54, z: -3 + 65 }, { x: -91 + 104, y: 84 - 54, z: 4 + 65 }],
             teamGenerator: {
@@ -81,8 +81,8 @@ export const mapSteamPunk: MapInformation = {
     teams: [
         {
             type: TeamType.Green,
-            itemShopLocation: { x: 105, y: 74, z: -57 },
-            teamShopLocation: { x: 91, y: 74, z: -57 },
+            itemShopLocation: { x: 105.5, y: 73, z: -56.5 },
+            teamShopLocation: { x: 91.5, y: 73, z: -56.5 },
             islandArea: [{ x: 82, y: 59, z: -67 }, { x: 111, y: 102, z: -39 }],
             protectedArea: [{ x: 95, y: 73, z: -59 }, { x: 102, y: 77, z: -52 }],
             teamGenerator: {
@@ -97,8 +97,8 @@ export const mapSteamPunk: MapInformation = {
             teamChestLocation: { x: 102, y: 73, z: -52 },
         }, {
             type: TeamType.Yellow,
-            itemShopLocation: { x: 91, y: 74, z: 57 },
-            teamShopLocation: { x: 105, y: 74, z: 57 },
+            itemShopLocation: { x: 91.5, y: 73, z: 57.5 },
+            teamShopLocation: { x: 105.5, y: 73, z: 57.5 },
             islandArea: [{ x: 86, y: 59, z: 40 }, { x: 115, y: 102, z: 68 }],
             protectedArea: [{ x: 95, y: 73, z: 53 }, { x: 102, y: 77, z: 60 }],
             teamGenerator: {
@@ -113,8 +113,8 @@ export const mapSteamPunk: MapInformation = {
             teamChestLocation: { x: 94, y: 73, z: 52 },
         }, {
             type: TeamType.Cyan,
-            itemShopLocation: { x: 57, y: 74, z: 105 },
-            teamShopLocation: { x: 57, y: 74, z: 91 },
+            itemShopLocation: { x: 57.5, y: 73, z: 105.5 },
+            teamShopLocation: { x: 57.5, y: 73, z: 91.5 },
             islandArea: [{ x: 40, y: 59, z: 82 }, { x: 68, y: 102, z: 111 }],
             protectedArea: [{ x: 53, y: 73, z: 95 }, { x: 60, y: 77, z: 102 }],
             teamGenerator: {
@@ -129,8 +129,8 @@ export const mapSteamPunk: MapInformation = {
             teamChestLocation: { x: 52, y: 73, z: 102 },
         }, {
             type: TeamType.White,
-            itemShopLocation: { x: -57, y: 74, z: 91 },
-            teamShopLocation: { x: -57, y: 74, z: 105 },
+            itemShopLocation: { x: -56.5, y: 73, z: 91.5 },
+            teamShopLocation: { x: -56.5, y: 73, z: 105.5 },
             islandArea: [{ x: -67, y: 59, z: 86 }, { x: -39, y: 102, z: 115 }],
             protectedArea: [{ x: -59, y: 73, z: 95 }, { x: -53, y: 77, z: 101 }],
             teamGenerator: {
@@ -145,8 +145,8 @@ export const mapSteamPunk: MapInformation = {
             teamChestLocation: { x: -52, y: 73, z: 94 },
         }, {
             type: TeamType.Pink,
-            itemShopLocation: { x: -105, y: 74, z: 57 },
-            teamShopLocation: { x: -91, y: 74, z: 57 },
+            itemShopLocation: { x: -104.5, y: 73, z: 57.5 },
+            teamShopLocation: { x: -90.5, y: 73, z: 57.5 },
             islandArea: [{ x: -110, y: 59, z: 40 }, { x: -81, y: 102, z: 68 }],
             protectedArea: [{ x: -101, y: 73, z: 53 }, { x: -94, y: 77, z: 60 }],
             teamGenerator: {
@@ -161,8 +161,8 @@ export const mapSteamPunk: MapInformation = {
             teamChestLocation: { x: -102, y: 73, z: 52 },
         }, {
             type: TeamType.Gray,
-            itemShopLocation: { x: -91, y: 74, z: -57 },
-            teamShopLocation: { x: -105, y: 74, z: -57 },
+            itemShopLocation: { x: -90.5, y: 73, z: -56.5 },
+            teamShopLocation: { x: -104.5, y: 73, z: -56.5 },
             islandArea: [{ x: -114, y: 59, z: -67 }, { x: -85, y: 102, z: -39 }],
             protectedArea: [{ x: -101, y: 73, z: -59 }, { x: -94, y: 77, z: -52 }],
             teamGenerator: {
@@ -177,8 +177,8 @@ export const mapSteamPunk: MapInformation = {
             teamChestLocation: { x: -94, y: 73, z: -52 },
         }, {
             type: TeamType.Red,
-            itemShopLocation: { x: -57, y: 74, z: -105 },
-            teamShopLocation: { x: -57, y: 74, z: -91 },
+            itemShopLocation: { x: -56.5, y: 73, z: -104.5 },
+            teamShopLocation: { x: -56.5, y: 73, z: -90.5 },
             islandArea: [{ x: -67, y: 59, z: -110 }, { x: -39, y: 102, z: -81 }],
             protectedArea: [{ x: -59, y: 73, z: -101 }, { x: -52, y: 77, z: -94 }],
             teamGenerator: {
@@ -193,8 +193,8 @@ export const mapSteamPunk: MapInformation = {
             teamChestLocation: { x: -52, y: 73, z: -102 },
         }, {
             type: TeamType.Blue,
-            itemShopLocation: { x: 57, y: 74, z: -91 },
-            teamShopLocation: { x: 57, y: 74, z: -105 },
+            itemShopLocation: { x: 57.5, y: 73, z: -90.5 },
+            teamShopLocation: { x: 57.5, y: 73, z: -104.5 },
             islandArea: [{ x: 40, y: 59, z: -114 }, { x: 68, y: 102, z: -85 }],
             protectedArea: [{ x: 53, y: 73, z: -101 }, { x: 60, y: 77, z: -94 }],
             teamGenerator: {
@@ -269,8 +269,8 @@ export const mapWaterfall: MapInformation = {
     teams: [
         {
             type: TeamType.Green,
-            itemShopLocation: { x: 74, y: 67, z: -29 },
-            teamShopLocation: { x: 74, y: 67, z: -39 },
+            itemShopLocation: { x: 74.5, y: 66, z: -28.5 },
+            teamShopLocation: { x: 74.5, y: 66, z: -38.5 },
             teamChestLocation: { x: 71, y: 66, z: -31 },
             playerSpawn: { x: 73.5, y: 66, z: -33.5 },
             playerSpawnViewDirection: { x: -1, y: 0, z: 0 },
@@ -285,8 +285,8 @@ export const mapWaterfall: MapInformation = {
             bedLocation: [{ x: 65, y: 66, z: -33 }, { x: 64, y: 66, z: -33 }],
         }, {
             type: TeamType.Yellow,
-            itemShopLocation: { x: 74, y: 67, z: 37 },
-            teamShopLocation: { x: 74, y: 67, z: 27 },
+            itemShopLocation: { x: 74.5, y: 66, z: 37.5 },
+            teamShopLocation: { x: 74.5, y: 66, z: 27.5 },
             teamChestLocation: { x: 71, y: 66, z: 35 },
             playerSpawn: { x: 73.5, y: 66, z: 32.5 },
             playerSpawnViewDirection: { x: -1, y: 0, z: 0 },
@@ -301,8 +301,8 @@ export const mapWaterfall: MapInformation = {
             bedLocation: [{ x: 65, y: 66, z: 33 }, { x: 64, y: 66, z: 33 }],
         }, {
             type: TeamType.Cyan,
-            itemShopLocation: { x: 29, y: 67, z: 74 },
-            teamShopLocation: { x: 39, y: 67, z: 74 },
+            itemShopLocation: { x: 29.5, y: 66, z: 74.5 },
+            teamShopLocation: { x: 39.5, y: 66, z: 74.5 },
             teamChestLocation: { x: 31, y: 66, z: 71 },
             playerSpawn: { x: 34.5, y: 66, z: 73.5 },
             playerSpawnViewDirection: { x: 0, y: 0, z: -1 },
@@ -317,8 +317,8 @@ export const mapWaterfall: MapInformation = {
             bedLocation: [{ x: 33, y: 66, z: 65 }, { x: 33, y: 66, z: 64 }],
         }, {
             type: TeamType.White,
-            itemShopLocation: { x: -37, y: 67, z: 74 },
-            teamShopLocation: { x: -27, y: 67, z: 74 },
+            itemShopLocation: { x: -36.5, y: 66, z: 74.5 },
+            teamShopLocation: { x: -26.5, y: 66, z: 74.5 },
             teamChestLocation: { x: -35, y: 66, z: 71 },
             playerSpawn: { x: -31.5, y: 66, z: 73.5 },
             playerSpawnViewDirection: { x: 0, y: 0, z: -1 },
@@ -333,8 +333,8 @@ export const mapWaterfall: MapInformation = {
             bedLocation: [{ x: -33, y: 66, z: 65 }, { x: -33, y: 66, z: 64 }],
         }, {
             type: TeamType.Pink,
-            itemShopLocation: { x: -74, y: 67, z: 29 },
-            teamShopLocation: { x: -74, y: 67, z: 39 },
+            itemShopLocation: { x: -73.5, y: 66, z: 29.5 },
+            teamShopLocation: { x: -73.5, y: 66, z: 39.5 },
             teamChestLocation: { x: -71, y: 66, z: 31 },
             playerSpawn: { x: -72.5, y: 66, z: 34.5 },
             playerSpawnViewDirection: { x: 1, y: 0, z: 0 },
@@ -349,8 +349,8 @@ export const mapWaterfall: MapInformation = {
             bedLocation: [{ x: -65, y: 66, z: 33 }, { x: -64, y: 66, z: 33 }],
         }, {
             type: TeamType.Gray,
-            itemShopLocation: { x: -74, y: 67, z: -37 },
-            teamShopLocation: { x: -74, y: 67, z: -27 },
+            itemShopLocation: { x: -73.5, y: 66, z: -36.5 },
+            teamShopLocation: { x: -73.5, y: 66, z: -26.5 },
             teamChestLocation: { x: -71, y: 66, z: -35 },
             playerSpawn: { x: -72.5, y: 66, z: -31.5 },
             playerSpawnViewDirection: { x: 1, y: 0, z: 0 },
@@ -365,8 +365,8 @@ export const mapWaterfall: MapInformation = {
             bedLocation: [{ x: -65, y: 66, z: -33 }, { x: -64, y: 66, z: -33 }],
         }, {
             type: TeamType.Red,
-            itemShopLocation: { x: -29, y: 67, z: -74 },
-            teamShopLocation: { x: -39, y: 67, z: -74 },
+            itemShopLocation: { x: -28.5, y: 66, z: -73.5 },
+            teamShopLocation: { x: -38.5, y: 66, z: -73.5 },
             teamChestLocation: { x: -31, y: 66, z: -71 },
             playerSpawn: { x: -33.5, y: 66, z: -72.5 },
             playerSpawnViewDirection: { x: 0, y: 0, z: 1 },
@@ -381,8 +381,8 @@ export const mapWaterfall: MapInformation = {
             bedLocation: [{ x: -33, y: 66, z: -65 }, { x: -33, y: 66, z: -64 }],
         }, {
             type: TeamType.Blue,
-            itemShopLocation: { x: 37, y: 67, z: -74 },
-            teamShopLocation: { x: 27, y: 67, z: -74 },
+            itemShopLocation: { x: 37.5, y: 66, z: -73.5 },
+            teamShopLocation: { x: 27.5, y: 66, z: -73.5 },
             teamChestLocation: { x: 35, y: 66, z: -71 },
             playerSpawn: { x: 32.5, y: 66, z: -72.5 },
             playerSpawnViewDirection: { x: 0, y: 0, z: 1 },
@@ -458,8 +458,8 @@ export const mapEastwood: MapInformation = {
     teams: [
         {
             type: TeamType.Green,
-            itemShopLocation: { x: -70, y: 67, z: -5 },
-            teamShopLocation: { x: -70, y: 67, z: 3 },
+            itemShopLocation: { x: -69.5, y: 66, z: -4.5 },
+            teamShopLocation: { x: -69.5, y: 66, z: 3.5 },
             teamChestLocation: { x: -70, y: 66, z: -3 },
             playerSpawn: { x: -65.5, y: 66.07, z: 0.5 },
             playerSpawnViewDirection: { x: 1, y: 0, z: 0 },
@@ -474,8 +474,8 @@ export const mapEastwood: MapInformation = {
             bedLocation: [{ x: -56, y: 66, z: 0 }, { x: -55, y: 66, z: 0 }],
         }, {
             type: TeamType.Red,
-            itemShopLocation: { x: 70, y: 67, z: 5 },
-            teamShopLocation: { x: 70, y: 67, z: -3 },
+            itemShopLocation: { x: 70.5, y: 66, z: 5.5 },
+            teamShopLocation: { x: 70.5, y: 66, z: -2.5 },
             teamChestLocation: { x: 70, y: 66, z: 3 },
             playerSpawn: { x: 66.5, y: 66.07, z: 0.5 },
             playerSpawnViewDirection: { x: -1, y: 0, z: 0 },
@@ -490,8 +490,8 @@ export const mapEastwood: MapInformation = {
             bedLocation: [{ x: 56, y: 66, z: 0 }, { x: 55, y: 66, z: 0 }],
         }, {
             type: TeamType.Yellow,
-            itemShopLocation: { x: 5, y: 67, z: -70 },
-            teamShopLocation: { x: -3, y: 67, z: -70 },
+            itemShopLocation: { x: 5.5, y: 66, z: -69.5 },
+            teamShopLocation: { x: -2.5, y: 66, z: -69.5 },
             teamChestLocation: { x: 3, y: 66, z: -70 },
             playerSpawn: { x: 0.5, y: 66.07, z: -65.5 },
             playerSpawnViewDirection: { x: 0, y: 0, z: 1 },
@@ -506,8 +506,8 @@ export const mapEastwood: MapInformation = {
             bedLocation: [{ x: 0, y: 66, z: -56 }, { x: 0, y: 66, z: -55 }],
         }, {
             type: TeamType.Blue,
-            itemShopLocation: { x: -5, y: 67, z: 70 },
-            teamShopLocation: { x: 3, y: 67, z: 70 },
+            itemShopLocation: { x: -4.5, y: 66, z: 70.5 },
+            teamShopLocation: { x: 3.5, y: 66, z: 70.5 },
             teamChestLocation: { x: -3, y: 66, z: 70 },
             playerSpawn: { x: 0.5, y: 66.07, z: 66.5 },
             playerSpawnViewDirection: { x: 0, y: 0, z: -1 },
@@ -571,8 +571,8 @@ export const mapVaryth: MapInformation = {
     teams: [
         {
             type: TeamType.Green,
-            itemShopLocation: { x: 20, y: 90, z: 82 },
-            teamShopLocation: { x: 34, y: 90, z: 82 },
+            itemShopLocation: { x: 20.5, y: 89, z: 82.5 },
+            teamShopLocation: { x: 34.5, y: 89, z: 82.5 },
             teamChestLocation: { x: 23, y: 89, z: 78 },
             playerSpawn: { x: 27.5, y: 89, z: 81.5 },
             playerSpawnViewDirection: { x: 0, y: 0, z: -1 },
@@ -587,8 +587,8 @@ export const mapVaryth: MapInformation = {
             bedLocation: [{ x: 27, y: 88, z: 71 }, { x: 27, y: 88, z: 70 }],
         }, {
             type: TeamType.Blue,
-            itemShopLocation: { x: -34, y: 90, z: 82 },
-            teamShopLocation: { x: -20, y: 90, z: 82 },
+            itemShopLocation: { x: -33.5, y: 89, z: 82.5 },
+            teamShopLocation: { x: -19.5, y: 89, z: 82.5 },
             teamChestLocation: { x: -31, y: 89, z: 78 },
             playerSpawn: { x: -26.5, y: 89, z: 81.5 },
             playerSpawnViewDirection: { x: 0, y: 0, z: -1 },
@@ -603,8 +603,8 @@ export const mapVaryth: MapInformation = {
             bedLocation: [{ x: -27, y: 88, z: 71 }, { x: -27, y: 88, z: 70 }],
         }, {
             type: TeamType.Yellow,
-            itemShopLocation: { x: -82, y: 90, z: 20 },
-            teamShopLocation: { x: -82, y: 90, z: 34 },
+            itemShopLocation: { x: -81.5, y: 89, z: 20.5 },
+            teamShopLocation: { x: -81.5, y: 89, z: 34.5 },
             teamChestLocation: { x: -78, y: 89, z: 23 },
             playerSpawn: { x: -80.5, y: 89, z: 27.5 },
             playerSpawnViewDirection: { x: 1, y: 0, z: 0 },
@@ -619,8 +619,8 @@ export const mapVaryth: MapInformation = {
             bedLocation: [{ x: -71, y: 88, z: 27 }, { x: -70, y: 88, z: 27 }],
         }, {
             type: TeamType.Pink,
-            itemShopLocation: { x: -82, y: 90, z: -34 },
-            teamShopLocation: { x: -82, y: 90, z: -20 },
+            itemShopLocation: { x: -81.5, y: 89, z: -33.5 },
+            teamShopLocation: { x: -81.5, y: 89, z: -19.5 },
             teamChestLocation: { x: -78, y: 89, z: -31 },
             playerSpawn: { x: -80.5, y: 89, z: -26.5 },
             playerSpawnViewDirection: { x: 1, y: 0, z: 0 },
@@ -635,8 +635,8 @@ export const mapVaryth: MapInformation = {
             bedLocation: [{ x: -71, y: 88, z: -27 }, { x: -70, y: 88, z: -27 }],
         }, {
             type: TeamType.Gray,
-            itemShopLocation: { x: -20, y: 90, z: -82 },
-            teamShopLocation: { x: -34, y: 90, z: -82 },
+            itemShopLocation: { x: -19.5, y: 89, z: -81.5 },
+            teamShopLocation: { x: -33.5, y: 89, z: -81.5 },
             teamChestLocation: { x: -23, y: 89, z: -78 },
             playerSpawn: { x: -26.5, y: 89, z: -80.5 },
             playerSpawnViewDirection: { x: 0, y: 0, z: 1 },
@@ -651,8 +651,8 @@ export const mapVaryth: MapInformation = {
             bedLocation: [{ x: -27, y: 88, z: -71 }, { x: -27, y: 88, z: -70 }],
         }, {
             type: TeamType.Cyan,
-            itemShopLocation: { x: 34, y: 90, z: -82 },
-            teamShopLocation: { x: 20, y: 90, z: -82 },
+            itemShopLocation: { x: 34.5, y: 89, z: -81.5 },
+            teamShopLocation: { x: 20.5, y: 89, z: -81.5 },
             teamChestLocation: { x: 31, y: 89, z: -78 },
             playerSpawn: { x: 27.5, y: 89, z: -80.5 },
             playerSpawnViewDirection: { x: 0, y: 0, z: 1 },
@@ -667,8 +667,8 @@ export const mapVaryth: MapInformation = {
             bedLocation: [{ x: 27, y: 88, z: -71 }, { x: 27, y: 88, z: -70 }],
         }, {
             type: TeamType.White,
-            itemShopLocation: { x: 82, y: 90, z: -20 },
-            teamShopLocation: { x: 82, y: 90, z: -34 },
+            itemShopLocation: { x: 82.5, y: 89, z: -19.5 },
+            teamShopLocation: { x: 82.5, y: 89, z: -33.5 },
             teamChestLocation: { x: 78, y: 89, z: -23 },
             playerSpawn: { x: 81.5, y: 89, z: -26.5 },
             playerSpawnViewDirection: { x: -1, y: 0, z: 0 },
@@ -683,8 +683,8 @@ export const mapVaryth: MapInformation = {
             bedLocation: [{ x: 71, y: 88, z: -27 }, { x: 70, y: 88, z: -27 }],
         }, {
             type: TeamType.Red,
-            itemShopLocation: { x: 82, y: 90, z: 34 },
-            teamShopLocation: { x: 82, y: 90, z: 20 },
+            itemShopLocation: { x: 82.5, y: 89, z: 34.5 },
+            teamShopLocation: { x: 82.5, y: 89, z: 20.5 },
             teamChestLocation: { x: 78, y: 89, z: 31 },
             playerSpawn: { x: 81.5, y: 89, z: 27.5 },
             playerSpawnViewDirection: { x: -1, y: 0, z: 0 },

@@ -5,7 +5,7 @@ import { setupGameTest } from './GameTest.js';
 import { MinecraftBlockTypes, MinecraftEffectTypes, MinecraftEnchantmentTypes, MinecraftEntityTypes, MinecraftItemTypes } from '@minecraft/vanilla-data';
 
 import { sprintf, vsprintf } from 'sprintf-js';
-import { openShop, openTeamShop, TokenValue } from './BedwarsShop.js';
+import { openItemShop, openTeamShop, TokenValue } from './BedwarsShop.js';
 import { isLocationPartOfAnyPlatforms } from './RescuePlatform.js';
 import { SimulatedPlayer } from '@minecraft/server-gametest';
 import { mapGarden, mapSteamPunk, mapWaterfall, mapEastwood, mapVaryth } from './BedwarsMaps.js';
@@ -42,7 +42,7 @@ export const FIRE_BALL_ITEM = (() => {
     return i;
 })();
 const FIRE_BALL_COOLDOWN = 20; // in ticks
-const FIREBALL_GAMEID_PROP = "BEDWARSID";
+const BEDWARS_GAMEID_PROP = "BEDWARSID";
 
 function isFireBallItem(item: mc.ItemStack) {
     return item.getLore()[1] == FIRE_BALL_ITEM.getLore()[1];
@@ -140,6 +140,7 @@ function isSettingsItem(item: mc.ItemStack) {
 }
 const OWNER_SYM = Symbol("owner of the entity");
 const SITTING_SYM = Symbol("is wolf sitting");
+const SHOP_TYPE_SYM = Symbol("type of the shop the villager is");
 
 const WOLF_GUARDING_DISTANCE = 10;
 const WOLF_GUARDING_INTERVAL = 100; // in ticks
@@ -148,6 +149,7 @@ declare module '@minecraft/server' {
     interface Entity {
         [OWNER_SYM]?: PlayerGameInformation;
         [SITTING_SYM]?: boolean;
+        [SHOP_TYPE_SYM]?: "item" | "team";
     }
 }
 declare module '@minecraft/server-gametest' {
@@ -878,6 +880,51 @@ export class BedWarsGame {
         for (const gen of this.generators) {
             gen.remainingCooldown = gen.interval;
         }
+        {
+            // Prepare shop villagers
+            const villagers: mc.Entity[] = [];
+            for (const villager of this.dimension.getEntities({ type: "minecraft:villager" })) {
+                if (!vectorWithinArea(villager.location, this.fixOrigin(this.map.playableArea))) continue;
+                if (villager.getDynamicProperty(BEDWARS_GAMEID_PROP) == null) continue;
+                if (villagers.length == this.map.teams.length * 2) {
+                    villager.remove();
+                    continue;
+                }
+                villager.setDynamicProperty(BEDWARS_GAMEID_PROP, this.id);
+                villagers.push(villager);
+            }
+            const spawnVillagerCount = this.map.teams.length * 2 - villagers.length;
+            for (let i = 0; i < spawnVillagerCount; ++i) {
+                const villager = this.dimension.spawnEntity("minecraft:villager_v2", this.originPos);
+                villager.triggerEvent("Amazing:entity_spawn");
+                villager.setDynamicProperty(BEDWARS_GAMEID_PROP, this.id);
+                villagers.push(villager);
+            }
+            let index = 0;
+            for (let { itemShopLocation, teamShopLocation, type, playerSpawnViewDirection } of this.map.teams) {
+                itemShopLocation = this.fixOrigin(itemShopLocation);
+                teamShopLocation = this.fixOrigin(teamShopLocation);
+                const itemShopVillager = villagers[index++];
+                const teamShopVillager = villagers[index++];
+                itemShopVillager.teleport(itemShopLocation, {
+                    dimension: this.dimension,
+                    facingLocation: playerSpawnViewDirection,
+                    keepVelocity: false,
+                    checkForBlocks: false
+                });
+                const t = TEAM_CONSTANTS[type];
+                itemShopVillager.nameTag = `§6Item Shop\n§7of ${t.colorPrefix + capitalize(t.name)}`;
+                itemShopVillager[SHOP_TYPE_SYM] = "item";
+                teamShopVillager.teleport(teamShopLocation, {
+                    dimension: this.dimension,
+                    facingLocation: playerSpawnViewDirection,
+                    keepVelocity: false,
+                    checkForBlocks: false
+                });
+                teamShopVillager.nameTag = `§3Team Shop\n§7of ${t.colorPrefix + capitalize(t.name)}`;
+                teamShopVillager[SHOP_TYPE_SYM] = "team";
+            }
+        }
         for (const { teamChestLocation, bedLocation: mapBedLocation, type: teamType } of this.map.teams) {
             { // Clear the team chest
                 const teamChestContainer = this.dimension.getBlock(this.fixOrigin(teamChestLocation))?.getComponent("inventory")?.container;
@@ -925,9 +972,11 @@ export class BedWarsGame {
         // mc.world.gameRules.recipesUnlock = true;
         // mc.world.gameRules.showRecipeMessages = false;
         // mc.world.gameRules.doLimitedCrafting = true;
+        // mc.world.gameRules.doWeatherCycle = false;
         this.dimension.runCommand("gamerule recipesunlock true");
         this.dimension.runCommand("gamerule showrecipemessages false");
         this.dimension.runCommand("gamerule dolimitedcrafting true");
+        this.dimension.runCommand("gamerule doweathercycle false");
     }
 
     private updateScoreboard() {
@@ -1714,7 +1763,7 @@ export class BedWarsGame {
         for (const fireBall of this.dimension.getEntities({
             type: "minecraft:fireball"
         })) {
-            const id = fireBall.getDynamicProperty(FIREBALL_GAMEID_PROP);
+            const id = fireBall.getDynamicProperty(BEDWARS_GAMEID_PROP);
             if (!id) continue;
             if (id != this.id) {
                 fireBall.kill();
@@ -1751,8 +1800,8 @@ export class BedWarsGame {
                 }
             }
         }
-        for(const arrow of this.dimension.getEntities({type: "minecraft:arrow"})) {
-            if(arrow.isOnGround) arrow.kill();
+        for (const arrow of this.dimension.getEntities({ type: "minecraft:arrow" })) {
+            if (arrow.isOnGround) arrow.kill();
         }
 
         // Simulated players AI
@@ -2046,23 +2095,22 @@ export class BedWarsGame {
             }
             return;
         }
+    }
+    async beforePlayerInteractWithEntity(event: mc.PlayerInteractWithEntityBeforeEvent) {
+        if (this.state != GameState.started) return;
 
-        for (const { itemShopLocation: shopLocation, teamShopLocation } of this.map.teams) {
-            if (v3.equals(this.fixOrigin(shopLocation), event.block.location)) {
-                await sleep(0);
-                const teamInfo = this.teams.get(playerInfo.team)!;
-                openShop(playerInfo, teamInfo, this);
-                return;
-            } else if (v3.equals(this.fixOrigin(teamShopLocation), event.block.location)) {
-                await sleep(0);
-                const teamInfo = this.teams.get(playerInfo.team)!;
-                openTeamShop(playerInfo, teamInfo, this);
-                return;
+        const playerInfo = this.players.get(event.player.name);
+        if (!playerInfo) return;
+        if (event.target.typeId == "minecraft:villager_v2" &&
+            event.target.getDynamicProperty(BEDWARS_GAMEID_PROP) == this.id) { // open the shop for player
+            const shopType = event.target[SHOP_TYPE_SYM]!;
+            await sleep(0);
+            if (shopType == "item") {
+                openItemShop(playerInfo, this.teams.get(playerInfo.team)!, this);
+            } else if (shopType == "team") {
+                openTeamShop(playerInfo, this.teams.get(playerInfo.team)!, this);
             }
         }
-    }
-    beforePlayerInteractWithEntity(event: mc.PlayerInteractWithEntityBeforeEvent) {
-        if (this.state != GameState.started) return;
     }
     private removeBlockFromRecord(block: mc.Block) {
         let existsInRecord = false;
@@ -2307,7 +2355,7 @@ export class BedWarsGame {
             fireBall.addTag(`team${playerInfo.team}`);
             fireBall.getComponent("projectile")!.owner = playerInfo.player;
             fireBall.applyImpulse(v3.normalize(playerInfo.player.getViewDirection()));
-            fireBall.setDynamicProperty(FIREBALL_GAMEID_PROP, this.id);
+            fireBall.setDynamicProperty(BEDWARS_GAMEID_PROP, this.id);
 
             consumeMainHandItem(playerInfo.player);
             playerInfo.fireBallCooldown = FIRE_BALL_COOLDOWN;

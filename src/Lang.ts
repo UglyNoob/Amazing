@@ -224,8 +224,8 @@ strings[Lang.en_US] = {
     killCountNotification: "§7Kills: §a%d",
     finalKillCountNotification: "§7Final Kills: §a%d",
     bedDestroyedCountNotification: "§7Destroyed Beds: §a%d",
-    wolfStartGuardingNotification: "§6Your wolf is now guarding",
-    wolfStopGuardingNotification: "§7Your wolf stops guarding",
+    wolfStartGuardingNotification: "§6Your wolf is now guarding.",
+    wolfStopGuardingNotification: "§7Your wolf stops guarding.",
 
     teamChatPrefix: "§3[TEAM]§r",
     globalChatPrefix: "§6[GLOBAL]§r",

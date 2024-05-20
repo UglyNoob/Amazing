@@ -134,9 +134,9 @@ type isUnion<T, K = T> = T extends any ? (Exclude<K, T> extends T ? false : true
 type FieldOrFunction<PropName extends string, ValueType> = isUnion<PropName> extends true ? never : {
     [prop in PropName]: ValueType;
 } | {
-        [prop in PropName as `get${ Capitalize<prop> }`]:
-        (playerInfo: PlayerGameInformation, currentTokens: TokenValue, teamInfo: TeamGameInformation, game: BedWarsGame) => ValueType;
-    };
+    [prop in PropName as `get${Capitalize<prop>}`]:
+    (playerInfo: PlayerGameInformation, currentTokens: TokenValue, teamInfo: TeamGameInformation, game: BedWarsGame) => ValueType;
+};
 
 type LocalString = {
     local: keyof Strings;
@@ -177,9 +177,9 @@ function generateBuyOneItemMenu(
             const strs = strings[getPlayerLang(playerInfo.player)];
             const evaluatedName = evaluateString(name, strs);
             if (item.amount == 1) {
-                return `${ color }${ evaluatedName }\n${ tokenToString(cost, strs) }`;
+                return `${color}${evaluatedName}\n${tokenToString(cost, strs)}`;
             } else {
-                return `${ color }${ evaluatedName } * ${ item.amount }\n${ tokenToString(cost, strs) }`;
+                return `${color}${evaluatedName} * ${item.amount}\n${tokenToString(cost, strs)}`;
             }
         },
         getAction(playerInfo) {
@@ -221,7 +221,7 @@ function generateBuySwordMenu(toLevel: SwordLevel, cost: TokenValue): Menu {
             } else {
                 color = TOKEN_NOT_ENOUGH_COLOR;
             }
-            return `${ color }${ strs[toLevel.name] }\n${ tokenToString(cost, strs) }`;
+            return `${color}${strs[toLevel.name]}\n${tokenToString(cost, strs)}`;
         },
         icon: toLevel.icon,
         action: {
@@ -245,7 +245,7 @@ function generateBuyArmorMenu(toLevel: ArmorLevel, cost: TokenValue): Menu {
             } else {
                 color = TOKEN_NOT_ENOUGH_COLOR;
             }
-            return `${ color }${ strs[toLevel.name] }\n${ tokenToString(cost, strs) }`;
+            return `${color}${strs[toLevel.name]}\n${tokenToString(cost, strs)}`;
         },
         icon: toLevel.icon,
         action: {
@@ -416,7 +416,7 @@ const generateItemShopData: () => Menu = () => ({
                         } else {
                             color = TOKEN_NOT_ENOUGH_COLOR;
                         }
-                        return `${ color }${ strs.shearsName }\n${ tokenToString(cost, strs) }`;
+                        return `${color}${strs.shearsName}\n${tokenToString(cost, strs)}`;
                     },
                     icon: "textures/items/shears.png",
                     action: {
@@ -444,7 +444,7 @@ const generateItemShopData: () => Menu = () => ({
                         } else {
                             color = TOKEN_NOT_ENOUGH_COLOR;
                         }
-                        return `${ color }${ strs[toLevel.name] }\n${ tokenToString(cost, strs) }`;
+                        return `${color}${strs[toLevel.name]}\n${tokenToString(cost, strs)}`;
                     },
                     getIcon(playerInfo) {
                         let toLevel: PickaxeLevel;
@@ -483,7 +483,7 @@ const generateItemShopData: () => Menu = () => ({
                         } else {
                             color = TOKEN_NOT_ENOUGH_COLOR;
                         }
-                        return `${ color }${ strs[toLevel.name] }\n${ tokenToString(cost, strs) }`;
+                        return `${color}${strs[toLevel.name]}\n${tokenToString(cost, strs)}`;
                     },
                     getIcon(playerInfo) {
                         let toLevel: AxeLevel;
@@ -612,7 +612,7 @@ function generateTeamFirstGetDisplay(text: keyof Strings, available: (teamInfo: 
         if (available(teamInfo)) {
             color = "";
         }
-        return `${ color }${ strings[getPlayerLang(playerInfo.player)][text] }`;
+        return `${color}${strings[getPlayerLang(playerInfo.player)][text]}`;
     };
 }
 function generateTeamSecondGetDisplay(
@@ -622,7 +622,7 @@ function generateTeamSecondGetDisplay(
     return (playerInfo: PlayerGameInformation, currentTokens: TokenValue, teamInfo: TeamGameInformation) => {
         const name = getName(teamInfo, playerInfo);
         if (!available(teamInfo)) {
-            return `${ NOT_AVAILABLE_COLOR }${ name }`;
+            return `${NOT_AVAILABLE_COLOR}${name}`;
         }
         let color: string;
         const cost = getCost(teamInfo);
@@ -631,7 +631,7 @@ function generateTeamSecondGetDisplay(
         } else {
             color = TOKEN_NOT_ENOUGH_COLOR;
         }
-        return `${ color }${ name }\n${ tokenToString(cost, strings[getPlayerLang(playerInfo.player)]) }`;
+        return `${color}${name}\n${tokenToString(cost, strings[getPlayerLang(playerInfo.player)])}`;
     };
 }
 
@@ -678,7 +678,7 @@ const generateTeamShopData: () => Menu = () => ({
                 const strs = strings[getPlayerLang(player)];
                 let result = strs.trapShopBody;
                 if (teamInfo.traps.length == MAX_TRAP_COUNT) {
-                    result += `\n${ strs.trapReachingMaximumString }`;
+                    result += `\n${strs.trapReachingMaximumString}`;
                 }
                 result += "\n\n";
                 result += strs.trapsViewingMenuBody0;
@@ -732,7 +732,7 @@ const generateTeamShopData: () => Menu = () => ({
                 {
                     type: "action",
                     getDisplay: generateTeamSecondGetDisplay(
-                        (teamInfo, { player }) => `${ strings[getPlayerLang(player)].reinforcedArmorName } ${ TIER_STRING[addOneWithMaximum(teamInfo.protectionLevel, MAX_PROTECTION_LEVEL)] }`,
+                        (teamInfo, { player }) => `${strings[getPlayerLang(player)].reinforcedArmorName} ${TIER_STRING[addOneWithMaximum(teamInfo.protectionLevel, MAX_PROTECTION_LEVEL)]}`,
                         teamInfo => PROTECTION_TO_NEXT_LEVEL_COSTS[teamInfo.protectionLevel],
                         teamInfo => teamInfo.protectionLevel != MAX_PROTECTION_LEVEL),
                     icon: "textures/items/diamond_boots.png",
@@ -751,7 +751,7 @@ const generateTeamShopData: () => Menu = () => ({
                 {
                     type: "action",
                     getDisplay: generateTeamSecondGetDisplay(
-                        (teamInfo, { player }) => `${ strings[getPlayerLang(player)].ironForgeName } ${ TIER_STRING[addOneWithMaximum(teamInfo.ironForgeLevel, MAX_IRON_FORGE_LEVEL)] }`,
+                        (teamInfo, { player }) => `${strings[getPlayerLang(player)].ironForgeName} ${TIER_STRING[addOneWithMaximum(teamInfo.ironForgeLevel, MAX_IRON_FORGE_LEVEL)]}`,
                         teamInfo => IRON_FORGE_TO_NEXT_LEVEL_COSTS[teamInfo.ironForgeLevel],
                         teamInfo => teamInfo.ironForgeLevel != MAX_IRON_FORGE_LEVEL),
                     icon: "textures/blocks/furnace_front_off.png",
@@ -770,7 +770,7 @@ const generateTeamShopData: () => Menu = () => ({
                 {
                     type: "action",
                     getDisplay: generateTeamSecondGetDisplay(
-                        (teamInfo, { player }) => `${ strings[getPlayerLang(player)].maniacMinerName } ${ TIER_STRING[addOneWithMaximum(teamInfo.hasteLevel, MAX_HASTE_LEVEL)] }`,
+                        (teamInfo, { player }) => `${strings[getPlayerLang(player)].maniacMinerName} ${TIER_STRING[addOneWithMaximum(teamInfo.hasteLevel, MAX_HASTE_LEVEL)]}`,
                         teamInfo => HASTE_TO_NEXT_LEVEL_COSTS[teamInfo.hasteLevel],
                         teamInfo => teamInfo.hasteLevel != MAX_HASTE_LEVEL),
                     icon: "textures/items/gold_pickaxe.png",
@@ -838,16 +838,16 @@ function tokenToString(t: TokenValue, strs: Strings) {
         emeraldName
     } = strs;
     if (t.ironAmount) {
-        result += `${ t.ironAmount }${ ironName } `;
+        result += `${t.ironAmount}${ironName} `;
     }
     if (t.goldAmount) {
-        result += `${ t.goldAmount }${ goldName } `;
+        result += `${t.goldAmount}${goldName} `;
     }
     if (t.diamondAmount) {
-        result += `${ t.diamondAmount }${ diamondName } `;
+        result += `${t.diamondAmount}${diamondName} `;
     }
     if (t.emeraldAmount) {
-        result += `${ t.emeraldAmount }${ emeraldName } `;
+        result += `${t.emeraldAmount}${emeraldName} `;
     }
     if (result.length > 0)
         result = result.slice(0, result.length - 1);
@@ -1175,7 +1175,7 @@ function performAction(action: Action, playerInfo: PlayerGameInformation, teamIn
         ++teamInfo.ironForgeLevel;
         game.applyTeamIronForge(teamInfo.type);
         const t = TEAM_CONSTANTS[teamInfo.type];
-        game.teamBroadcast(teamInfo.type, "teamPurchaseMessage", t.colorPrefix, player.name, `${ strs.ironForgeName } ${ TIER_STRING[teamInfo.ironForgeLevel] }`);
+        game.teamBroadcast(teamInfo.type, "teamPurchaseMessage", t.colorPrefix, player.name, `${strs.ironForgeName} ${TIER_STRING[teamInfo.ironForgeLevel]}`);
         result = true;
     } else if (action.type == ActionType.UpgradeProtection) {
         if (teamInfo.protectionLevel >= MAX_PROTECTION_LEVEL) {
@@ -1191,7 +1191,7 @@ function performAction(action: Action, playerInfo: PlayerGameInformation, teamIn
         consumeToken(container, cost);
         ++teamInfo.protectionLevel;
         const t = TEAM_CONSTANTS[teamInfo.type];
-        game.teamBroadcast(teamInfo.type, "teamPurchaseMessage", t.colorPrefix, player.name, `${ strs.reinforcedArmorName } ${ TIER_STRING[teamInfo.protectionLevel] }`);
+        game.teamBroadcast(teamInfo.type, "teamPurchaseMessage", t.colorPrefix, player.name, `${strs.reinforcedArmorName} ${TIER_STRING[teamInfo.protectionLevel]}`);
         result = true;
     } else if (action.type == ActionType.UpgradeHaste) {
         if (teamInfo.hasteLevel >= MAX_HASTE_LEVEL) {
@@ -1208,7 +1208,7 @@ function performAction(action: Action, playerInfo: PlayerGameInformation, teamIn
         ++teamInfo.hasteLevel;
         game.applyTeamHasteLevel(teamInfo.type);
         const t = TEAM_CONSTANTS[teamInfo.type];
-        game.teamBroadcast(teamInfo.type, "teamPurchaseMessage", t.colorPrefix, player.name, `${ strs.maniacMinerName } ${ TIER_STRING[teamInfo.hasteLevel] }`);
+        game.teamBroadcast(teamInfo.type, "teamPurchaseMessage", t.colorPrefix, player.name, `${strs.maniacMinerName} ${TIER_STRING[teamInfo.hasteLevel]}`);
         result = true;
     } else if (action.type == ActionType.BuySharpness) {
         if (teamInfo.hasSharpness) {
@@ -1274,7 +1274,7 @@ function performAction(action: Action, playerInfo: PlayerGameInformation, teamIn
     return result;
 }
 
-export function openShop(playerInfo: PlayerGameInformation, teamInfo: TeamGameInformation, game: BedWarsGame) {
+export function openItemShop(playerInfo: PlayerGameInformation, teamInfo: TeamGameInformation, game: BedWarsGame) {
     playerInfo.lastActionSucceed = null;
     if (!itemShopData) {
         itemShopData = generateItemShopData();
