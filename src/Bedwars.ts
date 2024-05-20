@@ -897,6 +897,7 @@ export class BedWarsGame {
             for (let i = 0; i < spawnVillagerCount; ++i) {
                 const villager = this.dimension.spawnEntity("minecraft:villager_v2", this.originPos);
                 villager.triggerEvent("Amazing:entity_spawn");
+                villager.triggerEvent("minecraft:ageable_grow_up");
                 villager.setDynamicProperty(BEDWARS_GAMEID_PROP, this.id);
                 villagers.push(villager);
             }
