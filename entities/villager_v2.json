@@ -1770,11 +1770,19 @@
 				"minecraft:behavior.pickup_items": {},
 				"minecraft:behavior.move_indoors": {},
 				"minecraft:behavior.look_at_trading_player": {},
-				"minecraft:behavior.look_at_player": {},
 				"minecraft:behavior.share_items": {},
 				"minecraft:behavior.move_towards_dwelling_restriction": {},
 				"minecraft:behavior.random_stroll": {},
-				"minecraft:shareables": {},
+				"minecraft:shareables": {
+                    "items": [
+						{
+							"item": "minecraft:bread",
+							"want_amount": 3,
+							"surplus_amount": 6,
+							"stored_in_inventory": true
+						}
+                    ]
+                },
 				"minecraft:behavior.trade_interest": {},
 				"minecraft:economy_trade_table": {},
 				"minecraft:behavior.make_love": {},

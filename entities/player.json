@@ -52,6 +52,7 @@
 						"on_damage": {
 							"filters": {
 								"any_of": [
+                                    { "test": "has_tag", "value": "invulnerable" },
 									{
 										"all_of": [
 											{ "test": "has_tag", "value": "team0" },

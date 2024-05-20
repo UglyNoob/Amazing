@@ -1,6 +1,6 @@
 import { Vector3Utils as v3 } from '@minecraft/math';
 import * as mc from '@minecraft/server';
-import { itemEqual, Area, sleep, vectorAdd, vectorWithinArea, containerIterator, capitalize, getPlayerByName, consumeMainHandItem, makeItem, shuffle, randomInt, setGameMode, analyzeTime, vectorCompare, raycastHits, quickFind, getAngle, smallest } from './utility.js';
+import { itemEqual, Area, sleep, vectorAdd, vectorWithinArea, containerIterator, capitalize, getPlayerByName, consumeMainHandItem, makeItem, shuffle, randomInt, setGameMode, analyzeTime, vectorCompare, raycastHits, quickFind, getAngle, smallest, containerSlotIterator } from './utility.js';
 import { setupGameTest } from './GameTest.js';
 import { MinecraftBlockTypes, MinecraftEffectTypes, MinecraftEnchantmentTypes, MinecraftEntityTypes, MinecraftItemTypes } from '@minecraft/vanilla-data';
 
@@ -695,6 +695,7 @@ export interface PlayerGameInformation {
     deathTime: number; // global tick
     deathLocation: mc.Vector3;
     deathRotaion: mc.Vector2;
+    invulnerableTime: number;
     /**
      * Cleared when the player opens menu or press the back button,
      * set when the player perform an action.
@@ -722,6 +723,8 @@ export interface PlayerGameInformation {
     basicNotificationD: number;
     trackerNotificationD?: number;
 }
+
+const RESPAWN_INVULNERABLE_TIME = 60; // in ticks
 
 export const MAX_IRON_FORGE_LEVEL = 4;
 export const MAX_PROTECTION_LEVEL = 4;
@@ -823,10 +826,10 @@ export class BedWarsGame {
     }
 
     setPlayer(player: mc.Player, teamType: TeamType) {
-        if (this.map.teams.find(t => t.type == teamType) == undefined) throw new Error(`No such team(${TEAM_CONSTANTS[teamType].name}).`);
+        if (this.map.teams.find(t => t.type == teamType) == undefined) throw new Error(`No such team(${ TEAM_CONSTANTS[teamType].name }).`);
 
         player.getTags().filter(s => s.startsWith("team")).forEach(s => player.removeTag(s));
-        player.addTag(`team${teamType}`);
+        player.addTag(`team${ teamType }`);
         let playerInfo = this.players.get(player.name);
         if (playerInfo) {
             playerInfo.team = teamType;
@@ -844,6 +847,7 @@ export class BedWarsGame {
             deathLocation: { x: 0, y: 0, z: 0 },
             deathTime: 0,
             deathRotaion: { x: 0, y: 0 },
+            invulnerableTime: 0,
             lastActionSucceed: null,
             placement: new BlockPlacementTracker(),
             swordLevel: SWORD_LEVELS[0],
@@ -914,7 +918,7 @@ export class BedWarsGame {
                     checkForBlocks: false
                 });
                 const t = TEAM_CONSTANTS[type];
-                itemShopVillager.nameTag = `§6Item Shop\n§7of ${t.colorPrefix + capitalize(t.name)}`;
+                itemShopVillager.nameTag = `§6§lItem Shop\n§r§7of ${ t.colorPrefix + capitalize(t.name) }`;
                 itemShopVillager[SHOP_TYPE_SYM] = "item";
                 teamShopVillager.teleport(teamShopLocation, {
                     dimension: this.dimension,
@@ -922,7 +926,7 @@ export class BedWarsGame {
                     keepVelocity: false,
                     checkForBlocks: false
                 });
-                teamShopVillager.nameTag = `§3Team Shop\n§7of ${t.colorPrefix + capitalize(t.name)}`;
+                teamShopVillager.nameTag = `§3§lTeam Shop\n§r§7of ${ t.colorPrefix + capitalize(t.name) }`;
                 teamShopVillager[SHOP_TYPE_SYM] = "team";
             }
         }
@@ -932,7 +936,7 @@ export class BedWarsGame {
                 if (teamChestContainer) {
                     teamChestContainer.clearAll();
                 } else {
-                    throw new Error(`Team chest of team ${TEAM_CONSTANTS[teamType].name} does not exist at ${v3.toString(teamChestLocation)}`);
+                    throw new Error(`Team chest of team ${ TEAM_CONSTANTS[teamType].name } does not exist at ${ v3.toString(teamChestLocation) }`);
                 }
             }
 
@@ -988,7 +992,7 @@ export class BedWarsGame {
         for (const [teamType, { state }] of this.teams) {
             ++index;
             const t = TEAM_CONSTANTS[teamType];
-            let result = `${t.colorPrefix}${t.name.charAt(0).toUpperCase()} §r${capitalize(t.name)}: `;
+            let result = `${ t.colorPrefix }${ t.name.charAt(0).toUpperCase() } §r${ capitalize(t.name) }: `;
             switch (state) {
                 case TeamState.BedAlive:
                     // result += "§a✔";
@@ -1004,7 +1008,7 @@ export class BedWarsGame {
                         if (playerInfo.team != teamType) continue;
                         if (this.isPlayerPlaying(playerInfo)) ++aliveCount;
                     }
-                    result += `§a${aliveCount}`;
+                    result += `§a${ aliveCount }`;
             }
             this.scoreObj.setScore(result, index);
         }
@@ -1016,15 +1020,15 @@ export class BedWarsGame {
         if (secondsStr.length == 1) secondsStr = "0" + secondsStr;
         let minutesStr = minutes.toString();
         if (minutesStr.length == 1) minutesStr = "0" + minutesStr;
-        this.scoreObj.setScore(`§a${minutesStr}:${secondsStr}`, index);
+        this.scoreObj.setScore(`§a${ minutesStr }:${ secondsStr }`, index);
     }
 
     private respawnPlayer(playerInfo: PlayerGameInformation) {
-        const teamInfo = this.map.teams.find(ele => ele.type === playerInfo.team)!;
-        const teamGameInfo = this.teams.get(playerInfo.team)!;
-        const spawnPoint = this.fixOrigin(teamInfo.playerSpawn);
+        const teamMapInfo = this.map.teams.find(ele => ele.type === playerInfo.team)!;
+        const teamInfo = this.teams.get(playerInfo.team)!;
+        const spawnPoint = this.fixOrigin(teamMapInfo.playerSpawn);
         const player = playerInfo.player;
-        player.teleport(spawnPoint, { facingLocation: v3.add(spawnPoint, teamInfo.playerSpawnViewDirection) });
+        player.teleport(spawnPoint, { facingLocation: v3.add(spawnPoint, teamMapInfo.playerSpawnViewDirection) });
         setGameMode(player, mc.GameMode.survival);
         player.getComponent("minecraft:health")!.resetToMaxValue();
         player.runCommand("effect @s clear");
@@ -1032,13 +1036,17 @@ export class BedWarsGame {
             amplifier: 100,
             showParticles: false
         });
-        player.addEffect(MinecraftEffectTypes.Resistance, 60, {
-            amplifier: 5,
-            showParticles: true
-        });
-        if (teamGameInfo.hasteLevel > 0) {
+        if (teamInfo.protectionLevel >= 1) {
+            player.addEffect(MinecraftEffectTypes.Resistance, 1000000, {
+                amplifier: 0,
+                showParticles: false
+            });
+        }
+        playerInfo.invulnerableTime = RESPAWN_INVULNERABLE_TIME;
+        player.addTag("invulnerable");
+        if (teamInfo.hasteLevel > 0) {
             player.addEffect(MinecraftEffectTypes.Haste, 1000000, {
-                amplifier: teamGameInfo.hasteLevel - 1,
+                amplifier: teamInfo.hasteLevel - 1,
                 showParticles: false
             });
         }
@@ -1509,19 +1517,7 @@ export class BedWarsGame {
                             equipment.getEquipmentSlot(slotName).setItem();
                             continue;
                         }
-                        if (itemEqual(item, playerInfo.swordLevel.item)) {
-                            if (teamInfo.hasSharpness) {
-                                const enchantment = item.getComponent("enchantable")!;
-                                const existedEnch = enchantment.getEnchantment(MinecraftEnchantmentTypes.Sharpness);
-                                if (!existedEnch) {
-                                    enchantment.addEnchantment({
-                                        type: mc.EnchantmentTypes.get(MinecraftEnchantmentTypes.Sharpness)!,
-                                        level: SHARPNESS_ENCHANMENT_LEVEL
-                                    });
-                                    equipment.setEquipment(slotName, item);
-                                }
-                            }
-                        } else if (playerInfo.trackingTarget && isTrackerItem(item)) {
+                        if (playerInfo.trackingTarget && isTrackerItem(item)) {
                             trackerWorking = true;
                             if (mc.system.currentTick % 5 == 0) {
                                 const distanceVec = v3.subtract(playerInfo.trackingTarget.player.location, player.location);
@@ -1560,19 +1556,6 @@ export class BedWarsGame {
                                 );
                             }
                         }
-                    } else { // Armors
-                        if (teamInfo.protectionLevel > 0) {
-                            const enchantment = item.getComponent("enchantable")!;
-                            const existedEnch = enchantment.getEnchantment(MinecraftEnchantmentTypes.Protection);
-                            if (!existedEnch || existedEnch.level != teamInfo.protectionLevel) {
-                                enchantment.addEnchantment({
-                                    type: mc.EnchantmentTypes.get(MinecraftEnchantmentTypes.Protection)!,
-                                    level: teamInfo.protectionLevel
-                                });
-                                equipment.setEquipment(slotName, item);
-                                continue;
-                            }
-                        }
                     }
                     const com = item.getComponent("durability");
                     if (!com) continue;
@@ -1592,6 +1575,9 @@ export class BedWarsGame {
                         this.resetArmor(playerInfo);
                     }
                 }
+                if (playerInfo.invulnerableTime == 0) {
+                    player.removeTag("invulnerable");
+                } else --playerInfo.invulnerableTime;
 
                 let playerWithinTeamArea = false;
                 for (const iTeamInfo of this.teams.values()) {
@@ -1653,10 +1639,10 @@ export class BedWarsGame {
                 for (const loc of gen.indicatorLocations) {
                     const sign = this.dimension.getBlock(loc)?.getComponent("sign");
                     if (!sign) {
-                        throw new Error(`Generator indicator does not exist at ${v3.toString(loc)}.`);
+                        throw new Error(`Generator indicator does not exist at ${ v3.toString(loc) }.`);
                     }
                     sign.setWaxed(true);
-                    [mc.SignSide.Front, mc.SignSide.Back].forEach(signSide => sign.setText(`§eSpawns in §c${gen.remainingCooldown / 20} §eseconds`, signSide));
+                    [mc.SignSide.Front, mc.SignSide.Back].forEach(signSide => sign.setText(`§eSpawns in §c${ gen.remainingCooldown / 20 } §eseconds`, signSide));
                 }
             }
             if (gen.remainingCooldown > 0) {
@@ -1796,7 +1782,7 @@ export class BedWarsGame {
                 if (targetInfo && v3.distance(targetInfo.player.getHeadLocation(), launchLocation) <= WOLF_GUARDING_DISTANCE) {
                     const arrow = this.dimension.spawnEntity(MinecraftEntityTypes.Arrow, launchLocation);
                     arrow.getComponent("projectile")!.owner = wolf;
-                    arrow.addTag(`team${ownerInfo.team}`);
+                    arrow.addTag(`team${ ownerInfo.team }`);
                     arrow.applyImpulse(v3.scale(v3.normalize(v3.subtract(targetInfo.player.getHeadLocation(), launchLocation)), 1.5));
                 }
             }
@@ -1992,7 +1978,7 @@ export class BedWarsGame {
 
     private resetNameTag(playerInfo: PlayerGameInformation) {
         const health = playerInfo.player.getComponent("health")!.currentValue.toFixed(0);
-        playerInfo.player.nameTag = `${TEAM_CONSTANTS[playerInfo.team].colorPrefix}${playerInfo.name}\n§c${health}`;
+        playerInfo.player.nameTag = `${ TEAM_CONSTANTS[playerInfo.team].colorPrefix }${ playerInfo.name }\n§c${ health }`;
     }
 
     afterEntityHurt(event: mc.EntityHurtAfterEvent) {
@@ -2353,7 +2339,7 @@ export class BedWarsGame {
 
             const location = playerInfo.player.getHeadLocation();
             const fireBall = this.dimension.spawnEntity(MinecraftEntityTypes.Fireball, location);
-            fireBall.addTag(`team${playerInfo.team}`);
+            fireBall.addTag(`team${ playerInfo.team }`);
             fireBall.getComponent("projectile")!.owner = playerInfo.player;
             fireBall.applyImpulse(v3.normalize(playerInfo.player.getViewDirection()));
             fireBall.setDynamicProperty(BEDWARS_GAMEID_PROP, this.id);
@@ -2433,7 +2419,7 @@ export class BedWarsGame {
 
             wolf.triggerEvent("Amazing:wolf_spawned");
             wolf.triggerEvent("minecraft:ageable_grow_up");
-            wolf.addTag(`team${playerInfo.team}`);
+            wolf.addTag(`team${ playerInfo.team }`);
             wolf[OWNER_SYM] = playerInfo;
             wolf[SITTING_SYM] = false;
             // wolf.teleport(wolfLocation);
@@ -2479,6 +2465,51 @@ export class BedWarsGame {
         }*/
     }
 
+    updateTeamPlayersInventory(teamInfo: TeamGameInformation) {
+        for (const playerInfo of this.players.values()) {
+            if (playerInfo.state != PlayerState.Alive) continue;
+            if (playerInfo.team != teamInfo.type) continue;
+            for (const { slot } of containerSlotIterator(playerInfo.player.getComponent("inventory")!.container!)) {
+                const item = slot.getItem();
+                if (!item) continue;
+                if (teamInfo.hasSharpness &&
+                    itemEqual(playerInfo.swordLevel.item, item)) {
+                    item.getComponent("enchantable")!.addEnchantment({
+                        type: mc.EnchantmentTypes.get(MinecraftEnchantmentTypes.Sharpness)!,
+                        level: SHARPNESS_ENCHANMENT_LEVEL
+                    });
+                    slot.setItem(item);
+                }
+            }
+            if (teamInfo.protectionLevel >= 1) {
+                const equippable = playerInfo.player.getComponent("equippable")!;
+                for (const slotName of [
+                    mc.EquipmentSlot.Head,
+                    mc.EquipmentSlot.Chest,
+                    mc.EquipmentSlot.Legs,
+                    mc.EquipmentSlot.Feet
+                ]) {
+                    const slot = equippable.getEquipmentSlot(slotName);
+                    const item = slot.getItem();
+                    if (!item) continue;
+                    const enchantable = item.getComponent("enchantable")!;
+                    const protection = mc.EnchantmentTypes.get(MinecraftEnchantmentTypes.Protection)!;
+                    if (enchantable.getEnchantment(protection)?.level != teamInfo.protectionLevel) {
+                        enchantable.addEnchantment({
+                            type: protection,
+                            level: teamInfo.protectionLevel
+                        });
+                        slot.setItem(item);
+                    }
+                }
+                playerInfo.player.addEffect(MinecraftEffectTypes.Resistance, 100000, {
+                    amplifier: 0,
+                    showParticles: false
+                });
+            }
+        }
+    }
+
     afterScriptEventReceive(event: mc.ScriptEventCommandMessageAfterEvent) {
         if (game.state != GameState.started) return;
 
@@ -2521,7 +2552,7 @@ export class BedWarsGame {
         form.title(teleportMenuTitle);
         form.body(teleportMenuBody);
         for (const iPlayerInfo of players) {
-            form.button(`${TEAM_CONSTANTS[iPlayerInfo.team].colorPrefix}${iPlayerInfo.name}`);
+            form.button(`${ TEAM_CONSTANTS[iPlayerInfo.team].colorPrefix }${ iPlayerInfo.name }`);
         }
         playerInfo.player.sendMessage(closeChatMenuMessage);
         let response: ActionFormResponse;
@@ -2600,7 +2631,7 @@ export class BedWarsGame {
             message = message.slice(1);
         }
 
-        message = `<${TEAM_CONSTANTS[senderInfo.team].colorPrefix}${sender.name}§r> ${message}`;
+        message = `<${ TEAM_CONSTANTS[senderInfo.team].colorPrefix }${ sender.name }§r> ${ message }`;
         for (const playerInfo of this.players.values()) {
             if (!globalChat && playerInfo.team != senderInfo.team) continue;
             if (playerInfo.state == PlayerState.Offline) continue;
@@ -2610,7 +2641,7 @@ export class BedWarsGame {
                 globalChatPrefix,
                 spectatorChatPrefix
             } = strings[getPlayerLang(playerInfo.player)];
-            playerInfo.player.sendMessage(`${spectate ? spectatorChatPrefix : ""}${globalChat ? globalChatPrefix : teamChatPrefix}${message}`);
+            playerInfo.player.sendMessage(`${ spectate ? spectatorChatPrefix : "" }${ globalChat ? globalChatPrefix : teamChatPrefix }${ message }`);
         }
     }
 };
@@ -2630,7 +2661,7 @@ class ActionbarManager {
     private getInstance(descriptor: number) {
         const instance = this.instances.get(descriptor);
         if (!instance) {
-            throw new Error(`Can't find the instance of descriptor "${descriptor}".`);
+            throw new Error(`Can't find the instance of descriptor "${ descriptor }".`);
         }
         return instance;
     }
@@ -2797,7 +2828,7 @@ mc.world.beforeEvents.chatSend.subscribe(async event => {
 
         minimalPlayer = Number(settingResponse.formValues![0]);
         if (minimalPlayer < 0 || !Number.isInteger(minimalPlayer)) {
-            event.sender.sendMessage(`§c"${settingResponse.formValues![0]}" is not a valid number, or a valid player count.`);
+            event.sender.sendMessage(`§c"${ settingResponse.formValues![0] }" is not a valid number, or a valid player count.`);
             return;
         }
         fillBlankTeams = settingResponse.formValues![1] as boolean;
