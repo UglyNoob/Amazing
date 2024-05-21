@@ -143,7 +143,7 @@ const SITTING_SYM = Symbol("is wolf sitting");
 const SHOP_TYPE_SYM = Symbol("type of the shop the villager is");
 
 const WOLF_GUARDING_DISTANCE = 10;
-const WOLF_GUARDING_INTERVAL = 100; // in ticks
+const WOLF_GUARDING_INTERVAL = 60; // in ticks
 
 declare module '@minecraft/server' {
     interface Entity {
@@ -1036,7 +1036,7 @@ export class BedWarsGame {
             amplifier: 100,
             showParticles: false
         });
-        if (teamInfo.protectionLevel >= 1) {
+        if (playerInfo.armorLevel.level >= 1) {
             player.addEffect(MinecraftEffectTypes.Resistance, 1000000, {
                 amplifier: 0,
                 showParticles: false
@@ -2420,6 +2420,7 @@ export class BedWarsGame {
             wolf.triggerEvent("Amazing:wolf_spawned");
             wolf.triggerEvent("minecraft:ageable_grow_up");
             wolf.addTag(`team${ playerInfo.team }`);
+            wolf.nameTag = `${ TEAM_CONSTANTS[playerInfo.team].colorPrefix + playerInfo.name }§7's Wolf`;
             wolf[OWNER_SYM] = playerInfo;
             wolf[SITTING_SYM] = false;
             // wolf.teleport(wolfLocation);
@@ -2465,7 +2466,7 @@ export class BedWarsGame {
         }*/
     }
 
-    updateTeamPlayersInventory(teamInfo: TeamGameInformation) {
+    updateTeamPlayerBuffs(teamInfo: TeamGameInformation) {
         for (const playerInfo of this.players.values()) {
             if (playerInfo.state != PlayerState.Alive) continue;
             if (playerInfo.team != teamInfo.type) continue;
@@ -2480,6 +2481,12 @@ export class BedWarsGame {
                     });
                     slot.setItem(item);
                 }
+            }
+            if (playerInfo.armorLevel.level >= 1) {
+                playerInfo.player.addEffect(MinecraftEffectTypes.Resistance, 1000000, {
+                    amplifier: 0,
+                    showParticles: false
+                });
             }
             if (teamInfo.protectionLevel >= 1) {
                 const equippable = playerInfo.player.getComponent("equippable")!;
@@ -2502,10 +2509,6 @@ export class BedWarsGame {
                         slot.setItem(item);
                     }
                 }
-                playerInfo.player.addEffect(MinecraftEffectTypes.Resistance, 100000, {
-                    amplifier: 0,
-                    showParticles: false
-                });
             }
         }
     }

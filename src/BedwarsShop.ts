@@ -1049,7 +1049,7 @@ function performAction(action: Action, playerInfo: PlayerGameInformation, teamIn
             container.addItem(action.toLevel.item);
         }
         playerInfo.swordLevel = action.toLevel;
-        game.updateTeamPlayersInventory(teamInfo);
+        game.updateTeamPlayerBuffs(teamInfo);
         player.sendMessage(sprintf(purchaseMessage, strs[action.toLevel.name]));
         result = true;
     } else if (action.type == ActionType.BuyShear) {
@@ -1083,6 +1083,7 @@ function performAction(action: Action, playerInfo: PlayerGameInformation, teamIn
         if (!playerInfo.armorDisabled) {
             game.resetArmor(playerInfo);
         }
+        game.updateTeamPlayerBuffs(teamInfo);
         player.sendMessage(sprintf(purchaseMessage, strs[playerInfo.armorLevel.name]));
         result = true;
     } else if (action.type == ActionType.UpgradePickaxe) {
@@ -1191,7 +1192,7 @@ function performAction(action: Action, playerInfo: PlayerGameInformation, teamIn
         }
         consumeToken(container, cost);
         ++teamInfo.protectionLevel;
-        game.updateTeamPlayersInventory(teamInfo);
+        game.updateTeamPlayerBuffs(teamInfo);
         const t = TEAM_CONSTANTS[teamInfo.type];
         game.teamBroadcast(teamInfo.type, "teamPurchaseMessage", t.colorPrefix, player.name, `${ strs.reinforcedArmorName } ${ TIER_STRING[teamInfo.protectionLevel] }`);
         result = true;
@@ -1225,7 +1226,7 @@ function performAction(action: Action, playerInfo: PlayerGameInformation, teamIn
         }
         consumeToken(container, cost);
         teamInfo.hasSharpness = true;
-        game.updateTeamPlayersInventory(teamInfo);
+        game.updateTeamPlayerBuffs(teamInfo);
         const t = TEAM_CONSTANTS[teamInfo.type];
         game.teamBroadcast(teamInfo.type, "teamPurchaseMessage", t.colorPrefix, player.name, strs.sharpenedSwordName);
         result = true;
