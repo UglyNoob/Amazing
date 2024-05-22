@@ -1502,18 +1502,11 @@ export class BedWarsGame {
                     const item = equipment.getEquipment(slotName);
                     if (!item) continue;
                     if (slotName == mc.EquipmentSlot.Mainhand) {
-                        let erase = false;
                         // clean items
                         if ([
                             MinecraftItemTypes.GlassBottle,
                             MinecraftItemTypes.CraftingTable,
                         ].includes(item.typeId as MinecraftItemTypes)) {
-                            erase = true;
-                        }
-                        if (item.typeId == MinecraftItemTypes.Shears && !playerInfo.hasShear) {
-                            erase = true;
-                        }
-                        if (erase) {
                             equipment.getEquipmentSlot(slotName).setItem();
                             continue;
                         }
@@ -1614,6 +1607,11 @@ export class BedWarsGame {
                 }
             }
             if ((mc.system.currentTick - this.startTime) % 80 == 0) {
+                // totem of undying may flush the effect
+                playerInfo.player.addEffect(MinecraftEffectTypes.Saturation, 1000000, {
+                    amplifier: 100,
+                    showParticles: false
+                });
                 const t = TEAM_CONSTANTS[playerInfo.team];
                 let result = sprintf(teamInformationNotification, t.colorPrefix, capitalize(strs[t.localName])) + " ";
                 switch ((mc.system.currentTick - this.startTime) % 240) {
@@ -1993,15 +1991,9 @@ export class BedWarsGame {
         const hurter = event.damageSource.damagingEntity;
         if (!hurter) return;
         if (!(hurter instanceof mc.Player)) {
-            if (hurter[OWNER_SYM]) { // the hurter is a tamed entity
-                const ownerInfo = hurter[OWNER_SYM];
-                if (ownerInfo.team == victimInfo.team) {
-                    if (hurter.typeId != "minecraft:tnt") {
-                        // workaround for disabling in-team damage
-                        const health = victim.getComponent("health")!;
-                        health.setCurrentValue(health.currentValue + event.damage);
-                    }
-                } else {
+            const ownerInfo = hurter[OWNER_SYM];
+            if (ownerInfo) {
+                if (ownerInfo.team != victimInfo.team) {
                     victimInfo.lastHurtBy = hurter[OWNER_SYM];
                 }
             } else {
@@ -2012,12 +2004,6 @@ export class BedWarsGame {
         const hurterInfo = this.players.get(hurter.name);
         if (!hurterInfo) return;
 
-        if (victimInfo.team == hurterInfo.team) {
-            // workaround for disabling in-team damage
-            const health = victim.getComponent("health")!;
-            health.setCurrentValue(health.currentValue + event.damage);
-            return;
-        }
         victimInfo.lastHurtBy = hurterInfo;
 
         const attackingItem = hurter.getComponent("equippable")!.getEquipment(mc.EquipmentSlot.Mainhand);
@@ -2045,12 +2031,8 @@ export class BedWarsGame {
             if (event.source instanceof mc.Player) {
                 const hurterInfo = this.players.get(event.source.name);
                 if (hurterInfo) {
-                    if (hurterInfo.team == victimInfo.team) {
-                        // TOWAIT TODO
-                    } else {
-                        victimInfo.lastHurtBy = hurterInfo;
-                        return;
-                    }
+                    victimInfo.lastHurtBy = hurterInfo;
+                    return;
                 }
             }
             victimInfo.lastHurtBy = undefined;
@@ -2408,14 +2390,18 @@ export class BedWarsGame {
         if (isFireBallItem(event.itemStack)) {
             event.cancel = true;
         } else if (event.itemStack.typeId == MinecraftItemTypes.WolfSpawnEgg) {
-            event.cancel = true;
             await sleep(0);
 
-            //const wolfLocation = v3.add(event.block.location, event.faceLocation);
-            //this.dimension.getEntities({type: "minecraft:wolf", location: wolfLocation, maxDistance: 2}).filter(e => e.getComponent("tameable").)
-            const wolf = this.dimension.spawnEntity(MinecraftEntityTypes.Wolf, playerInfo.player.location);
+            let wolfLocation = v3.add(event.block.location, event.faceLocation);
+            const wolf = smallest(this.dimension.getEntities({ type: "minecraft:wolf" }).filter(e => !e[OWNER_SYM]), ({ location: a }, { location: b }) => {
+                return v3.distance(a, wolfLocation) - v3.distance(b, wolfLocation);
+            });
+            if (!wolf) return;
+            wolfLocation = wolf.location;
+            wolf.teleport(playerInfo.player.location);
             // tame() method would make the wolf tamed to the nearest player
             wolf.getComponent("tameable")!.tame();
+            wolf.teleport(wolfLocation);
 
             wolf.triggerEvent("Amazing:wolf_spawned");
             wolf.triggerEvent("minecraft:ageable_grow_up");
@@ -2423,8 +2409,6 @@ export class BedWarsGame {
             wolf.nameTag = `${ TEAM_CONSTANTS[playerInfo.team].colorPrefix + playerInfo.name }§7's Wolf`;
             wolf[OWNER_SYM] = playerInfo;
             wolf[SITTING_SYM] = false;
-            // wolf.teleport(wolfLocation);
-            consumeMainHandItem(playerInfo.player);
             await sleep(0);
             wolf.getComponent("color")!.value = TEAM_CONSTANTS[playerInfo.team].color;
         } else if (isTrackerItem(event.itemStack)) {

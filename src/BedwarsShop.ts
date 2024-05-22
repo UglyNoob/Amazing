@@ -59,6 +59,7 @@ enum ActionType {
     UpgradePickaxe,
     UpgradeAxe,
     BuyShear,
+    BuyTotem,
     UpgradeHaste,
     BuySharpness,
     UpgradeProtection,
@@ -93,6 +94,10 @@ interface BuyShearAction {
     type: ActionType.BuyShear;
     cost: TokenValue;
 }
+interface BuyTotemAction {
+    type: ActionType.BuyTotem;
+    cost: TokenValue;
+}
 interface BuySharpnessAction {
     type: ActionType.BuySharpness;
     cost: TokenValue;
@@ -121,6 +126,7 @@ type Action = BuyNormalItemAction |
     UpgradePickaxeAction |
     UpgradeAxeAction |
     BuyShearAction |
+    BuyTotemAction |
     BuyArmorAction |
     BuySharpnessAction |
     UpgradeProtectionAction |
@@ -262,6 +268,12 @@ const SHEARS_COST: TokenValue = {
     diamondAmount: 0,
     emeraldAmount: 0
 };
+const TOTEM_COST = {
+    ironAmount: 32,
+    goldAmount: 16,
+    emeraldAmount: 0,
+    diamondAmount: 0
+};
 const IRON_FORGE_TO_NEXT_LEVEL_COSTS: TokenValue[] = [
     { ironAmount: 0, goldAmount: 0, diamondAmount: 2, emeraldAmount: 0 },
     { ironAmount: 0, goldAmount: 0, diamondAmount: 4, emeraldAmount: 0 },
@@ -288,6 +300,8 @@ const OBSIDIAN_ITEM = new mc.ItemStack(MinecraftItemTypes.Obsidian, 4);
 const BOW_ITEM = new mc.ItemStack(MinecraftItemTypes.Bow, 1);
 const ARROW_ITEM = new mc.ItemStack(MinecraftItemTypes.Arrow, 6);
 const GOLDEN_APPLE_ITEM = new mc.ItemStack(MinecraftItemTypes.GoldenApple, 1);
+const TOTEM_ITEM = new mc.ItemStack(MinecraftItemTypes.TotemOfUndying, 1);
+TOTEM_ITEM.lockMode = mc.ItemLockMode.slot;
 const ENDER_PEARL_ITEM = new mc.ItemStack(MinecraftItemTypes.EnderPearl, 1);
 const WIND_CHARGE_ITEM = new mc.ItemStack(MinecraftItemTypes.WindCharge, 1);
 const WOLF_ARMOR_ITEM = new mc.ItemStack(MinecraftItemTypes.WolfArmor, 1);
@@ -574,6 +588,28 @@ const generateItemShopData: () => Menu = () => ({
                     cost: { ironAmount: 0, goldAmount: 2, emeraldAmount: 0, diamondAmount: 0 },
                     item: TRACKER_ITEM
                 }), () => "textures/blocks/deadbush.png"),
+                {
+                    type: "action",
+                    getDisplay({ player }, currentTokens) {
+                        const equippable = player.getComponent("equippable")!;
+                        const slot = equippable.getEquipmentSlot(mc.EquipmentSlot.Offhand);
+                        const strs = strings[getPlayerLang(player)];
+                        const { totemOfUndyingName } = strs;
+                        if (slot.getItem()) {
+                            return NOT_AVAILABLE_COLOR + totemOfUndyingName;
+                        }
+                        let color = TOKEN_NOT_ENOUGH_COLOR;
+                        if (isTokenSatisfying(currentTokens, TOTEM_COST)) {
+                            color = TOKEN_ENOUGH_COLOR;
+                        }
+                        return `${ color }${ totemOfUndyingName }\n${ tokenToString(TOTEM_COST, strs) }`;
+                    },
+                    icon: "textures/items/totem.png",
+                    action: {
+                        type: ActionType.BuyTotem,
+                        cost: TOTEM_COST
+                    }
+                },
                 generateBuyOneItemMenu({ local: "loyalWolfName" }, () => ({
                     cost: { ironAmount: 0, goldAmount: 0, emeraldAmount: 4, diamondAmount: 0 },
                     item: LOYAL_WOLF_ITEM
@@ -1066,6 +1102,16 @@ function performAction(action: Action, playerInfo: PlayerGameInformation, teamIn
         container.addItem(new mc.ItemStack(MinecraftItemTypes.Shears));
         player.sendMessage(sprintf(purchaseMessage, strs.shearsName));
         playerInfo.hasShear = true;
+        result = true;
+    } else if (action.type == ActionType.BuyTotem) {
+        const slot = player.getComponent("equippable")!.getEquipmentSlot(mc.EquipmentSlot.Offhand);
+        if (slot.getItem() || !isTokenSatisfying(tokens, action.cost)) {
+            result = false;
+            break execute;
+        }
+        consumeToken(container, action.cost);
+        slot.setItem(TOTEM_ITEM);
+        player.sendMessage(sprintf(purchaseMessage, strs.totemOfUndyingName));
         result = true;
     } else if (action.type == ActionType.BuyArmor) {
         const currentLevel = playerInfo.armorLevel;

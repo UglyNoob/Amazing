@@ -100,6 +100,7 @@ export interface Strings {
     enderPearlName: string;
     bridgeEggName: string;
     trackerName: string;
+    totemOfUndyingName: string;
     loyalWolfName: string;
     wolfArmorName: string;
     rescuePlatformName: string;
@@ -290,6 +291,7 @@ strings[Lang.en_US] = {
     enderPearlName: "Ender Pearl",
     bridgeEggName: "Bridge Egg",
     trackerName: "Tracker",
+    totemOfUndyingName: "Totem of Undying",
     loyalWolfName: "Loyal Wolf",
     wolfArmorName: "Wolf Armor",
     rescuePlatformName: "Rescue Platform",
@@ -485,6 +487,7 @@ strings[Lang.zh_CN] = {
     enderPearlName: "末影珍珠",
     bridgeEggName: "搭桥蛋",
     trackerName: "追踪器",
+    totemOfUndyingName: "不死图腾",
     loyalWolfName: "忠诚的狼",
     wolfArmorName: "狼甲",
     rescuePlatformName: "救援平台",
