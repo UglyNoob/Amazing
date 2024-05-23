@@ -12,7 +12,7 @@
 				"minecraft:explode": {
 					"fuse_length": 0,
 					"fuse_lit": true,
-					"power": 1.6,
+					"power": 1,
 					"causes_fire": true,
 					"fire_affected_by_griefing": true,
 					"destroy_affected_by_griefing": true
@@ -27,7 +27,7 @@
 			"minecraft:projectile": {
 				"on_hit": {
 					"impact_damage": {
-						"damage": 6,
+						"damage": 0,
 						"knockback": false,
 						"semi_random_diff_damage": false
 					},
@@ -65,8 +65,8 @@
 		},
 		"events": {
 			"minecraft:explode": {
-				"add": {
-					"component_groups": ["minecraft:exploding"]
+				"queue_command": {
+					"command": "scriptevent Amazing:fireball explode"
 				}
 			}
 		}

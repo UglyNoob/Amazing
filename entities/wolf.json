@@ -724,22 +724,14 @@
 			},
 
 			"Amazing:sit": {
-				"sequence": [
-					{
-						"queue_command": {
-							"command": "scriptevent Amazing:Wolf wolf_sit"
-						}
-					}
-				]
+				"queue_command": {
+					"command": "scriptevent Amazing:Wolf wolf_sit"
+				}
 			},
 			"Amazing:stand": {
-				"sequence": [
-					{
-						"queue_command": {
-							"command": "scriptevent Amazing:Wolf wolf_stand"
-						}
-					}
-				]
+				"queue_command": {
+					"command": "scriptevent Amazing:Wolf wolf_stand"
+				}
 			}
 		}
 	}

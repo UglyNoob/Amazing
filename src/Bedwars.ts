@@ -1941,11 +1941,11 @@ export class BedWarsGame {
                     if (v3.equals(raycastLoc, block.location)) break;
                     if (quickFind(protectedBlocks, raycastLoc, vectorCompare)) {
                         protect = true;
+                        //mc.system.run(() => this.dimension.fillBlocks(raycastLoc, raycastLoc, MinecraftBlockTypes.Glowstone)); // DEBUG
                         break;
                     }
                 }
                 if (protect) {
-                    // mc.system.run(() => this.dimension.fillBlocks(raycastBlock.location, raycastBlock.location, MinecraftBlockTypes.Glowstone)); // DEBUG
                     unprotectedBlocks.splice(index, 1);
                     continue;
                 }
@@ -2500,17 +2500,41 @@ export class BedWarsGame {
     afterScriptEventReceive(event: mc.ScriptEventCommandMessageAfterEvent) {
         if (game.state != GameState.started) return;
 
-        if (event.id != "Amazing:Wolf") return;
+        if (event.id == "Amazing:Wolf") {
+            const wolf = event.sourceEntity!;
+            const ownerInfo = wolf[OWNER_SYM]!;
+            const strs = strings[getPlayerLang(ownerInfo.player)];
+            if (event.message == "wolf_sit") {
+                ownerInfo.actionbar.add(strs.wolfStartGuardingNotification, 20);
+                wolf[SITTING_SYM] = true;
+            } else if (event.message == "wolf_stand") {
+                ownerInfo.actionbar.add(strs.wolfStopGuardingNotification, 20);
+                wolf[SITTING_SYM] = false;
+            }
+        } else if (event.id == "Amazing:fireball" && event.message == "explode") {
+            const fireball = event.sourceEntity!;
+            // the script event would be called twice
+            // because of on_hit component occasionally
+            // for the same fireball
+            if (!fireball.isValid()) return;
 
-        const wolf = event.sourceEntity!;
-        const ownerInfo = wolf[OWNER_SYM]!;
-        const strs = strings[getPlayerLang(ownerInfo.player)];
-        if (event.message == "wolf_sit") {
-            ownerInfo.actionbar.add(strs.wolfStartGuardingNotification, 20);
-            wolf[SITTING_SYM] = true;
-        } else if (event.message == "wolf_stand") {
-            ownerInfo.actionbar.add(strs.wolfStopGuardingNotification, 20);
-            wolf[SITTING_SYM] = false;
+            this.dimension.createExplosion(fireball.location, 1.8, {
+                source: fireball,
+                breaksBlocks: true,
+                causesFire: true
+            });
+            for (const playerInfo of this.players.values()) {
+                if (playerInfo.state != PlayerState.Alive) continue;
+
+                const d = v3.distance(playerInfo.player.location, fireball.location);
+                const multiplier = -d * d + 25;
+                if (multiplier > 0) {
+                    const x = playerInfo.player.location.x - fireball.location.x;
+                    const z = playerInfo.player.location.z - fireball.location.z;
+                    playerInfo.player.applyKnockback(x, z, multiplier / 17.5, multiplier / 25);
+                }
+            }
+            fireball.kill();
         }
     }
 
