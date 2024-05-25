@@ -1,6 +1,16 @@
-import { Vector3Utils as v3 } from '@minecraft/math';
+import { Vector3Utils } from '@minecraft/math';
+const {
+    subtract,
+    normalize,
+    toString,
+    floor,
+    magnitude,
+    distance: vecDistance,
+    scale,
+    equals
+} = Vector3Utils;
 import * as mc from '@minecraft/server';
-import { itemEqual, Area, sleep, vectorAdd, vectorWithinArea, containerIterator, capitalize, getPlayerByName, consumeMainHandItem, makeItem, shuffle, randomInt, setGameMode, analyzeTime, vectorCompare, raycastHits, quickFind, getAngle, smallest, containerSlotIterator } from './utility.js';
+import { itemEqual, Area, sleep, add, vectorWithinArea, containerIterator, capitalize, getPlayerByName, consumeMainHandItem, makeItem, shuffle, randomInt, setGameMode, analyzeTime, vectorCompare, raycastHits, quickFind, getAngle, smallest, containerSlotIterator } from './utility.js';
 import { setupGameTest } from './GameTest.js';
 import { MinecraftBlockTypes, MinecraftEffectTypes, MinecraftEnchantmentTypes, MinecraftEntityTypes, MinecraftItemTypes } from '@minecraft/vanilla-data';
 
@@ -936,7 +946,7 @@ export class BedWarsGame {
                 if (teamChestContainer) {
                     teamChestContainer.clearAll();
                 } else {
-                    throw new Error(`Team chest of team ${ TEAM_CONSTANTS[teamType].name } does not exist at ${ v3.toString(teamChestLocation) }`);
+                    throw new Error(`Team chest of team ${ TEAM_CONSTANTS[teamType].name } does not exist at ${ toString(teamChestLocation) }`);
                 }
             }
 
@@ -946,7 +956,7 @@ export class BedWarsGame {
                 this.dimension.fillBlocks(bedLocation[0], bedLocation[1], MinecraftBlockTypes.Air);
                 continue;
             }
-            const directionVector = v3.subtract(bedLocation[1], bedLocation[0]);
+            const directionVector = subtract(bedLocation[1], bedLocation[0]);
             let direction: number;
             if (directionVector.x == 1) {
                 direction = 3; // east
@@ -1028,7 +1038,7 @@ export class BedWarsGame {
         const teamInfo = this.teams.get(playerInfo.team)!;
         const spawnPoint = this.fixOrigin(teamMapInfo.playerSpawn);
         const player = playerInfo.player;
-        player.teleport(spawnPoint, { facingLocation: v3.add(spawnPoint, teamMapInfo.playerSpawnViewDirection) });
+        player.teleport(spawnPoint, { facingLocation: add(spawnPoint, teamMapInfo.playerSpawnViewDirection) });
         setGameMode(player, mc.GameMode.survival);
         player.getComponent("minecraft:health")!.resetToMaxValue();
         player.runCommand("effect @s clear");
@@ -1368,9 +1378,9 @@ export class BedWarsGame {
     private fixOrigin(vectors: mc.Vector3[]): mc.Vector3[];
     private fixOrigin(vector: mc.Vector3 | mc.Vector3[]) {
         if (Array.isArray(vector)) {
-            return vector.map(v => v3.add(this.originPos, v));
+            return vector.map(v => add(this.originPos, v));
         } else {
-            return v3.add(this.originPos, vector);
+            return add(this.originPos, vector);
         }
     }
 
@@ -1439,7 +1449,7 @@ export class BedWarsGame {
                 const teamMapInfo = this.map.teams.find(t => t.type == playerInfo.team)!;
                 playerInfo.player.teleport(this.fixOrigin(teamMapInfo.playerSpawn), {
                     dimension: this.dimension,
-                    facingLocation: vectorAdd(this.originPos, teamMapInfo.playerSpawn, teamMapInfo.playerSpawnViewDirection)
+                    facingLocation: add(this.originPos, teamMapInfo.playerSpawn, teamMapInfo.playerSpawnViewDirection)
                 });
                 if (teamInfo.state == TeamState.BedAlive) {
                     playerInfo.state = PlayerState.Respawning;
@@ -1449,7 +1459,7 @@ export class BedWarsGame {
             }
 
             if (playerInfo.state == PlayerState.dead &&
-                v3.distance(this.fixOrigin(this.map.fallbackRespawnPoint), player.location) <= 1) {
+                vecDistance(this.fixOrigin(this.map.fallbackRespawnPoint), player.location) <= 1) {
                 setGameMode(player, mc.GameMode.spectator);
                 player.teleport(playerInfo.deathLocation, { rotation: playerInfo.deathRotaion });
                 if (teamInfo.state == TeamState.BedAlive) {
@@ -1513,7 +1523,7 @@ export class BedWarsGame {
                         if (playerInfo.trackingTarget && isTrackerItem(item)) {
                             trackerWorking = true;
                             if (mc.system.currentTick % 5 == 0) {
-                                const distanceVec = v3.subtract(playerInfo.trackingTarget.player.location, player.location);
+                                const distanceVec = subtract(playerInfo.trackingTarget.player.location, player.location);
                                 const viewDirection = player.getViewDirection();
                                 const PI = Math.PI;
                                 let angle = getAngle(distanceVec.x, distanceVec.z) - getAngle(viewDirection.x, viewDirection.z);
@@ -1544,7 +1554,7 @@ export class BedWarsGame {
                                     sprintf(trackerTrackingNotification,
                                         TEAM_CONSTANTS[playerInfo.trackingTarget.team].colorPrefix,
                                         playerInfo.trackingTarget.name,
-                                        v3.magnitude(distanceVec).toFixed(0),
+                                        magnitude(distanceVec).toFixed(0),
                                         directionString)
                                 );
                             }
@@ -1637,7 +1647,7 @@ export class BedWarsGame {
                 for (const loc of gen.indicatorLocations) {
                     const sign = this.dimension.getBlock(loc)?.getComponent("sign");
                     if (!sign) {
-                        throw new Error(`Generator indicator does not exist at ${ v3.toString(loc) }.`);
+                        throw new Error(`Generator indicator does not exist at ${ toString(loc) }.`);
                     }
                     sign.setWaxed(true);
                     [mc.SignSide.Front, mc.SignSide.Back].forEach(signSide => sign.setText(`§eSpawns in §c${ gen.remainingCooldown / 20 } §eseconds`, signSide));
@@ -1654,7 +1664,7 @@ export class BedWarsGame {
             // Detect if it reaches capacity
             let { producingArea, capacity } = GENERATOR_CONSTANTS[gen.type];
             producingArea = producingArea.map(
-                vec => vectorAdd(vec, gen.location, this.originPos)) as Area;
+                vec => add(vec, gen.location, this.originPos)) as Area;
             let existingTokens = 0;
             for (const entity of this.dimension.getEntities({ type: "minecraft:item" })) {
                 if (!vectorWithinArea(entity.location, producingArea)) continue;
@@ -1726,7 +1736,7 @@ export class BedWarsGame {
                 eggEntity.kill();
                 continue;
             }
-            const baseLocation = v3.floor(eggEntity.location);
+            const baseLocation = floor(eggEntity.location);
             baseLocation.y -= 2;
             [
                 { x: 0, y: 0, z: 0 },
@@ -1735,7 +1745,7 @@ export class BedWarsGame {
                 { x: 0, y: 0, z: -1 },
                 { x: 0, y: 0, z: 1 },
             ].forEach(_pos => {
-                const location = v3.add(baseLocation, _pos);
+                const location = add(baseLocation, _pos);
                 const existingBlock = this.dimension.getBlock(location);
                 if (this.isBlockLocationPlayerPlacable(location) &&
                     (!existingBlock || existingBlock.type.id == MinecraftBlockTypes.Air)) {
@@ -1775,13 +1785,13 @@ export class BedWarsGame {
                 const launchLocation = Object.assign({}, wolf.location);
                 launchLocation.y += 0.5;
                 const targetInfo = smallest(Array.from(this.players.values()).filter(p => p.state == PlayerState.Alive && p.team != ownerInfo.team), (a, b) => {
-                    return v3.distance(a.player.getHeadLocation(), launchLocation) - v3.distance(b.player.getHeadLocation(), launchLocation);
+                    return vecDistance(a.player.getHeadLocation(), launchLocation) - vecDistance(b.player.getHeadLocation(), launchLocation);
                 });
-                if (targetInfo && v3.distance(targetInfo.player.getHeadLocation(), launchLocation) <= WOLF_GUARDING_DISTANCE) {
+                if (targetInfo && vecDistance(targetInfo.player.getHeadLocation(), launchLocation) <= WOLF_GUARDING_DISTANCE) {
                     const arrow = this.dimension.spawnEntity(MinecraftEntityTypes.Arrow, launchLocation);
                     arrow.getComponent("projectile")!.owner = wolf;
                     arrow.addTag(`team${ ownerInfo.team }`);
-                    arrow.applyImpulse(v3.scale(v3.normalize(v3.subtract(targetInfo.player.getHeadLocation(), launchLocation)), 1.5));
+                    arrow.applyImpulse(scale(normalize(subtract(targetInfo.player.getHeadLocation(), launchLocation)), 1.5));
                 }
             }
         }
@@ -1809,11 +1819,11 @@ export class BedWarsGame {
             if (!(fakePlayerInfo.player instanceof SimulatedPlayer)) continue;
             const fakePlayer = fakePlayerInfo.player;
             const victims = teamIslandEnemies.get(fakePlayerInfo.team)?.sort((a, b) =>
-                v3.distance(a.player.location, fakePlayer.location) - v3.distance(b.player.location, fakePlayer.location)
+                vecDistance(a.player.location, fakePlayer.location) - vecDistance(b.player.location, fakePlayer.location)
             );
             let updateTarget = false;
             if (!fakePlayer.attackTarget ||
-                (v3.distance(fakePlayer.location, fakePlayer.attackTarget.player.location) >= 30 ||
+                (vecDistance(fakePlayer.location, fakePlayer.attackTarget.player.location) >= 30 ||
                     fakePlayer.attackTarget.state != PlayerState.Alive)) {
                 updateTarget = true;
             }
@@ -1824,7 +1834,7 @@ export class BedWarsGame {
                     continue;
                 }
             } else {
-                if (updateTarget || (fakePlayer && v3.distance(fakePlayer.location, victims[0].player.location) < 3)) {
+                if (updateTarget || (fakePlayer && vecDistance(fakePlayer.location, victims[0].player.location) < 3)) {
                     fakePlayer.attackTarget = victims[0];
                 }
             }
@@ -1833,7 +1843,7 @@ export class BedWarsGame {
             if (!fakePlayer.previousOnGround && fakePlayer.isOnGround || mc.system.currentTick % randomInt(7, 10) == 0) {
                 fakePlayer.navigateToEntity(fakePlayer.attackTarget.player as any);
             }
-            if (v3.distance(fakePlayer.location, fakePlayer.attackTarget.player.location) < 2.95) {
+            if (vecDistance(fakePlayer.location, fakePlayer.attackTarget.player.location) < 2.95) {
                 if (mc.system.currentTick % randomInt(2, 3) == 0) {
                     fakePlayer.stopMoving();
                     const location = Object.assign({}, fakePlayer.attackTarget.player.getHeadLocation());
@@ -1937,8 +1947,8 @@ export class BedWarsGame {
             const block = unprotectedBlocks[index];
             if (explosionLocation) {
                 let protect = false;
-                for (const raycastLoc of raycastHits(explosionLocation, v3.subtract(block.center(), explosionLocation))) {
-                    if (v3.equals(raycastLoc, block.location)) break;
+                for (const raycastLoc of raycastHits(explosionLocation, subtract(block.center(), explosionLocation))) {
+                    if (equals(raycastLoc, block.location)) break;
                     if (quickFind(protectedBlocks, raycastLoc, vectorCompare)) {
                         protect = true;
                         //mc.system.run(() => this.dimension.fillBlocks(raycastLoc, raycastLoc, MinecraftBlockTypes.Glowstone)); // DEBUG
@@ -2054,7 +2064,7 @@ export class BedWarsGame {
         }
         if (event.block.typeId == MinecraftBlockTypes.Chest) {
             for (const team of this.map.teams) {
-                if (v3.equals(event.block.location, this.fixOrigin(team.teamChestLocation))) {
+                if (equals(event.block.location, this.fixOrigin(team.teamChestLocation))) {
                     if (playerInfo.team != team.type) {
                         playerInfo.player.sendMessage(strings[getPlayerLang(playerInfo.player)].openEnemyChestMessage);
                         event.cancel = true;
@@ -2135,7 +2145,7 @@ export class BedWarsGame {
         TeamBedDestroyed: if (event.block.typeId == "minecraft:bed") {
             const destroyedTeam = this.map.teams.find(team =>
                 team.bedLocation.findIndex(pos =>
-                    v3.equals(this.fixOrigin(pos), event.block.location)) != -1);
+                    equals(this.fixOrigin(pos), event.block.location)) != -1);
             if (!destroyedTeam) {
                 break TeamBedDestroyed;
             }
@@ -2202,7 +2212,7 @@ export class BedWarsGame {
         if (location.y < this.map.voidY + this.originPos.y) return false;
         for (const gen of this.generators) {
             const protectedArea = GENERATOR_CONSTANTS[gen.type].protectedArea.map(
-                vec => vectorAdd(vec, gen.location, this.originPos)) as Area;
+                vec => add(vec, gen.location, this.originPos)) as Area;
             if (vectorWithinArea(location, protectedArea)) {
                 return false;
             }
@@ -2227,7 +2237,7 @@ export class BedWarsGame {
             { x: 0, y: 0, z: 1 },
             { x: 0, y: 0, z: -1 },
         ]) {
-            const block = this.dimension.getBlock(vectorAdd(location, offset));
+            const block = this.dimension.getBlock(add(location, offset));
             if (!block) continue;
             // Maybe I need to look up the record
             if (block.typeId == MinecraftBlockTypes.Cactus) {
@@ -2323,7 +2333,8 @@ export class BedWarsGame {
             const fireBall = this.dimension.spawnEntity(MinecraftEntityTypes.Fireball, location);
             fireBall.addTag(`team${ playerInfo.team }`);
             fireBall.getComponent("projectile")!.owner = playerInfo.player;
-            fireBall.applyImpulse(v3.normalize(playerInfo.player.getViewDirection()));
+            const launchVelocity = normalize(playerInfo.player.getViewDirection());
+            fireBall.applyImpulse(launchVelocity);
             fireBall.setDynamicProperty(BEDWARS_GAMEID_PROP, this.id);
 
             consumeMainHandItem(playerInfo.player);
@@ -2344,7 +2355,7 @@ export class BedWarsGame {
                 if (playerInfo.team == potentialInfo.team) continue;
                 if (potentialInfo.state != PlayerState.Alive) continue;
 
-                const distance = v3.distance(potentialInfo.player.location, playerInfo.player.location);
+                const distance = vecDistance(potentialInfo.player.location, playerInfo.player.location);
                 if (distance < minDistance) {
                     minDistance = distance;
                     newTarget = potentialInfo;
@@ -2392,9 +2403,9 @@ export class BedWarsGame {
         } else if (event.itemStack.typeId == MinecraftItemTypes.WolfSpawnEgg) {
             await sleep(0);
 
-            let wolfLocation = v3.add(event.block.location, event.faceLocation);
+            let wolfLocation = add(event.block.location, event.faceLocation);
             const wolf = smallest(this.dimension.getEntities({ type: "minecraft:wolf" }).filter(e => !e[OWNER_SYM]), ({ location: a }, { location: b }) => {
-                return v3.distance(a, wolfLocation) - v3.distance(b, wolfLocation);
+                return vecDistance(a, wolfLocation) - vecDistance(b, wolfLocation);
             });
             if (!wolf) return;
             wolfLocation = wolf.location;
@@ -2511,30 +2522,6 @@ export class BedWarsGame {
                 ownerInfo.actionbar.add(strs.wolfStopGuardingNotification, 20);
                 wolf[SITTING_SYM] = false;
             }
-        } else if (event.id == "Amazing:fireball" && event.message == "explode") {
-            const fireball = event.sourceEntity!;
-            // the script event would be called twice
-            // because of on_hit component occasionally
-            // for the same fireball
-            if (!fireball.isValid()) return;
-
-            this.dimension.createExplosion(fireball.location, 1.8, {
-                source: fireball,
-                breaksBlocks: true,
-                causesFire: true
-            });
-            for (const playerInfo of this.players.values()) {
-                if (playerInfo.state != PlayerState.Alive) continue;
-
-                const d = v3.distance(playerInfo.player.location, fireball.location);
-                const multiplier = -d * d + 25;
-                if (multiplier > 0) {
-                    const x = playerInfo.player.location.x - fireball.location.x;
-                    const z = playerInfo.player.location.z - fireball.location.z;
-                    playerInfo.player.applyKnockback(x, z, multiplier / 17.5, multiplier / 25);
-                }
-            }
-            fireball.kill();
         }
     }
 
@@ -2752,7 +2739,7 @@ class BlockPlacementTracker {
         const bucketIndex = this.hash(loc) % this.bucketSize;
         let index = 0;
         for (const existedLoc of this.data[bucketIndex]) {
-            if (v3.equals(loc, existedLoc)) {
+            if (equals(loc, existedLoc)) {
                 return;
             }
             ++index;
@@ -2763,7 +2750,7 @@ class BlockPlacementTracker {
     has(loc: mc.Vector3) {
         const bucketIndex = this.hash(loc) % this.bucketSize;
         for (const existedLoc of this.data[bucketIndex]) {
-            if (v3.equals(loc, existedLoc)) {
+            if (equals(loc, existedLoc)) {
                 return true;
             }
         }
@@ -2776,7 +2763,7 @@ class BlockPlacementTracker {
         const bucketIndex = this.hash(loc) % this.bucketSize;
         let index = 0;
         for (const existedLoc of this.data[bucketIndex]) {
-            if (v3.equals(loc, existedLoc)) {
+            if (equals(loc, existedLoc)) {
                 this.data[bucketIndex].splice(index, 1);
                 return true;
             }
@@ -2973,6 +2960,33 @@ mc.world.afterEvents.weatherChange.subscribe(event => {
 mc.system.afterEvents.scriptEventReceive.subscribe(event => {
     if (game) {
         game.afterScriptEventReceive(event);
+    }
+    if (event.id == "Amazing:fireball" && event.message == "explode") {
+        const fireball = event.sourceEntity!;
+        // the script event would be called twice
+        // because of on_hit component occasionally
+        // for the same fireball
+        if (!fireball.isValid()) return;
+        const explosionLocation = fireball.location;
+
+        fireball.dimension.createExplosion(explosionLocation, 1.8, {
+            source: fireball,
+            breaksBlocks: true,
+            causesFire: true
+        });
+        for (const player of mc.world.getAllPlayers()) {
+            if (player.dimension != fireball.dimension) continue;
+
+            const d = vecDistance(player.location, explosionLocation);
+            const multiplier = -d * d + 25;
+            if (multiplier > 0) {
+                const { x, y, z } = subtract(player.location, explosionLocation);
+                let ymultiplier = 2 - y;
+                if (ymultiplier < 0) ymultiplier = 0;
+                player.applyKnockback(x, z, multiplier / 17.5, ymultiplier * multiplier / 25);
+            }
+        }
+        fireball.kill();
     }
 });
 mc.system.runInterval(() => {

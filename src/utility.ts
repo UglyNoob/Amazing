@@ -170,7 +170,7 @@ export function vectorWithinArea(vec: mc.Vector3, area: [mc.Vector3, mc.Vector3]
         vec.z >= minZ && vec.z < maxZ) return true;
     return false;
 }
-export function vectorAdd(...vecs: mc.Vector3[]): mc.Vector3 {
+export function add(...vecs: mc.Vector3[]): mc.Vector3 {
     const result = { x: 0, y: 0, z: 0 };
     for (const vec of vecs) {
         result.x += vec.x;
@@ -426,10 +426,10 @@ export function quickFind<T>(array: T[], element: T, compareFn: (a: T, b: T) => 
 }
 
 export function smallest<T>(array: T[], compareFn: (a: T, b: T) => number) {
-    if(array.length == 0) return null;
+    if (array.length == 0) return null;
     let result = array[0];
-    for(const element of array) {
-        if(compareFn(result, element) > 0) result = element;
+    for (const element of array) {
+        if (compareFn(result, element) > 0) result = element;
     }
     return result;
 }
