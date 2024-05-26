@@ -2980,10 +2980,8 @@ mc.system.afterEvents.scriptEventReceive.subscribe(event => {
             const d = vecDistance(player.location, explosionLocation);
             const multiplier = -d * d + 25;
             if (multiplier > 0) {
-                const { x, y, z } = subtract(player.location, explosionLocation);
-                let ymultiplier = 2 - y;
-                if (ymultiplier < 0) ymultiplier = 0;
-                player.applyKnockback(x, z, multiplier / 17.5, ymultiplier * multiplier / 25);
+                const { x, z } = subtract(player.location, explosionLocation);
+                player.applyKnockback(x, z, multiplier / 17.5, multiplier / 25);
             }
         }
         fireball.kill();
