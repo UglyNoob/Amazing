@@ -1464,6 +1464,12 @@ export class BedWarsGame {
                 player.teleport(playerInfo.deathLocation, { rotation: playerInfo.deathRotaion });
                 if (teamInfo.state == TeamState.BedAlive) {
                     playerInfo.state = PlayerState.Respawning;
+                    player.onScreenDisplay.setTitle(deathTitle, {
+                        subtitle: sprintf(deathSubtitle, Math.ceil((RESPAWN_TIME - mc.system.currentTick + playerInfo.deathTime) / 20)),
+                        fadeInDuration: 0,
+                        stayDuration: 30,
+                        fadeOutDuration: 20,
+                    });
                 } else {
                     this.makePlayerSpectator(playerInfo);
                 }
