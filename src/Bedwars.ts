@@ -1795,14 +1795,23 @@ export class BedWarsGame {
                 });
                 if (targetInfo && vecDistance(targetInfo.player.getHeadLocation(), launchLocation) <= WOLF_GUARDING_DISTANCE) {
                     const arrow = this.dimension.spawnEntity(MinecraftEntityTypes.Arrow, launchLocation);
-                    arrow.getComponent("projectile")!.owner = wolf;
+                    const projectile = arrow.getComponent("projectile")!;
+                    projectile.owner = wolf;
                     arrow.addTag(`team${ ownerInfo.team }`);
-                    arrow.applyImpulse(scale(normalize(subtract(targetInfo.player.getHeadLocation(), launchLocation)), 1.5));
+                    arrow[OWNER_SYM] = ownerInfo;
+                    projectile.shoot(scale(normalize(subtract(targetInfo.player.getHeadLocation(), launchLocation)), 1.5));
                 }
             }
         }
         for (const arrow of this.dimension.getEntities({ type: "minecraft:arrow" })) {
-            if (arrow.isOnGround) arrow.kill();
+            if (arrow.isOnGround) {
+                for (const rider of arrow.getComponent("rideable")!.getRiders()) {
+                    let { x, y, z } = arrow.location;
+                    ++y;
+                    rider.teleport({ x, y, z });
+                }
+                arrow.kill();
+            }
         }
 
         // Simulated players AI
@@ -2010,7 +2019,7 @@ export class BedWarsGame {
             const ownerInfo = hurter[OWNER_SYM];
             if (ownerInfo) {
                 if (ownerInfo.team != victimInfo.team) {
-                    victimInfo.lastHurtBy = hurter[OWNER_SYM];
+                    victimInfo.lastHurtBy = ownerInfo;
                 }
             } else {
                 victimInfo.lastHurtBy = undefined;
@@ -2021,6 +2030,11 @@ export class BedWarsGame {
         if (!hurterInfo) return;
 
         victimInfo.lastHurtBy = hurterInfo;
+        if (hurterInfo.armorDisabled) {
+            hurterInfo.armorDisabled = false;
+            hurterInfo.armorToEnablingTicks = 0;
+            this.resetArmor(hurterInfo);
+        }
 
         const attackingItem = hurter.getComponent("equippable")!.getEquipment(mc.EquipmentSlot.Mainhand);
         if (attackingItem && isKnockBackStickItem(attackingItem)) {
@@ -2046,8 +2060,13 @@ export class BedWarsGame {
         if (event.source) {
             if (event.source instanceof mc.Player) {
                 const hurterInfo = this.players.get(event.source.name);
-                if (hurterInfo) {
+                if (hurterInfo && hurterInfo.team != victimInfo.team) {
                     victimInfo.lastHurtBy = hurterInfo;
+                    if (hurterInfo.armorDisabled) {
+                        hurterInfo.armorDisabled = false;
+                        hurterInfo.armorToEnablingTicks = 0;
+                        this.resetArmor(hurterInfo);
+                    }
                     return;
                 }
             }
@@ -2455,16 +2474,37 @@ export class BedWarsGame {
             playerInfo.player.addEffect(MinecraftEffectTypes.Speed, SPEED_DURATION, {
                 amplifier: 1
             });
-        }/* else if (event.itemStack.typeId == MinecraftItemTypes.Bow) {
+        } else if (event.itemStack.typeId == MinecraftItemTypes.Bow) {
             await sleep(0);
             // find the array shot
             const arrowEntity = smallest(this.dimension.getEntities({ type: "arrow" })
-                .filter(e => !e.getTags().find(t => t.startsWith("team"))), (a, b) => {
-                    return v3.distance(playerInfo.player.location, a.location) - v3.distance(playerInfo.player.location, b.location);
+                .filter(e => e.getComponent("projectile")!.owner == playerInfo.player), (a, b) => {
+                    return vecDistance(playerInfo.player.location, a.location) - vecDistance(playerInfo.player.location, b.location);
                 });
             if (!arrowEntity) return;
-            arrowEntity.addTag(`team${playerInfo.team}`);
-        }*/
+            // arrowEntity.addTag(`team${playerInfo.team}`);
+            arrowEntity.getComponent("rideable")!.addRider(playerInfo.player);
+        }
+    }
+
+    async afterItemReleaseUse(event: mc.ItemReleaseUseAfterEvent) {
+        if (this.state != GameState.started) return;
+
+        if (!(event.source instanceof mc.Player)) return;
+        const playerInfo = this.players.get(event.source.name);
+        if (!playerInfo) return;
+        if (event.itemStack?.typeId == MinecraftItemTypes.Bow) {
+            await sleep(0);
+            // find the array shot
+            const arrowEntity = smallest(this.dimension.getEntities({ type: "arrow" })
+                .filter(e => e.getComponent("projectile")!.owner == playerInfo.player && !e[OWNER_SYM]), (a, b) => {
+                    return vecDistance(playerInfo.player.location, a.location) - vecDistance(playerInfo.player.location, b.location);
+                });
+            if (!arrowEntity) return;
+            arrowEntity[OWNER_SYM] = playerInfo;
+            arrowEntity.addTag(`team${ playerInfo.team }`);
+            // arrowEntity.getComponent("rideable")!.addRider(playerInfo.player);
+        }
     }
 
     updateTeamPlayerBuffs(teamInfo: TeamGameInformation) {
@@ -2936,6 +2976,11 @@ mc.world.beforeEvents.itemUseOn.subscribe(event => {
 mc.world.afterEvents.itemCompleteUse.subscribe(event => {
     if (game) {
         game.afterItemCompleteUse(event);
+    }
+});
+mc.world.afterEvents.itemReleaseUse.subscribe(event => {
+    if (game) {
+        game.afterItemReleaseUse(event);
     }
 });
 mc.world.beforeEvents.playerInteractWithBlock.subscribe(event => {

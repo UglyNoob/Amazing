@@ -280,7 +280,7 @@ strings[Lang.en_US] = {
     knockbackStickName: "Knockback Stick",
     shearsName: "Shears",
     itemAlreadyHaveString: "You already have this item.",
-    invisiblePotionName: "Invisible Potion (0:30)",
+    invisiblePotionName: "Invisibility Potion (0:30)",
     jumpPotionName: "Jump V Potion (0:45)",
     speedPotionName: "Speed II Potion (0:45)",
     arrowName: "Arrow",

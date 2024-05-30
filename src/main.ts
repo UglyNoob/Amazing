@@ -5,8 +5,8 @@ import './RescuePlatform.js';
 import './Bedwars.js';
 import './GameTest.js';
 
-import * as mc from '@minecraft/server';
 // DEBUG DEBUG DEBUG
+// import * as mc from '@minecraft/server';
 //mc.system.beforeEvents.watchdogTerminate.subscribe(event => {
 //    event.cancel = true;
 //    mc.world.sendMessage(`§4Yall gotta be careful! ${event.terminateReason}`);
