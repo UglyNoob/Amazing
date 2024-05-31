@@ -55,7 +55,7 @@ mc.world.beforeEvents.chatSend.subscribe(event => {
         const dropdownFields = [mc.GameMode.survival, mc.GameMode.creative, mc.GameMode.adventure, mc.GameMode.spectator];
         let defaultName: string | undefined;
         let defaultGameModeChoice: number | undefined;
-        let reShowed = false; // Indicated whether the form is showed again
+        let reShowed = false; // Indicates whether the form is showed again
         while (true) { // Repeats until the user fill everything legally
             const form = new ui.ModalFormData();
             form.title("Simulated Player Wizard");

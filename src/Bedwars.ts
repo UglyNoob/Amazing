@@ -2354,11 +2354,11 @@ export class BedWarsGame {
             }
             await sleep(0);
 
-            const location = playerInfo.player.getHeadLocation();
+            const launchVelocity = normalize(playerInfo.player.getViewDirection());
+            const location = add(playerInfo.player.getHeadLocation(), scale(launchVelocity, 0.5));
             const fireBall = this.dimension.spawnEntity(MinecraftEntityTypes.Fireball, location);
             fireBall.addTag(`team${ playerInfo.team }`);
             fireBall.getComponent("projectile")!.owner = playerInfo.player;
-            const launchVelocity = normalize(playerInfo.player.getViewDirection());
             fireBall.applyImpulse(launchVelocity);
             fireBall.setDynamicProperty(BEDWARS_GAMEID_PROP, this.id);
 
