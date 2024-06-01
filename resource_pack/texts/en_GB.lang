@@ -1,0 +1,11 @@
+notification.lock.noCraft=
+notification.lock.noDrop=
+notification.lock.noRemove=
+item.itemLock.cantDrop=
+item.itemLock.cantMove=
+item.itemLock.hoverText.cantBe.moved=
+item.itemLock.hoverText.cantBe.dropped=
+item.itemLock.hoverText.cantBe.removed=
+item.itemLock.hoverText.cantBe.craftedWith=
+item.itemLock.popupNotice.cantDrop=
+item.itemLock.popupNotice.cantMove=

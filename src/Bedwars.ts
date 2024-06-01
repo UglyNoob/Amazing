@@ -10,7 +10,7 @@ const {
     equals
 } = Vector3Utils;
 import * as mc from '@minecraft/server';
-import { itemEqual, Area, sleep, add, vectorWithinArea, containerIterator, capitalize, getPlayerByName, consumeMainHandItem, makeItem, shuffle, randomInt, setGameMode, analyzeTime, vectorCompare, raycastHits, quickFind, getAngle, smallest, containerSlotIterator } from './utility.js';
+import { itemEqual, Area, sleep, add, vectorWithinArea, containerIterator, capitalize, getPlayerByName, consumeMainHandItem, makeItem, shuffle, randomInt, setGameMode, analyzeTime, vectorCompare, raycastHits, quickFind, getAngle, smallest, containerSlotIterator, timeToString } from './utility.js';
 import { setupGameTest } from './GameTest.js';
 import { MinecraftBlockTypes, MinecraftEffectTypes, MinecraftEnchantmentTypes, MinecraftEntityTypes, MinecraftItemTypes } from '@minecraft/vanilla-data';
 
@@ -151,6 +151,7 @@ function isSettingsItem(item: mc.ItemStack) {
 const OWNER_SYM = Symbol("owner of the entity");
 const SITTING_SYM = Symbol("is wolf sitting");
 const SHOP_TYPE_SYM = Symbol("type of the shop the villager is");
+const CREATED_LOC_SYM = Symbol("birth location");
 
 const WOLF_GUARDING_DISTANCE = 10;
 const WOLF_GUARDING_INTERVAL = 60; // in ticks
@@ -160,6 +161,7 @@ declare module '@minecraft/server' {
         [OWNER_SYM]?: PlayerGameInformation;
         [SITTING_SYM]?: boolean;
         [SHOP_TYPE_SYM]?: "item" | "team";
+        [CREATED_LOC_SYM]?: mc.Vector3;
     }
 }
 declare module '@minecraft/server-gametest' {
@@ -351,7 +353,7 @@ interface GeneratorInformation {
     spawnLocation: mc.Vector3;
     location: mc.Vector3; // the bottom-north-west location
     initialInterval: number;
-    indicatorLocations?: mc.Vector3[];
+    indicatorLocation?: mc.Vector3;
 }
 interface TeamInformation {
     type: TeamType;
@@ -676,13 +678,14 @@ enum GameState {
 }
 
 type GeneratorGameInformation = {
+    mapInfo: GeneratorInformation;
     spawnLocation: mc.Vector3;
     location: mc.Vector3;
     type: GeneratorType;
     interval: number;
-    indicatorLocations?: mc.Vector3[];
     remainingCooldown: number;
     tokensGeneratedCount: number;
+    indicator?: mc.Entity;
 } & ({
     belongToTeam: true;
     team: TeamType;
@@ -805,15 +808,15 @@ export class BedWarsGame {
         }
         this.generators = [];
         for (const teamInfo of map.teams) {
-            const genInfo = teamInfo.teamGenerator;
+            const mapGenInfo = teamInfo.teamGenerator;
             this.generators.push({
-                spawnLocation: genInfo.spawnLocation,
-                location: genInfo.location,
-                type: genInfo.type,
-                interval: genInfo.initialInterval,
+                mapInfo: mapGenInfo,
+                spawnLocation: mapGenInfo.spawnLocation,
+                location: mapGenInfo.location,
+                type: mapGenInfo.type,
+                interval: mapGenInfo.initialInterval,
                 remainingCooldown: 0,
                 tokensGeneratedCount: 0,
-                indicatorLocations: genInfo.indicatorLocations && this.fixOrigin(genInfo.indicatorLocations),
                 belongToTeam: true,
                 team: teamInfo.type,
                 spawnExtraEmerald: false,
@@ -821,15 +824,15 @@ export class BedWarsGame {
                 extraEmeraldRemainingCooldown: map.teamExtraEmeraldGenInterval
             });
         }
-        for (const genInfo of map.extraGenerators) {
+        for (const mapGenInfo of map.extraGenerators) {
             this.generators.push({
-                spawnLocation: genInfo.spawnLocation,
-                location: genInfo.location,
-                type: genInfo.type,
-                interval: genInfo.initialInterval,
+                mapInfo: mapGenInfo,
+                spawnLocation: mapGenInfo.spawnLocation,
+                location: mapGenInfo.location,
+                type: mapGenInfo.type,
+                interval: mapGenInfo.initialInterval,
                 remainingCooldown: 0,
                 tokensGeneratedCount: 0,
-                indicatorLocations: genInfo.indicatorLocations && this.fixOrigin(genInfo.indicatorLocations),
                 belongToTeam: false
             });
         }
@@ -891,54 +894,95 @@ export class BedWarsGame {
             this.setupSpawnPoint(playerInfo.player);
             fixPlayerSettings(playerInfo.player);
         }
+        const textDisplays: mc.Entity[] = [];
+        const neededTextDisplaysCount = this.generators.reduce((v, ele) => ele.mapInfo.indicatorLocation ? v + 2 : v, 0);
+        for (const textDisplay of this.dimension.getEntities({ type: "amazing:text_display" })) {
+            if (!vectorWithinArea(textDisplay.location, this.fixOrigin(this.map.playableArea))) continue;
+            if (textDisplay.getDynamicProperty(BEDWARS_GAMEID_PROP) == null) continue;
+            if (textDisplays.length == neededTextDisplaysCount) {
+                textDisplay.remove();
+                continue;
+            }
+            textDisplay.setDynamicProperty(BEDWARS_GAMEID_PROP, this.id);
+            textDisplays.push(textDisplay);
+        }
+        const spawnTextDisplaysCount = neededTextDisplaysCount - textDisplays.length;
+        for (let i = 0; i < spawnTextDisplaysCount; ++i) {
+            const textDisplay = this.dimension.spawnEntity("amazing:text_display", this.originPos);
+            textDisplay.setDynamicProperty(BEDWARS_GAMEID_PROP, this.id);
+            textDisplays.push(textDisplay);
+        }
+        let index = 0;
         for (const gen of this.generators) {
             gen.remainingCooldown = gen.interval;
-        }
-        {
-            // Prepare shop villagers
-            const villagers: mc.Entity[] = [];
-            for (const villager of this.dimension.getEntities({ type: "minecraft:villager" })) {
-                if (!vectorWithinArea(villager.location, this.fixOrigin(this.map.playableArea))) continue;
-                if (villager.getDynamicProperty(BEDWARS_GAMEID_PROP) == null) continue;
-                if (villagers.length == this.map.teams.length * 2) {
-                    villager.remove();
-                    continue;
+            if (gen.mapInfo.indicatorLocation) {
+                gen.indicator = textDisplays[index++];
+                let loc = this.fixOrigin(gen.mapInfo.indicatorLocation);
+                gen.indicator.teleport(loc);
+                gen.indicator[CREATED_LOC_SYM] = loc;
+
+                const textDisplay = textDisplays[index++];
+                loc = add(loc, { x: 0, y: 0.4, z: 0 });
+                textDisplay.teleport(loc);
+                textDisplay[CREATED_LOC_SYM] = loc;
+                let text: string;
+                switch (gen.type) {
+                    case GeneratorType.IronGold:
+                        text = "§7§lIrons";
+                        break;
+                    case GeneratorType.Diamond:
+                        text = "§b§lDiamonds";
+                        break;
+                    case GeneratorType.Emerald:
+                        text = "§a§lEmeralds";
+                        break;
                 }
-                villager.setDynamicProperty(BEDWARS_GAMEID_PROP, this.id);
-                villagers.push(villager);
+                textDisplay.nameTag = text;
             }
-            const spawnVillagerCount = this.map.teams.length * 2 - villagers.length;
-            for (let i = 0; i < spawnVillagerCount; ++i) {
-                const villager = this.dimension.spawnEntity("minecraft:villager_v2", this.originPos);
-                villager.triggerEvent("Amazing:entity_spawn");
-                villager.triggerEvent("minecraft:ageable_grow_up");
-                villager.setDynamicProperty(BEDWARS_GAMEID_PROP, this.id);
-                villagers.push(villager);
+        }
+        // Prepare shop villagers
+        const villagers: mc.Entity[] = [];
+        for (const villager of this.dimension.getEntities({ type: "minecraft:villager" })) {
+            if (!vectorWithinArea(villager.location, this.fixOrigin(this.map.playableArea))) continue;
+            if (villager.getDynamicProperty(BEDWARS_GAMEID_PROP) == null) continue;
+            if (villagers.length == this.map.teams.length * 2) {
+                villager.remove();
+                continue;
             }
-            let index = 0;
-            for (let { itemShopLocation, teamShopLocation, type, playerSpawnViewDirection } of this.map.teams) {
-                itemShopLocation = this.fixOrigin(itemShopLocation);
-                teamShopLocation = this.fixOrigin(teamShopLocation);
-                const itemShopVillager = villagers[index++];
-                const teamShopVillager = villagers[index++];
-                itemShopVillager.teleport(itemShopLocation, {
-                    dimension: this.dimension,
-                    facingLocation: playerSpawnViewDirection,
-                    keepVelocity: false,
-                    checkForBlocks: false
-                });
-                const t = TEAM_CONSTANTS[type];
-                itemShopVillager.nameTag = `§6§lItem Shop\n§r§7of ${ t.colorPrefix + capitalize(t.name) }`;
-                itemShopVillager[SHOP_TYPE_SYM] = "item";
-                teamShopVillager.teleport(teamShopLocation, {
-                    dimension: this.dimension,
-                    facingLocation: playerSpawnViewDirection,
-                    keepVelocity: false,
-                    checkForBlocks: false
-                });
-                teamShopVillager.nameTag = `§3§lTeam Shop\n§r§7of ${ t.colorPrefix + capitalize(t.name) }`;
-                teamShopVillager[SHOP_TYPE_SYM] = "team";
-            }
+            villager.setDynamicProperty(BEDWARS_GAMEID_PROP, this.id);
+            villagers.push(villager);
+        }
+        const spawnVillagerCount = this.map.teams.length * 2 - villagers.length;
+        for (let i = 0; i < spawnVillagerCount; ++i) {
+            const villager = this.dimension.spawnEntity("minecraft:villager_v2", this.originPos);
+            villager.triggerEvent("Amazing:entity_spawn");
+            villager.triggerEvent("minecraft:ageable_grow_up");
+            villager.setDynamicProperty(BEDWARS_GAMEID_PROP, this.id);
+            villagers.push(villager);
+        }
+        index = 0;
+        for (let { itemShopLocation, teamShopLocation, type, playerSpawnViewDirection } of this.map.teams) {
+            itemShopLocation = this.fixOrigin(itemShopLocation);
+            teamShopLocation = this.fixOrigin(teamShopLocation);
+            const itemShopVillager = villagers[index++];
+            const teamShopVillager = villagers[index++];
+            itemShopVillager.teleport(itemShopLocation, {
+                dimension: this.dimension,
+                facingLocation: playerSpawnViewDirection,
+                keepVelocity: false,
+                checkForBlocks: false
+            });
+            const t = TEAM_CONSTANTS[type];
+            itemShopVillager.nameTag = `§6§lItem Shop\n§r§7of ${ t.colorPrefix + capitalize(t.name) }`;
+            itemShopVillager[SHOP_TYPE_SYM] = "item";
+            teamShopVillager.teleport(teamShopLocation, {
+                dimension: this.dimension,
+                facingLocation: playerSpawnViewDirection,
+                keepVelocity: false,
+                checkForBlocks: false
+            });
+            teamShopVillager.nameTag = `§3§lTeam Shop\n§r§7of ${ t.colorPrefix + capitalize(t.name) }`;
+            teamShopVillager[SHOP_TYPE_SYM] = "team";
         }
         for (const { teamChestLocation, bedLocation: mapBedLocation, type: teamType } of this.map.teams) {
             { // Clear the team chest
@@ -1000,7 +1044,6 @@ export class BedWarsGame {
         this.scoreObj.setScore("", 2);
         let index = 2;
         for (const [teamType, { state }] of this.teams) {
-            ++index;
             const t = TEAM_CONSTANTS[teamType];
             let result = `${ t.colorPrefix }${ t.name.charAt(0).toUpperCase() } §r${ capitalize(t.name) }: `;
             switch (state) {
@@ -1020,22 +1063,15 @@ export class BedWarsGame {
                     }
                     result += `§a${ aliveCount }`;
             }
-            this.scoreObj.setScore(result, index);
+            this.scoreObj.setScore(result, ++index);
         }
-        ++index;
-        this.scoreObj.setScore(" ", index);
-        ++index;
-        const { minutes, seconds } = analyzeTime((mc.system.currentTick - this.startTime) * 50);
-        let secondsStr = seconds.toString();
-        if (secondsStr.length == 1) secondsStr = "0" + secondsStr;
-        let minutesStr = minutes.toString();
-        if (minutesStr.length == 1) minutesStr = "0" + minutesStr;
-        this.scoreObj.setScore(`§a${ minutesStr }:${ secondsStr }`, index);
+        this.scoreObj.setScore(" ", ++index);
+        this.scoreObj.setScore(`§a${ timeToString(analyzeTime((mc.system.currentTick - this.startTime) * 50)) }`, ++index);
     }
 
     private respawnPlayer(playerInfo: PlayerGameInformation) {
-        const teamMapInfo = this.map.teams.find(ele => ele.type === playerInfo.team)!;
         const teamInfo = this.teams.get(playerInfo.team)!;
+        const teamMapInfo = this.map.teams.find(ele => ele.type === playerInfo.team)!;
         const spawnPoint = this.fixOrigin(teamMapInfo.playerSpawn);
         const player = playerInfo.player;
         player.teleport(spawnPoint, { facingLocation: add(spawnPoint, teamMapInfo.playerSpawnViewDirection) });
@@ -1248,8 +1284,8 @@ export class BedWarsGame {
      */
     applyTeamIronForge(teamType: TeamType) {
         const teamInfo = this.teams.get(teamType)!;
-        const teamGenMapInfo = this.map.teams.filter(t => t.type == teamType)[0].teamGenerator;
         const teamGenInfo = this.generators.filter(g => g.belongToTeam && g.team == teamType)[0];
+        const teamGenMapInfo = teamGenInfo.mapInfo;
         if (!teamGenInfo.belongToTeam) return;
         switch (teamInfo.ironForgeLevel) {
             case 0:
@@ -1649,15 +1685,14 @@ export class BedWarsGame {
 
         }
         for (const gen of this.generators) {
-            if (gen.indicatorLocations && gen.remainingCooldown % 20 == 0) {
-                for (const loc of gen.indicatorLocations) {
-                    const sign = this.dimension.getBlock(loc)?.getComponent("sign");
-                    if (!sign) {
-                        throw new Error(`Generator indicator does not exist at ${ toString(loc) }.`);
-                    }
-                    sign.setWaxed(true);
-                    [mc.SignSide.Front, mc.SignSide.Back].forEach(signSide => sign.setText(`§eSpawns in §c${ gen.remainingCooldown / 20 } §eseconds`, signSide));
+            if (gen.indicator && gen.remainingCooldown % 20 == 0) {
+                if (!gen.indicator.isValid()) {
+                    const loc = this.fixOrigin(gen.mapInfo.indicatorLocation!);
+                    gen.indicator = this.dimension.spawnEntity("amazing:text_display", loc);
+                    gen.indicator[CREATED_LOC_SYM] = loc;
+                    gen.indicator.setDynamicProperty(BEDWARS_GAMEID_PROP, this.id);
                 }
+                gen.indicator.nameTag = `§eSpawns in §c${ gen.remainingCooldown / 20 } §eseconds`;
             }
             if (gen.remainingCooldown > 0) {
                 --gen.remainingCooldown;
@@ -1730,6 +1765,11 @@ export class BedWarsGame {
                 }
                 this.dimension.spawnItem(EMERALD_ITEM_STACK, spawnLocation);
                 gen.extraEmeraldRemainingCooldown = gen.extraEmeraldInterval;
+            }
+        }
+        for (const textDisplay of this.dimension.getEntities({ type: "amazing:text_display" })) {
+            if (textDisplay[CREATED_LOC_SYM] && vecDistance(textDisplay.location, textDisplay[CREATED_LOC_SYM]) >= 0.01) {
+                textDisplay.teleport(textDisplay[CREATED_LOC_SYM]);
             }
         }
         if ((mc.system.currentTick - this.startTime) % 20 == 0) {
@@ -2185,7 +2225,16 @@ export class BedWarsGame {
             await sleep(0);
 
             /* Clear the bed */
-            event.dimension.fillBlocks(...this.fixOrigin(destroyedTeam.bedLocation), "minecraft:air");
+            const bedLocations = this.fixOrigin(destroyedTeam.bedLocation);
+            event.dimension.fillBlocks(...bedLocations, "minecraft:air");
+
+            const t = TEAM_CONSTANTS[destroyedTeam.type];
+
+            const loc = add(bedLocations[0], { x: 0.5, y: 0.2, z: 0.5 });
+            const textDisplay = this.dimension.spawnEntity("amazing:text_display", loc);
+            textDisplay.setDynamicProperty(BEDWARS_GAMEID_PROP, this.id);
+            textDisplay[CREATED_LOC_SYM] = loc;
+            textDisplay.nameTag = `${ t.colorPrefix }${ capitalize(t.name) } Bed §7was destroyed by \n${ TEAM_CONSTANTS[destroyerInfo.team].colorPrefix }${ destroyerInfo.name } §7at §e${ timeToString(analyzeTime((mc.system.currentTick - this.startTime) * 50)) }`;
 
             if (destroyerInfo.armorDisabled) {
                 destroyerInfo.armorDisabled = false;
@@ -2214,7 +2263,6 @@ export class BedWarsGame {
                 } else {
                     playerInfo.player.playSound("mob.enderdragon.growl", { volume: 0.1 });
                 }
-                const t = TEAM_CONSTANTS[destroyedTeam.type];
                 playerInfo.player.sendMessage(sprintf(teamBedDestroyedMessage,
                     t.colorPrefix, capitalize(str[t.localName]),
                     TEAM_CONSTANTS[destroyerInfo.team].colorPrefix, destroyerInfo.name));
@@ -2357,9 +2405,10 @@ export class BedWarsGame {
             const launchVelocity = normalize(playerInfo.player.getViewDirection());
             const location = add(playerInfo.player.getHeadLocation(), scale(launchVelocity, 0.5));
             const fireBall = this.dimension.spawnEntity(MinecraftEntityTypes.Fireball, location);
+            const projectile = fireBall.getComponent("projectile")!;
             fireBall.addTag(`team${ playerInfo.team }`);
-            fireBall.getComponent("projectile")!.owner = playerInfo.player;
-            fireBall.applyImpulse(launchVelocity);
+            projectile.owner = playerInfo.player;
+            projectile.shoot(launchVelocity);
             fireBall.setDynamicProperty(BEDWARS_GAMEID_PROP, this.id);
 
             consumeMainHandItem(playerInfo.player);

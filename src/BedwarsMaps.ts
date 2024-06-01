@@ -215,49 +215,49 @@ export const mapSteamPunk: MapInformation = {
             spawnLocation: { x: 85.5, y: 74, z: 0.5 },
             location: { x: 85, y: 73, z: 0 },
             initialInterval: DIAMOND_GENERATOR_INTERVAL,
-            indicatorLocations: [{ x: 85, y: 77, z: 0 }]
+            indicatorLocation: { x: 85.5, y: 77, z: 0.5 }
         }, {
             type: GeneratorType.Diamond,
             spawnLocation: { x: 0.5, y: 74, z: 85.5 },
             location: { x: 0, y: 73, z: 85 },
             initialInterval: DIAMOND_GENERATOR_INTERVAL,
-            indicatorLocations: [{ x: 0, y: 77, z: 85 }]
+            indicatorLocation: { x: 0.5, y: 77, z: 85.5 }
         }, {
             type: GeneratorType.Diamond,
             spawnLocation: { x: -84.5, y: 74, z: 0.5 },
             location: { x: -85, y: 73, z: 0 },
             initialInterval: DIAMOND_GENERATOR_INTERVAL,
-            indicatorLocations: [{ x: -85, y: 77, z: 0 }]
+            indicatorLocation: { x: -84.5, y: 77, z: 0.5 }
         }, {
             type: GeneratorType.Diamond,
             spawnLocation: { x: 0.5, y: 74, z: -84.5 },
             location: { x: 0, y: 73, z: -85 },
             initialInterval: DIAMOND_GENERATOR_INTERVAL,
-            indicatorLocations: [{ x: 0, y: 77, z: -85 }]
+            indicatorLocation: { x: 0.5, y: 77, z: -84.5 }
         }, {
             type: GeneratorType.Emerald,
             spawnLocation: { x: 24.5, y: 74, z: 24.5 },
             location: { x: 24, y: 73, z: 24 },
             initialInterval: EMERLAD_GENERATOR_INTERVAL,
-            indicatorLocations: [{ x: 24, y: 77, z: 24 }]
+            indicatorLocation: { x: 24.5, y: 77, z: 24.5 }
         }, {
             type: GeneratorType.Emerald,
             spawnLocation: { x: -23.5, y: 74, z: 24.5 },
             location: { x: -24, y: 73, z: 24 },
             initialInterval: EMERLAD_GENERATOR_INTERVAL,
-            indicatorLocations: [{ x: -24, y: 77, z: 24 }]
+            indicatorLocation: { x: -23.5, y: 77, z: 24.5 }
         }, {
             type: GeneratorType.Emerald,
             spawnLocation: { x: 24.5, y: 74, z: -23.5 },
             location: { x: 24, y: 73, z: -24 },
             initialInterval: EMERLAD_GENERATOR_INTERVAL,
-            indicatorLocations: [{ x: 24, y: 77, z: -24 }]
+            indicatorLocation: { x: 24.5, y: 77, z: -23.5 }
         }, {
             type: GeneratorType.Emerald,
             spawnLocation: { x: -23.5, y: 74, z: -23.5 },
             location: { x: -24, y: 73, z: -24 },
             initialInterval: EMERLAD_GENERATOR_INTERVAL,
-            indicatorLocations: [{ x: -24, y: 77, z: -24 }]
+            indicatorLocation: { x: -23.5, y: 77, z: -23.5 }
         }
     ]
 };
@@ -403,49 +403,49 @@ export const mapWaterfall: MapInformation = {
             spawnLocation: { x: 52.5, y: 64, z: 0.5 },
             location: { x: 52, y: 63, z: 0 },
             initialInterval: DIAMOND_GENERATOR_INTERVAL,
-            indicatorLocations: [{ x: 52, y: 67, z: 0 }]
+            indicatorLocation: { x: 52.5, y: 67, z: 0.5 }
         }, {
             type: GeneratorType.Diamond,
             spawnLocation: { x: 0.5, y: 64, z: 52.5 },
             location: { x: 0, y: 63, z: 52 },
             initialInterval: DIAMOND_GENERATOR_INTERVAL,
-            indicatorLocations: [{ x: 0, y: 67, z: 52 }]
+            indicatorLocation: { x: 0.5, y: 67, z: 52.5 }
         }, {
             type: GeneratorType.Diamond,
             spawnLocation: { x: -51.5, y: 64, z: 0.5 },
             location: { x: -52, y: 63, z: 0 },
             initialInterval: DIAMOND_GENERATOR_INTERVAL,
-            indicatorLocations: [{ x: -52, y: 67, z: 0 }]
+            indicatorLocation: { x: -51.5, y: 67, z: 0.5 }
         }, {
             type: GeneratorType.Diamond,
             spawnLocation: { x: 0.5, y: 64, z: -51.5 },
             location: { x: 0, y: 63, z: -52 },
             initialInterval: DIAMOND_GENERATOR_INTERVAL,
-            indicatorLocations: [{ x: 0, y: 67, z: -52 }]
+            indicatorLocation: { x: 0.5, y: 67, z: -51.5 }
         }, {
             type: GeneratorType.Emerald,
             spawnLocation: { x: 12.5, y: 78, z: 12.5 },
             location: { x: 12, y: 77, z: 12 },
             initialInterval: EMERLAD_GENERATOR_INTERVAL,
-            indicatorLocations: [{ x: 12, y: 81, z: 12 }]
+            indicatorLocation: { x: 12.5, y: 81, z: 12.5 }
         }, {
             type: GeneratorType.Emerald,
             spawnLocation: { x: -11.5, y: 78, z: 12.5 },
             location: { x: -12, y: 77, z: 12 },
             initialInterval: EMERLAD_GENERATOR_INTERVAL,
-            indicatorLocations: [{ x: -12, y: 81, z: 12 }]
+            indicatorLocation: { x: -11.5, y: 81, z: 12.5 }
         }, {
             type: GeneratorType.Emerald,
             spawnLocation: { x: 12.5, y: 78, z: -11.5 },
             location: { x: 12, y: 77, z: -12 },
             initialInterval: EMERLAD_GENERATOR_INTERVAL,
-            indicatorLocations: [{ x: 12, y: 81, z: -12 }]
+            indicatorLocation: { x: 12.5, y: 81, z: -11.5 }
         }, {
             type: GeneratorType.Emerald,
             spawnLocation: { x: -11.5, y: 78, z: -11.5 },
             location: { x: -12, y: 77, z: -12 },
             initialInterval: EMERLAD_GENERATOR_INTERVAL,
-            indicatorLocations: [{ x: -12, y: 81, z: -12 }]
+            indicatorLocation: { x: -11.5, y: 81, z: -11.5 }
         }
     ]
 };
@@ -528,37 +528,37 @@ export const mapEastwood: MapInformation = {
             spawnLocation: { x: 40.5, y: 65, z: 40.5 },
             location: { x: 40, y: 64, z: 40 },
             initialInterval: DIAMOND_GENERATOR_INTERVAL,
-            indicatorLocations: [{ x: 40, y: 68, z: 40 }]
+            indicatorLocation: { x: 40.5, y: 68, z: 40.5 }
         }, {
             type: GeneratorType.Diamond,
             spawnLocation: { x: -39.5, y: 65, z: 40.5 },
             location: { x: -40, y: 64, z: 40 },
             initialInterval: DIAMOND_GENERATOR_INTERVAL,
-            indicatorLocations: [{ x: -40, y: 68, z: 40 }]
+            indicatorLocation: { x: -39.5, y: 68, z: 40.5 }
         }, {
             type: GeneratorType.Diamond,
             spawnLocation: { x: 40.5, y: 65, z: -39.5 },
             location: { x: 40, y: 64, z: -40 },
             initialInterval: DIAMOND_GENERATOR_INTERVAL,
-            indicatorLocations: [{ x: 40, y: 68, z: -40 }]
+            indicatorLocation: { x: 40.5, y: 68, z: -39.5 }
         }, {
             type: GeneratorType.Diamond,
             spawnLocation: { x: -39.5, y: 65, z: -39.5 },
             location: { x: -40, y: 64, z: -40 },
             initialInterval: DIAMOND_GENERATOR_INTERVAL,
-            indicatorLocations: [{ x: -40, y: 68, z: -40 }]
+            indicatorLocation: { x: -39.5, y: 68, z: -39.5 }
         }, {
             type: GeneratorType.Emerald,
             spawnLocation: { x: 10.5, y: 65, z: 10.5 },
             location: { x: 10, y: 64, z: 10 },
             initialInterval: EMERLAD_GENERATOR_INTERVAL,
-            indicatorLocations: [{ x: 10, y: 68, z: 10 }]
+            indicatorLocation: { x: 10.5, y: 68, z: 10.5 }
         }, {
             type: GeneratorType.Emerald,
             spawnLocation: { x: -9.5, y: 65, z: -9.5 },
             location: { x: -10, y: 64, z: -10 },
             initialInterval: EMERLAD_GENERATOR_INTERVAL,
-            indicatorLocations: [{ x: -10, y: 68, z: -10 }]
+            indicatorLocation: { x: -9.5, y: 68, z: -9.5 }
         }
     ]
 };
@@ -705,49 +705,49 @@ export const mapVaryth: MapInformation = {
             spawnLocation: { x: 35.5, y: 82, z: 35.5 },
             location: { x: 35, y: 81, z: 35 },
             initialInterval: DIAMOND_GENERATOR_INTERVAL,
-            indicatorLocations: [{ x: 35, y: 85, z: 35 }]
+            indicatorLocation: { x: 35.5, y: 85, z: 35.5 }
         }, {
             type: GeneratorType.Diamond,
             spawnLocation: { x: -34.5, y: 82, z: 35.5 },
             location: { x: -35, y: 81, z: 35 },
             initialInterval: DIAMOND_GENERATOR_INTERVAL,
-            indicatorLocations: [{ x: -35, y: 85, z: 35 }]
+            indicatorLocation: { x: -34.5, y: 85, z: 35.5 }
         }, {
             type: GeneratorType.Diamond,
             spawnLocation: { x: 35.5, y: 82, z: -34.5 },
             location: { x: 35, y: 81, z: -35 },
             initialInterval: DIAMOND_GENERATOR_INTERVAL,
-            indicatorLocations: [{ x: 35, y: 85, z: -35 }]
+            indicatorLocation: { x: 35.5, y: 85, z: -34.5 }
         }, {
             type: GeneratorType.Diamond,
             spawnLocation: { x: -34.5, y: 82, z: -34.5 },
             location: { x: -35, y: 81, z: -35 },
             initialInterval: DIAMOND_GENERATOR_INTERVAL,
-            indicatorLocations: [{ x: -35, y: 85, z: -35 }]
+            indicatorLocation: { x: -34.5, y: 85, z: -34.5 }
         }, {
             type: GeneratorType.Emerald,
             spawnLocation: { x: 16.5, y: 95, z: 16.5 },
             location: { x: 16, y: 94, z: 16 },
             initialInterval: EMERLAD_GENERATOR_INTERVAL,
-            indicatorLocations: [{ x: 16, y: 98, z: 16 }]
+            indicatorLocation: { x: 16.5, y: 98, z: 16.5 }
         }, {
             type: GeneratorType.Emerald,
             spawnLocation: { x: -15.5, y: 95, z: 16.5 },
             location: { x: -16, y: 94, z: 16 },
             initialInterval: EMERLAD_GENERATOR_INTERVAL,
-            indicatorLocations: [{ x: -16, y: 98, z: 16 }]
+            indicatorLocation: { x: -15.5, y: 98, z: 16.5 }
         }, {
             type: GeneratorType.Emerald,
             spawnLocation: { x: 16.5, y: 95, z: -15.5 },
             location: { x: 16, y: 94, z: -16 },
             initialInterval: EMERLAD_GENERATOR_INTERVAL,
-            indicatorLocations: [{ x: 16, y: 98, z: -16 }]
+            indicatorLocation: { x: 16.5, y: 98, z: -15.5 }
         }, {
             type: GeneratorType.Emerald,
             spawnLocation: { x: -15.5, y: 95, z: -15.5 },
             location: { x: -16, y: 94, z: -16 },
             initialInterval: EMERLAD_GENERATOR_INTERVAL,
-            indicatorLocations: [{ x: -16, y: 98, z: -16 }]
+            indicatorLocation: { x: -15.5, y: 98, z: -15.5 }
         }
     ]
 };

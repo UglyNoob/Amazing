@@ -304,6 +304,17 @@ export function analyzeTime(ms: number) {
     };
 }
 
+export function timeToString({ minutes, seconds }: {
+    minutes: number,
+    seconds: number;
+}) {
+    let secondsStr = seconds.toString();
+    if (secondsStr.length == 1) secondsStr = "0" + secondsStr;
+    let minutesStr = minutes.toString();
+    if (minutesStr.length == 1) minutesStr = "0" + minutesStr;
+    return `${ minutesStr }:${ secondsStr }`;
+}
+
 export function vectorCompare(a: mc.Vector3, b: mc.Vector3) {
     const dx = a.x - b.x;
     const dy = a.y - b.y;
