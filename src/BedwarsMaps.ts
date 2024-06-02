@@ -662,16 +662,16 @@ export const mapInvasion: MapInformation = {
             indicatorLocation: { x: 0, y: 90, z: 48.5 }
         }, {
             type: GeneratorType.Emerald,
-            spawnLocation: { x: 0.5, y: 100, z: 13.5 },
-            location: { x: 0, y: 99, z: 13 },
+            spawnLocation: { x: 13.5, y: 100, z: 0.5 },
+            location: { x: 13, y: 99, z: 0 },
             initialInterval: EMERLAD_GENERATOR_INTERVAL,
-            indicatorLocation: { x: 0.5, y: 103, z: 13.5 }
+            indicatorLocation: { x: 13.5, y: 103, z: 0.5 }
         }, {
             type: GeneratorType.Emerald,
-            spawnLocation: { x: 0.5, y: 100, z: -12.5 },
-            location: { x: 0, y: 99, z: -13 },
+            spawnLocation: { x: -12.5, y: 100, z: 0.5 },
+            location: { x: -13, y: 99, z: 0 },
             initialInterval: EMERLAD_GENERATOR_INTERVAL,
-            indicatorLocation: { x: 0.5, y: 103, z: -12.5 }
+            indicatorLocation: { x: -12.5, y: 103, z: 0.5 }
         }
     ]
 };
