@@ -51,7 +51,7 @@ export const FIRE_BALL_ITEM = (() => {
     i.setLore(["", "§r§7Launch it!"]);
     return i;
 })();
-const FIRE_BALL_COOLDOWN = 20; // in ticks
+const FIRE_BALL_COOLDOWN = 5; // in ticks
 const BEDWARS_GAMEID_PROP = "BEDWARSID";
 
 function isFireBallItem(item: mc.ItemStack) {

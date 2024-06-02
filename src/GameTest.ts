@@ -8,13 +8,8 @@ let gameTest: gt.Test;
 
 gt.register("AmazingSimulatedPlayerFunctionalityImplementation", "Implementation", test => {
     gameTest = test;
-    (globalThis as any).test = gameTest;
+    globalThis.test = gameTest;
 }).maxTicks(2147483647).structureName("void:void");
-
-mc.world.afterEvents.worldInitialize.subscribe(() => {
-    mc.system.runTimeout(() => {
-    }, 40);
-});
 
 /**
  * @returns {Promise<Boolean>} whether the player decides to continue
@@ -109,6 +104,6 @@ mc.world.afterEvents.entityDie.subscribe(event => {
     if (event.deadEntity instanceof gt.SimulatedPlayer) {
         let sPlayer = event.deadEntity;
         // mc.world.sendMessage(`${sPlayer.name} will respawn in 5 seconds`);
-        mc.system.runTimeout(() => sPlayer.respawn(), 100);
+        mc.system.runTimeout(() => sPlayer.respawn(), 20);
     }
 });
