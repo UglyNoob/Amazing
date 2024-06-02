@@ -18,7 +18,7 @@ import { sprintf, vsprintf } from 'sprintf-js';
 import { openItemShop, openTeamShop, TokenValue } from './BedwarsShop.js';
 import { isLocationPartOfAnyPlatforms } from './RescuePlatform.js';
 import { SimulatedPlayer } from '@minecraft/server-gametest';
-import { mapGarden, mapSteamPunk, mapWaterfall, mapEastwood, mapVaryth } from './BedwarsMaps.js';
+import { mapGarden, mapSteamPunk, mapWaterfall, mapEastwood, mapVaryth, mapInvasion } from './BedwarsMaps.js';
 import { ActionFormData, ActionFormResponse, FormCancelationReason, ModalFormData } from '@minecraft/server-ui';
 import { Strings, Lang, fixPlayerSettings, getPlayerLang, setPlayerLang, strings } from './Lang.js';
 
@@ -2894,6 +2894,7 @@ mc.world.beforeEvents.chatSend.subscribe(async event => {
             ["Steampunk", mapSteamPunk, { x: 0, y: 0, z: 0 }],
             ["Waterfall", mapWaterfall, { x: 0, y: 0, z: 0 }],
             ["Eastwood", mapEastwood, { x: 0, y: 0, z: 0 }],
+            ["Invasion", mapInvasion, { x: 0, y: 0, z: 0 }],
             ["Varyth(voidless)", mapVaryth, { x: 0, y: 0, z: 0 }]
         ];
         form.body("Choose the map you are in.");
