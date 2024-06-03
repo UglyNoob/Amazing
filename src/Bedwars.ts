@@ -964,23 +964,27 @@ export class BedWarsGame {
         for (let { itemShopLocation, teamShopLocation, type, playerSpawnViewDirection } of this.map.teams) {
             itemShopLocation = this.fixOrigin(itemShopLocation);
             teamShopLocation = this.fixOrigin(teamShopLocation);
+            const t = TEAM_CONSTANTS[type];
             const itemShopVillager = villagers[index++];
             const teamShopVillager = villagers[index++];
+
             itemShopVillager.teleport(itemShopLocation, {
                 dimension: this.dimension,
                 facingLocation: playerSpawnViewDirection,
                 keepVelocity: false,
                 checkForBlocks: false
             });
-            const t = TEAM_CONSTANTS[type];
+            itemShopVillager[CREATED_LOC_SYM] = itemShopLocation;
             itemShopVillager.nameTag = `§6§lItem Shop\n§r§7of ${ t.colorPrefix + capitalize(t.name) }`;
             itemShopVillager[SHOP_TYPE_SYM] = "item";
+
             teamShopVillager.teleport(teamShopLocation, {
                 dimension: this.dimension,
                 facingLocation: playerSpawnViewDirection,
                 keepVelocity: false,
                 checkForBlocks: false
             });
+            teamShopVillager[CREATED_LOC_SYM] = teamShopLocation;
             teamShopVillager.nameTag = `§3§lTeam Shop\n§r§7of ${ t.colorPrefix + capitalize(t.name) }`;
             teamShopVillager[SHOP_TYPE_SYM] = "team";
         }
@@ -1767,11 +1771,19 @@ export class BedWarsGame {
                 gen.extraEmeraldRemainingCooldown = gen.extraEmeraldInterval;
             }
         }
+
+        // Ensure text_displays and villagers are in the right position
         for (const textDisplay of this.dimension.getEntities({ type: "amazing:text_display" })) {
             if (textDisplay[CREATED_LOC_SYM] && vecDistance(textDisplay.location, textDisplay[CREATED_LOC_SYM]) >= 0.01) {
                 textDisplay.teleport(textDisplay[CREATED_LOC_SYM]);
             }
         }
+        for (const villager of this.dimension.getEntities({ type: "minecraft:villager_v2" })) {
+            if (villager[CREATED_LOC_SYM] && vecDistance(villager.location, villager[CREATED_LOC_SYM]) >= 0.01) {
+                villager.teleport(villager[CREATED_LOC_SYM]);
+            }
+        }
+
         if ((mc.system.currentTick - this.startTime) % 20 == 0) {
             this.updateScoreboard();
         }
