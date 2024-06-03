@@ -650,16 +650,16 @@ export const mapInvasion: MapInformation = {
             indicatorLocation: { x: 48.5, y: 90, z: 0.5 }
         }, {
             type: GeneratorType.Diamond,
-            spawnLocation: { x: 0, y: 87, z: -47.5 },
+            spawnLocation: { x: 0.5, y: 87, z: -47.5 },
             location: { x: 0, y: 86, z: -48 },
             initialInterval: DIAMOND_GENERATOR_INTERVAL,
-            indicatorLocation: { x: 0, y: 90, z: -47.5 }
+            indicatorLocation: { x: 0.5, y: 90, z: -47.5 }
         }, {
             type: GeneratorType.Diamond,
-            spawnLocation: { x: 0, y: 87, z: 48.5 },
+            spawnLocation: { x: 0.5, y: 87, z: 48.5 },
             location: { x: 0, y: 86, z: 48 },
             initialInterval: DIAMOND_GENERATOR_INTERVAL,
-            indicatorLocation: { x: 0, y: 90, z: 48.5 }
+            indicatorLocation: { x: 0.5, y: 90, z: 48.5 }
         }, {
             type: GeneratorType.Emerald,
             spawnLocation: { x: 13.5, y: 100, z: 0.5 },
