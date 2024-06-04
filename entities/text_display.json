@@ -20,14 +20,14 @@
 				"max": 1,
 				"value": 1
 			},
-            "minecraft:damage_sensor": {
-                "triggers": [
-                    {
-                        "cause": "all",
-                        "deals_damage": false
-                    }
-                ]
-            },
+			"minecraft:damage_sensor": {
+				"triggers": [
+					{
+						"cause": "all",
+						"deals_damage": false
+					}
+				]
+			},
 			"minecraft:nameable": {
 				"always_show": true
 			}

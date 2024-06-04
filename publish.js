@@ -1,8 +1,36 @@
 #! /usr/bin/env node
 import * as fs from 'node:fs/promises';
 
+function addTrailingSlash(pathStr) {
+    if (pathStr.endsWith("/") || pathStr.endsWith("\\")) return pathStr;
+    return pathStr + "/";
+}
+
+async function copyFolder(source, destination) {
+    try {
+        await fs.mkdir(destination);
+    } catch { }
+    source = addTrailingSlash(source);
+    destination = addTrailingSlash(destination);
+
+    const operations = [];
+    for (const entry of await fs.readdir(source)) {
+        if (entry.startsWith(".")) continue;
+        const sourcePath = source + entry;
+        const destPath = destination + entry;
+        operations.push(fs.stat(sourcePath).then(stat => {
+            if (stat.isDirectory()) {
+                return copyFolder(sourcePath, destPath);
+            } else {
+                return fs.copyFile(sourcePath, destPath);
+            }
+        }));
+    }
+    return Promise.all(operations);
+}
+
 async function main() {
-    await fs.rm("out", {force: true, recursive: true});
+    await fs.rm("out", { force: true, recursive: true });
     await fs.mkdir("out/AmazingBP/scripts", { recursive: true });
 
     await Promise.all([
@@ -10,24 +38,11 @@ async function main() {
         fs.copyFile("scripts/main.js", "out/AmazingBP/scripts/main.js"),
         fs.copyFile("pack_icon.png", "out/AmazingBP/pack_icon.png")
     ]);
-    const operations = [];
-    for(const folderName of ["entities", "structures"]) {
-        await fs.mkdir("out/AmazingBP/" + folderName);
-        for(const fileName of await fs.readdir(folderName, {
-            recursive: true
-        })) {
-            if(fileName.startsWith(".")) continue;
-            const path = folderName + "/" + fileName;
-            console.log(path);
-            const directory = (await fs.stat(path)).isDirectory();
-            if(directory) {
-                await fs.mkdir("out/AmazingBP/" + path, { recursive: true });
-            } else {
-                operations.push(fs.copyFile(path, "out/AmazingBP/" + path));
-            }
-        }
-    }
-    await Promise.all(operations);
+    await Promise.all([
+        copyFolder("entities", "out/AmazingBP/entities"),
+        copyFolder("structures", "out/AmazingBP/structures"),
+        copyFolder("resource_pack", "out/AmazingRP"),
+    ]);
 
     console.log("Publish complete");
 }
