@@ -2535,16 +2535,6 @@ export class BedWarsGame {
             playerInfo.player.addEffect(MinecraftEffectTypes.Speed, SPEED_DURATION, {
                 amplifier: 1
             });
-        } else if (event.itemStack.typeId == MinecraftItemTypes.Bow) {
-            await sleep(0);
-            // find the array shot
-            const arrowEntity = smallest(this.dimension.getEntities({ type: "arrow" })
-                .filter(e => e.getComponent("projectile")!.owner == playerInfo.player), (a, b) => {
-                    return vecDistance(playerInfo.player.location, a.location) - vecDistance(playerInfo.player.location, b.location);
-                });
-            if (!arrowEntity) return;
-            // arrowEntity.addTag(`team${playerInfo.team}`);
-            arrowEntity.getComponent("rideable")!.addRider(playerInfo.player);
         }
     }
 
