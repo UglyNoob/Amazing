@@ -2486,7 +2486,9 @@ export class BedWarsGame {
         if (!playerInfo) return;
 
         if (isFireBallItem(event.itemStack)) {
-            event.cancel = true;
+            if (event.block.typeId != MinecraftBlockTypes.Chest) {
+                event.cancel = true;
+            }
         } else if (event.itemStack.typeId == MinecraftItemTypes.WolfSpawnEgg) {
             await sleep(0);
 
