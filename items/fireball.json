@@ -7,6 +7,17 @@
 		"components": {
 			"minecraft:icon": {
 				"texture": "fireball"
+			},
+			"minecraft:on_use": {
+				"on_use": {
+					"event": "use"
+				}
+			}
+		},
+		"event": {
+			"use": {
+				"decrement_stack": {},
+				"swing": {}
 			}
 		}
 	}

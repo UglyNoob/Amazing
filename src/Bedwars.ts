@@ -2405,7 +2405,6 @@ export class BedWarsGame {
             projectile.shoot(launchVelocity);
             fireball.setDynamicProperty(BEDWARS_GAMEID_PROP, this.id);
 
-            consumeMainHandItem(playerInfo.player);
             playerInfo.fireBallCooldown = FIRE_BALL_COOLDOWN;
         } else if (isSettingsItem(event.itemStack)) {
             event.cancel = true;
@@ -2466,11 +2465,7 @@ export class BedWarsGame {
         const playerInfo = this.players.get(event.source.name);
         if (!playerInfo) return;
 
-        if (isFireBallItem(event.itemStack)) {
-            if (event.block.typeId != MinecraftBlockTypes.Chest) {
-                event.cancel = true;
-            }
-        } else if (event.itemStack.typeId == MinecraftItemTypes.WolfSpawnEgg) {
+        if (event.itemStack.typeId == MinecraftItemTypes.WolfSpawnEgg) {
             await sleep(0);
 
             let wolfLocation = add(event.block.location, event.faceLocation);

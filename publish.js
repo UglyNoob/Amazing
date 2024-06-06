@@ -40,6 +40,7 @@ async function main() {
     ]);
     await Promise.all([
         copyFolder("entities", "out/AmazingBP/entities"),
+        copyFolder("items", "out/AmazingBP/items"),
         copyFolder("structures", "out/AmazingBP/structures"),
         copyFolder("resource_pack", "out/AmazingRP"),
     ]);

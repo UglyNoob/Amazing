@@ -6,7 +6,7 @@
 		},
 		"components": {
 			"minecraft:icon": {
-				"texture": "clock_item"
+				"texture": "bedwars_settings"
 			}
 		}
 	}
