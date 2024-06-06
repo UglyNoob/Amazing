@@ -1737,6 +1737,13 @@
 			},
 
 			"Amazing:entity_spawn": {
+				"minecraft:interact": {
+					"interactions": [
+						{
+							"interact_text": "action.interact.villagerShop"
+						}
+					]
+				},
 				"minecraft:pushable": {
 					"is_pushable": false,
 					"is_pushable_by_piston": false

@@ -9,3 +9,5 @@ item.itemLock.hoverText.cantBe.removed=
 item.itemLock.hoverText.cantBe.craftedWith= 
 item.itemLock.popupNotice.cantDrop= 
 item.itemLock.popupNotice.cantMove= 
+
+action.interact.villagerShop=Open Shop
