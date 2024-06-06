@@ -2139,6 +2139,10 @@ export class BedWarsGame {
             }
             return;
         }
+        if(event.block.typeId == MinecraftBlockTypes.BrewingStand) {
+            event.cancel = true;
+            return;
+        }
         if (event.block.typeId == MinecraftBlockTypes.Chest) {
             for (const team of this.map.teams) {
                 if (equals(event.block.location, this.fixOrigin(team.teamChestLocation))) {

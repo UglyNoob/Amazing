@@ -624,7 +624,7 @@ export const mapInvasion: MapInformation = {
             teamChestLocation: { x: 42, y: 94, z: 46 },
             playerSpawn: { x: 48.5, y: 93, z: 48.5 },
             playerSpawnViewDirection: { x: -1, y: 0, z: -1 },
-            islandArea: [{ x: 20, y: 84, z: 28 }, { x: 69, y: 111, z: 69 }],
+            islandArea: [{ x: 28, y: 84, z: 28 }, { x: 69, y: 111, z: 69 }],
             protectedArea: [{ x: 46, y: 93, z: 46 }, { x: 51, y: 97, z: 51 }],
             teamGenerator: {
                 type: GeneratorType.IronGold,
@@ -970,8 +970,8 @@ export const mapJurassic: MapInformation = {
             initialInterval: EMERLAD_GENERATOR_INTERVAL
         }, {
             type: GeneratorType.Emerald,
-            spawnLocation: { x: 2, y: 66, z: -3 },
-            location: { x: 2.5, y: 67, z: -2.5 },
+            location: { x: 2, y: 66, z: -3 },
+            spawnLocation: { x: 2.5, y: 67, z: -2.5 },
             indicatorLocation: { x: 2.5, y: 70, z: -2.5 },
             initialInterval: EMERLAD_GENERATOR_INTERVAL
         }
