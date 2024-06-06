@@ -11,3 +11,8 @@ item.itemLock.popupNotice.cantDrop=
 item.itemLock.popupNotice.cantMove= 
 
 action.interact.villagerShop=Open Shop
+
+tile.amazing:bridge_egg=§2Bridge Egg
+tile.amazing:fireball=§6Fireball
+tile.amazing:bedwars_settings=Settings
+tile.amazing:player_tracker=§6Tracker

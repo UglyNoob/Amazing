@@ -11,3 +11,8 @@ item.itemLock.popupNotice.cantDrop=
 item.itemLock.popupNotice.cantMove= 
 
 action.interact.villagerShop=打开商店
+
+tile.amazing:bridge_egg=§2搭桥蛋
+tile.amazing:fireball=§6火焰弹
+tile.amazing:bedwars_settings=设置
+tile.amazing:player_tracker=§6追踪器
