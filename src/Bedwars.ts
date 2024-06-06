@@ -18,7 +18,7 @@ import { sprintf, vsprintf } from 'sprintf-js';
 import { openItemShop, openTeamShop, TokenValue } from './BedwarsShop.js';
 import { isLocationPartOfAnyPlatforms } from './RescuePlatform.js';
 import { SimulatedPlayer } from '@minecraft/server-gametest';
-import { mapGarden, mapSteamPunk, mapWaterfall, mapEastwood, mapVaryth, mapInvasion } from './BedwarsMaps.js';
+import { mapGarden, mapSteamPunk, mapWaterfall, mapEastwood, mapVaryth, mapInvasion, mapJurassic } from './BedwarsMaps.js';
 import { ActionFormData, ActionFormResponse, FormCancelationReason, ModalFormData } from '@minecraft/server-ui';
 import { Strings, Lang, fixPlayerSettings, getPlayerLang, setPlayerLang, strings } from './Lang.js';
 
@@ -2879,6 +2879,15 @@ class BlockPlacementTracker {
     }
 }
 
+const maps: [string, MapInformation, mc.Vector3][] = [
+    ["Garden", mapGarden, { x: -104, y: 54, z: -65 }],
+    ["Steampunk", mapSteamPunk, { x: 0, y: 0, z: 0 }],
+    ["Waterfall", mapWaterfall, { x: 0, y: 0, z: 0 }],
+    ["Eastwood", mapEastwood, { x: 0, y: 0, z: 0 }],
+    ["Invasion", mapInvasion, { x: 0, y: 0, z: 0 }],
+    ["Jurassic", mapJurassic, { x: 0, y: 0, z: 0 }],
+    ["Varyth(voidless)", mapVaryth, { x: 0, y: 0, z: 0 }]
+];
 let game: BedWarsGame;
 
 mc.world.beforeEvents.chatSend.subscribe(async event => {
@@ -2894,14 +2903,6 @@ mc.world.beforeEvents.chatSend.subscribe(async event => {
         await sleep(0);
 
         const form = new ActionFormData();
-        const maps: [string, MapInformation, mc.Vector3][] = [
-            ["Garden", mapGarden, { x: -104, y: 54, z: -65 }],
-            ["Steampunk", mapSteamPunk, { x: 0, y: 0, z: 0 }],
-            ["Waterfall", mapWaterfall, { x: 0, y: 0, z: 0 }],
-            ["Eastwood", mapEastwood, { x: 0, y: 0, z: 0 }],
-            ["Invasion", mapInvasion, { x: 0, y: 0, z: 0 }],
-            ["Varyth(voidless)", mapVaryth, { x: 0, y: 0, z: 0 }]
-        ];
         form.body("Choose the map you are in.");
         for (const [name] of maps) {
             form.button(name);
