@@ -10,7 +10,7 @@ const {
     equals
 } = Vector3Utils;
 import * as mc from '@minecraft/server';
-import { itemEqual, Area, sleep, add, vectorWithinArea, containerIterator, capitalize, getPlayerByName, consumeMainHandItem, makeItem, shuffle, randomInt, setGameMode, analyzeTime, vectorCompare, raycastHits, quickFind, getAngle, smallest, containerSlotIterator, timeToString } from './utility.js';
+import { itemEqual, Area, sleep, add, vectorWithinArea, containerIterator, capitalize, getPlayerByName, consumeMainHandItem, shuffle, randomInt, analyzeTime, vectorCompare, raycastHits, quickFind, getAngle, smallest, containerSlotIterator, timeToString } from './utility.js';
 import { setupGameTest } from './GameTest.js';
 import { MinecraftBlockTypes, MinecraftEffectTypes, MinecraftEnchantmentTypes, MinecraftEntityTypes, MinecraftItemTypes } from '@minecraft/vanilla-data';
 
@@ -24,28 +24,16 @@ import { Strings, Lang, fixPlayerSettings, getPlayerLang, setPlayerLang, strings
 
 const RESPAWN_TIME = 100; // in ticks
 const TRACKER_CHANGE_TARGET_COOLDOWN = 10; // in ticks
-export const IRON_ITEM_STACK = new mc.ItemStack(MinecraftItemTypes.IronIngot);
-IRON_ITEM_STACK.nameTag = "Iron Token";
-export const GOLD_ITEM_STACK = new mc.ItemStack(MinecraftItemTypes.GoldIngot);
-GOLD_ITEM_STACK.nameTag = "Gold Token";
-export const DIAMOND_ITEM_STACK = new mc.ItemStack(MinecraftItemTypes.Diamond);
-DIAMOND_ITEM_STACK.nameTag = "Diamond Token";
-export const EMERALD_ITEM_STACK = new mc.ItemStack(MinecraftItemTypes.Emerald);
-EMERALD_ITEM_STACK.nameTag = "Emerald Token";
+export const IRON_TOKEN_ITEM = new mc.ItemStack("amazing:iron_token");
+export const GOLD_TOKEN_ITEM = new mc.ItemStack("amazing:gold_token");
+export const DIAMOND_TOKEN_ITEM = new mc.ItemStack("amazing:diamond_token");
+export const EMERALD_TOKEN_ITEM = new mc.ItemStack("amazing:emerald_token");
 
 export const BRIDGE_EGG_ITEM = new mc.ItemStack("amazing:bridge_egg");
 const BRIDGE_EGG_COOLDOWN = 20; // in ticks
 
-function isBridgeEggItem(item: mc.ItemStack) {
-    return item.typeId == "amazing:bridge_egg";
-}
-
 export const FIRE_BALL_ITEM = new mc.ItemStack("amazing:fireball");
 const FIRE_BALL_COOLDOWN = 5; // in ticks
-
-function isFireBallItem(item: mc.ItemStack) {
-    return item.typeId == "amazing:fireball";
-}
 
 export const INVISIBLILITY_POTION_ITEM = (() => {
     const i = new mc.ItemStack(MinecraftItemTypes.Potion);
@@ -101,17 +89,7 @@ function isSpeedPotionItem(item: mc.ItemStack) {
         loreA[1] == loreB[1];
 }
 
-export const KNOCKBACK_STICK_ITEM = (() => {
-    const i = new mc.ItemStack(MinecraftItemTypes.Stick);
-    i.nameTag = "§r§eKnockBack Stick";
-    i.setLore(["", "§rKnock off all your opponents!"]);
-
-    return i;
-})();
-
-function isKnockBackStickItem(item: mc.ItemStack) {
-    return item.getLore()[1] == KNOCKBACK_STICK_ITEM.getLore()[1];
-}
+export const KNOCKBACK_STICK_ITEM = new mc.ItemStack("amazing:knockback_stick");
 
 export const TRACKER_ITEM = new mc.ItemStack("amazing:player_tracker");
 
@@ -119,11 +97,8 @@ function isTrackerItem(item: mc.ItemStack) {
     return item.typeId == "amazing:player_tracker";
 }
 
-const SETTINGS_ITEM = new mc.ItemStack("amazing:bedwars_settings")
+const SETTINGS_ITEM = new mc.ItemStack("amazing:bedwars_settings");
 
-function isSettingsItem(item: mc.ItemStack) {
-    return item.typeId == "amazing:bedwars_settings";
-}
 const OWNER_SYM = Symbol("owner of the entity");
 const SITTING_SYM = Symbol("is wolf sitting");
 const SHOP_TYPE_SYM = Symbol("type of the shop the villager is");
@@ -816,10 +791,10 @@ export class BedWarsGame {
     }
 
     setPlayer(player: mc.Player, teamType: TeamType) {
-        if (this.map.teams.find(t => t.type == teamType) == undefined) throw new Error(`No such team(${TEAM_CONSTANTS[teamType].name}).`);
+        if (this.map.teams.find(t => t.type == teamType) == undefined) throw new Error(`No such team(${ TEAM_CONSTANTS[teamType].name }).`);
 
         player.getTags().filter(s => s.startsWith("team")).forEach(s => player.removeTag(s));
-        player.addTag(`team${teamType}`);
+        player.addTag(`team${ teamType }`);
         let playerInfo = this.players.get(player.name);
         if (playerInfo) {
             playerInfo.team = teamType;
@@ -952,7 +927,7 @@ export class BedWarsGame {
                 checkForBlocks: false
             });
             itemShopVillager[CREATED_LOC_SYM] = itemShopLocation;
-            itemShopVillager.nameTag = `§6§lItem Shop\n§r§7of ${t.colorPrefix + capitalize(t.name)}`;
+            itemShopVillager.nameTag = `§6§lItem Shop\n§r§7of ${ t.colorPrefix + capitalize(t.name) }`;
             itemShopVillager[SHOP_TYPE_SYM] = "item";
 
             teamShopVillager.teleport(teamShopLocation, {
@@ -962,7 +937,7 @@ export class BedWarsGame {
                 checkForBlocks: false
             });
             teamShopVillager[CREATED_LOC_SYM] = teamShopLocation;
-            teamShopVillager.nameTag = `§3§lTeam Shop\n§r§7of ${t.colorPrefix + capitalize(t.name)}`;
+            teamShopVillager.nameTag = `§3§lTeam Shop\n§r§7of ${ t.colorPrefix + capitalize(t.name) }`;
             teamShopVillager[SHOP_TYPE_SYM] = "team";
         }
         for (const { teamChestLocation, bedLocation: mapBedLocation, type: teamType } of this.map.teams) {
@@ -971,7 +946,7 @@ export class BedWarsGame {
                 if (teamChestContainer) {
                     teamChestContainer.clearAll();
                 } else {
-                    throw new Error(`Team chest of team ${TEAM_CONSTANTS[teamType].name} does not exist at ${toString(teamChestLocation)}`);
+                    throw new Error(`Team chest of team ${ TEAM_CONSTANTS[teamType].name } does not exist at ${ toString(teamChestLocation) }`);
                 }
             }
 
@@ -1026,7 +1001,7 @@ export class BedWarsGame {
         let index = 2;
         for (const [teamType, { state }] of this.teams) {
             const t = TEAM_CONSTANTS[teamType];
-            let result = `${t.colorPrefix}${t.name.charAt(0).toUpperCase()} §r${capitalize(t.name)}: `;
+            let result = `${ t.colorPrefix }${ t.name.charAt(0).toUpperCase() } §r${ capitalize(t.name) }: `;
             switch (state) {
                 case TeamState.BedAlive:
                     // result += "§a✔";
@@ -1042,12 +1017,12 @@ export class BedWarsGame {
                         if (playerInfo.team != teamType) continue;
                         if (this.isPlayerPlaying(playerInfo)) ++aliveCount;
                     }
-                    result += `§a${aliveCount}`;
+                    result += `§a${ aliveCount }`;
             }
             this.scoreObj.setScore(result, ++index);
         }
         this.scoreObj.setScore(" ", ++index);
-        this.scoreObj.setScore(`§a${timeToString(analyzeTime((mc.system.currentTick - this.startTime) * 50))}`, ++index);
+        this.scoreObj.setScore(`§a${ timeToString(analyzeTime((mc.system.currentTick - this.startTime) * 50)) }`, ++index);
     }
 
     private respawnPlayer(playerInfo: PlayerGameInformation) {
@@ -1056,7 +1031,7 @@ export class BedWarsGame {
         const spawnPoint = this.fixOrigin(teamMapInfo.playerSpawn);
         const player = playerInfo.player;
         player.teleport(spawnPoint, { facingLocation: add(spawnPoint, teamMapInfo.playerSpawnViewDirection) });
-        setGameMode(player, mc.GameMode.survival);
+        player.setGameMode(mc.GameMode.survival);
         player.getComponent("minecraft:health")!.resetToMaxValue();
         player.runCommand("effect @s clear");
         player.addEffect(MinecraftEffectTypes.Saturation, 1000000, {
@@ -1162,7 +1137,7 @@ export class BedWarsGame {
                 }
                 continue;
             }
-            if (isSettingsItem(item)) {
+            if (itemEqual(item, SETTINGS_ITEM)) {
                 foundSettingsItem = true;
                 continue;
             }
@@ -1427,7 +1402,7 @@ export class BedWarsGame {
                 if (!player) continue;
                 // the player comes online
                 playerInfo.player = player;
-                setGameMode(player, mc.GameMode.spectator);
+                player.setGameMode(mc.GameMode.spectator);
                 player.teleport(playerInfo.deathLocation, { rotation: playerInfo.deathRotaion });
                 playerInfo.deathTime = mc.system.currentTick;
 
@@ -1461,7 +1436,7 @@ export class BedWarsGame {
             this.setupSpawnPoint(player);
 
             if (player.dimension != this.dimension) {
-                setGameMode(player, mc.GameMode.spectator);
+                player.setGameMode(mc.GameMode.spectator);
                 this.onPlayerDieOrOffline(playerInfo, playerInfo.lastHurtBy);
                 const teamMapInfo = this.map.teams.find(t => t.type == playerInfo.team)!;
                 playerInfo.player.teleport(this.fixOrigin(teamMapInfo.playerSpawn), {
@@ -1477,7 +1452,7 @@ export class BedWarsGame {
 
             if (playerInfo.state == PlayerState.dead &&
                 vecDistance(this.fixOrigin(this.map.fallbackRespawnPoint), player.location) <= 1) {
-                setGameMode(player, mc.GameMode.spectator);
+                player.setGameMode(mc.GameMode.spectator);
                 player.teleport(playerInfo.deathLocation, { rotation: playerInfo.deathRotaion });
                 if (teamInfo.state == TeamState.BedAlive) {
                     playerInfo.state = PlayerState.Respawning;
@@ -1494,7 +1469,7 @@ export class BedWarsGame {
             if (playerInfo.state == PlayerState.Alive &&
                 player.location.y < this.originPos.y + this.map.voidY) {
                 // The player falls to the void
-                setGameMode(player, mc.GameMode.spectator);
+                player.setGameMode(mc.GameMode.spectator);
                 this.onPlayerDieOrOffline(playerInfo, playerInfo.lastHurtBy);
                 if (teamInfo.state == TeamState.BedAlive) {
                     playerInfo.state = PlayerState.Respawning;
@@ -1673,7 +1648,7 @@ export class BedWarsGame {
                     gen.indicator[CREATED_LOC_SYM] = loc;
                     gen.indicator.setDynamicProperty(BEDWARS_GAMEID_PROP, this.id);
                 }
-                gen.indicator.nameTag = `§eSpawns in §c${gen.remainingCooldown / 20} §eseconds`;
+                gen.indicator.nameTag = `§eSpawns in §c${ gen.remainingCooldown / 20 } §eseconds`;
             }
             if (gen.remainingCooldown > 0) {
                 --gen.remainingCooldown;
@@ -1693,17 +1668,17 @@ export class BedWarsGame {
                 const itemStack = entity.getComponent("minecraft:item")!.itemStack;
                 switch (gen.type) {
                     case GeneratorType.IronGold:
-                        if (itemEqual(itemStack, IRON_ITEM_STACK) || itemEqual(itemStack, GOLD_ITEM_STACK)) {
+                        if (itemEqual(itemStack, IRON_TOKEN_ITEM) || itemEqual(itemStack, GOLD_TOKEN_ITEM)) {
                             existingTokens += itemStack.amount;
                         }
                         continue;
                     case GeneratorType.Diamond:
-                        if (itemEqual(itemStack, DIAMOND_ITEM_STACK)) {
+                        if (itemEqual(itemStack, DIAMOND_TOKEN_ITEM)) {
                             existingTokens += itemStack.amount;
                         }
                         continue;
                     case GeneratorType.Emerald:
-                        if (itemEqual(itemStack, EMERALD_ITEM_STACK)) {
+                        if (itemEqual(itemStack, EMERALD_TOKEN_ITEM)) {
                             existingTokens += itemStack.amount;
                         }
                         continue;
@@ -1718,15 +1693,15 @@ export class BedWarsGame {
             switch (gen.type) {
                 case GeneratorType.IronGold:
                     if (gen.tokensGeneratedCount % 4 == 0) {
-                        this.dimension.spawnItem(GOLD_ITEM_STACK, spawnLocation);
+                        this.dimension.spawnItem(GOLD_TOKEN_ITEM, spawnLocation);
                     }
-                    itemEntity = this.dimension.spawnItem(IRON_ITEM_STACK, spawnLocation);
+                    itemEntity = this.dimension.spawnItem(IRON_TOKEN_ITEM, spawnLocation);
                     break;
                 case GeneratorType.Diamond:
-                    itemEntity = this.dimension.spawnItem(DIAMOND_ITEM_STACK, spawnLocation);
+                    itemEntity = this.dimension.spawnItem(DIAMOND_TOKEN_ITEM, spawnLocation);
                     break;
                 case GeneratorType.Emerald:
-                    itemEntity = this.dimension.spawnItem(EMERALD_ITEM_STACK, spawnLocation);
+                    itemEntity = this.dimension.spawnItem(EMERALD_TOKEN_ITEM, spawnLocation);
                     break;
             }
             if (gen.type != GeneratorType.IronGold) {
@@ -1744,7 +1719,7 @@ export class BedWarsGame {
                     --gen.extraEmeraldRemainingCooldown;
                     continue;
                 }
-                this.dimension.spawnItem(EMERALD_ITEM_STACK, spawnLocation);
+                this.dimension.spawnItem(EMERALD_TOKEN_ITEM, spawnLocation);
                 gen.extraEmeraldRemainingCooldown = gen.extraEmeraldInterval;
             }
         }
@@ -1826,7 +1801,7 @@ export class BedWarsGame {
                     const arrow = this.dimension.spawnEntity(MinecraftEntityTypes.Arrow, launchLocation);
                     const projectile = arrow.getComponent("projectile")!;
                     projectile.owner = wolf;
-                    arrow.addTag(`team${ownerInfo.team}`);
+                    arrow.addTag(`team${ ownerInfo.team }`);
                     arrow[OWNER_SYM] = ownerInfo;
                     projectile.shoot(scale(normalize(subtract(targetInfo.player.getHeadLocation(), launchLocation)), 1.5));
                 }
@@ -2030,7 +2005,7 @@ export class BedWarsGame {
 
     private resetNameTag(playerInfo: PlayerGameInformation) {
         const health = playerInfo.player.getComponent("health")!.currentValue.toFixed(0);
-        playerInfo.player.nameTag = `${TEAM_CONSTANTS[playerInfo.team].colorPrefix}${playerInfo.name}\n§c${health}`;
+        playerInfo.player.nameTag = `${ TEAM_CONSTANTS[playerInfo.team].colorPrefix }${ playerInfo.name }\n§c${ health }`;
     }
 
     afterEntityHurt(event: mc.EntityHurtAfterEvent) {
@@ -2066,7 +2041,7 @@ export class BedWarsGame {
         }
 
         const attackingItem = hurter.getComponent("equippable")!.getEquipment(mc.EquipmentSlot.Mainhand);
-        if (attackingItem && isKnockBackStickItem(attackingItem)) {
+        if (attackingItem && itemEqual(KNOCKBACK_STICK_ITEM, attackingItem)) {
             const x = victim.location.x - hurter.location.x;
             const z = victim.location.z - hurter.location.z;
             victim.applyKnockback(x, z, 1, 0.3);
@@ -2227,7 +2202,7 @@ export class BedWarsGame {
             const textDisplay = this.dimension.spawnEntity("amazing:text_display", loc);
             textDisplay.setDynamicProperty(BEDWARS_GAMEID_PROP, this.id);
             textDisplay[CREATED_LOC_SYM] = loc;
-            textDisplay.nameTag = `${t.colorPrefix}${capitalize(t.name)} Bed §7was destroyed by \n${TEAM_CONSTANTS[destroyerInfo.team].colorPrefix}${destroyerInfo.name} §7at §e${timeToString(analyzeTime((mc.system.currentTick - this.startTime) * 50))}`;
+            textDisplay.nameTag = `${ t.colorPrefix }${ capitalize(t.name) } Bed §7was destroyed by \n${ TEAM_CONSTANTS[destroyerInfo.team].colorPrefix }${ destroyerInfo.name } §7at §e${ timeToString(analyzeTime((mc.system.currentTick - this.startTime) * 50)) }`;
 
             if (destroyerInfo.armorDisabled) {
                 destroyerInfo.armorDisabled = false;
@@ -2374,7 +2349,7 @@ export class BedWarsGame {
         const playerInfo = this.players.get(event.source.name);
         if (!playerInfo) return;
 
-        if (isBridgeEggItem(event.itemStack)) {
+        if (itemEqual(BRIDGE_EGG_ITEM, event.itemStack)) {
             if (playerInfo.bridgeEggCooldown > 0) {
                 event.cancel = true;
                 return;
@@ -2388,7 +2363,7 @@ export class BedWarsGame {
 
             eggEntity[OWNER_SYM] = playerInfo;
             playerInfo.bridgeEggCooldown = BRIDGE_EGG_COOLDOWN;
-        } else if (isFireBallItem(event.itemStack)) {
+        } else if (itemEqual(FIRE_BALL_ITEM, event.itemStack)) {
             event.cancel = true;
             if (playerInfo.fireBallCooldown > 0) {
                 return;
@@ -2399,14 +2374,14 @@ export class BedWarsGame {
             const location = add(playerInfo.player.getHeadLocation(), scale(launchVelocity, 0.5));
             const fireball = this.dimension.spawnEntity(MinecraftEntityTypes.Fireball, location);
             const projectile = fireball.getComponent("projectile")!;
-            fireball.addTag(`team${playerInfo.team}`);
+            fireball.addTag(`team${ playerInfo.team }`);
             projectile.owner = playerInfo.player;
             fireball[OWNER_SYM] = playerInfo;
             projectile.shoot(launchVelocity);
             fireball.setDynamicProperty(BEDWARS_GAMEID_PROP, this.id);
 
             playerInfo.fireBallCooldown = FIRE_BALL_COOLDOWN;
-        } else if (isSettingsItem(event.itemStack)) {
+        } else if (itemEqual(SETTINGS_ITEM, event.itemStack)) {
             event.cancel = true;
             await sleep(0);
 
@@ -2481,8 +2456,8 @@ export class BedWarsGame {
 
             wolf.triggerEvent("Amazing:wolf_spawned");
             wolf.triggerEvent("minecraft:ageable_grow_up");
-            wolf.addTag(`team${playerInfo.team}`);
-            wolf.nameTag = `${TEAM_CONSTANTS[playerInfo.team].colorPrefix + playerInfo.name}§7's Wolf`;
+            wolf.addTag(`team${ playerInfo.team }`);
+            wolf.nameTag = `${ TEAM_CONSTANTS[playerInfo.team].colorPrefix + playerInfo.name }§7's Wolf`;
             wolf[OWNER_SYM] = playerInfo;
             wolf[SITTING_SYM] = false;
             await sleep(0);
@@ -2532,7 +2507,7 @@ export class BedWarsGame {
                 });
             if (!arrowEntity) return;
             arrowEntity[OWNER_SYM] = playerInfo;
-            arrowEntity.addTag(`team${playerInfo.team}`);
+            arrowEntity.addTag(`team${ playerInfo.team }`);
             // arrowEntity.getComponent("rideable")!.addRider(playerInfo.player);
         }
     }
@@ -2626,7 +2601,7 @@ export class BedWarsGame {
         form.title(teleportMenuTitle);
         form.body(teleportMenuBody);
         for (const iPlayerInfo of players) {
-            form.button(`${TEAM_CONSTANTS[iPlayerInfo.team].colorPrefix}${iPlayerInfo.name}`);
+            form.button(`${ TEAM_CONSTANTS[iPlayerInfo.team].colorPrefix }${ iPlayerInfo.name }`);
         }
         playerInfo.player.sendMessage(closeChatMenuMessage);
         let response: ActionFormResponse;
@@ -2705,7 +2680,7 @@ export class BedWarsGame {
             message = message.slice(1);
         }
 
-        message = `<${TEAM_CONSTANTS[senderInfo.team].colorPrefix}${sender.name}§r> ${message}`;
+        message = `<${ TEAM_CONSTANTS[senderInfo.team].colorPrefix }${ sender.name }§r> ${ message }`;
         for (const playerInfo of this.players.values()) {
             if (!globalChat && playerInfo.team != senderInfo.team) continue;
             if (playerInfo.state == PlayerState.Offline) continue;
@@ -2715,7 +2690,7 @@ export class BedWarsGame {
                 globalChatPrefix,
                 spectatorChatPrefix
             } = strings[getPlayerLang(playerInfo.player)];
-            playerInfo.player.sendMessage(`${spectate ? spectatorChatPrefix : ""}${globalChat ? globalChatPrefix : teamChatPrefix}${message}`);
+            playerInfo.player.sendMessage(`${ spectate ? spectatorChatPrefix : "" }${ globalChat ? globalChatPrefix : teamChatPrefix }${ message }`);
         }
     }
 };
@@ -2735,7 +2710,7 @@ class ActionbarManager {
     private getInstance(descriptor: number) {
         const instance = this.instances.get(descriptor);
         if (!instance) {
-            throw new Error(`Can't find the instance of descriptor "${descriptor}".`);
+            throw new Error(`Can't find the instance of descriptor "${ descriptor }".`);
         }
         return instance;
     }
@@ -2904,18 +2879,10 @@ mc.world.beforeEvents.chatSend.subscribe(async event => {
 
         minimalPlayer = Number(settingResponse.formValues![0]);
         if (minimalPlayer < 0 || !Number.isInteger(minimalPlayer)) {
-            event.sender.sendMessage(`§c"${settingResponse.formValues![0]}" is not a valid number, or a valid player count.`);
+            event.sender.sendMessage(`§c"${ settingResponse.formValues![0] }" is not a valid number, or a valid player count.`);
             return;
         }
         fillBlankTeams = settingResponse.formValues![1] as boolean;
-    } else if (event.message == "SPECIAL CODE") {
-        await sleep(0);
-        const container = event.sender.getComponent("inventory")!.container!;
-        container.addItem(makeItem(IRON_ITEM_STACK, 64));
-        container.addItem(makeItem(GOLD_ITEM_STACK, 64));
-        container.addItem(makeItem(DIAMOND_ITEM_STACK, 64));
-        container.addItem(makeItem(EMERALD_ITEM_STACK, 64));
-        return;
     } else if (event.message == "DEBUG STICK") {
         await sleep(0);
         const container = event.sender.getComponent("inventory")!.container!;

@@ -1,9 +1,9 @@
 import * as mc from "@minecraft/server";
 import {
-    IRON_ITEM_STACK,
-    GOLD_ITEM_STACK,
-    DIAMOND_ITEM_STACK,
-    EMERALD_ITEM_STACK,
+    IRON_TOKEN_ITEM,
+    GOLD_TOKEN_ITEM,
+    DIAMOND_TOKEN_ITEM,
+    EMERALD_TOKEN_ITEM,
     BedWarsGame,
     PlayerGameInformation,
     PlayerState,
@@ -613,7 +613,7 @@ const generateItemShopData: () => Menu = () => ({
                 generateBuyOneItemMenu({ local: "loyalWolfName" }, () => ({
                     cost: { ironAmount: 0, goldAmount: 0, emeraldAmount: 4, diamondAmount: 0 },
                     item: LOYAL_WOLF_ITEM
-                }), () => "textures/items/spawn_egg.png"),
+                }), () => "textures/items/egg_wolf.png"),
                 generateBuyOneItemMenu({ local: "wolfArmorName" }, () => ({
                     cost: { ironAmount: 0, goldAmount: 0, emeraldAmount: 4, diamondAmount: 0 },
                     item: WOLF_ARMOR_ITEM
@@ -848,10 +848,10 @@ function calculateTokens(container: mc.Container) {
     };
     for (const { item } of containerIterator(container)) {
         if (!item) continue;
-        if (itemEqual(item, IRON_ITEM_STACK)) tokens.ironAmount += item.amount;
-        if (itemEqual(item, GOLD_ITEM_STACK)) tokens.goldAmount += item.amount;
-        if (itemEqual(item, DIAMOND_ITEM_STACK)) tokens.diamondAmount += item.amount;
-        if (itemEqual(item, EMERALD_ITEM_STACK)) tokens.emeraldAmount += item.amount;
+        if (itemEqual(item, IRON_TOKEN_ITEM)) tokens.ironAmount += item.amount;
+        if (itemEqual(item, GOLD_TOKEN_ITEM)) tokens.goldAmount += item.amount;
+        if (itemEqual(item, DIAMOND_TOKEN_ITEM)) tokens.diamondAmount += item.amount;
+        if (itemEqual(item, EMERALD_TOKEN_ITEM)) tokens.emeraldAmount += item.amount;
     }
 
     return tokens;
@@ -898,7 +898,7 @@ function consumeToken(container: mc.Container, _tokens: TokenValue) {
     // Consume tokens
     for (const { item, index } of containerIterator(container)) {
         if (!item) continue;
-        if (itemEqual(item, IRON_ITEM_STACK)) {
+        if (itemEqual(item, IRON_TOKEN_ITEM)) {
             if (tokens.ironAmount >= item.amount) {
                 tokens.ironAmount -= item.amount;
                 container.setItem(index); // clear the slot
@@ -908,7 +908,7 @@ function consumeToken(container: mc.Container, _tokens: TokenValue) {
                 container.setItem(index, item);
             }
         }
-        if (itemEqual(item, GOLD_ITEM_STACK)) {
+        if (itemEqual(item, GOLD_TOKEN_ITEM)) {
             if (tokens.goldAmount >= item.amount) {
                 tokens.goldAmount -= item.amount;
                 container.setItem(index); // clear the slot
@@ -918,7 +918,7 @@ function consumeToken(container: mc.Container, _tokens: TokenValue) {
                 container.setItem(index, item);
             }
         }
-        if (itemEqual(item, DIAMOND_ITEM_STACK)) {
+        if (itemEqual(item, DIAMOND_TOKEN_ITEM)) {
             if (tokens.diamondAmount >= item.amount) {
                 tokens.diamondAmount -= item.amount;
                 container.setItem(index); // clear the slot
@@ -928,7 +928,7 @@ function consumeToken(container: mc.Container, _tokens: TokenValue) {
                 container.setItem(index, item);
             }
         }
-        if (itemEqual(item, EMERALD_ITEM_STACK)) {
+        if (itemEqual(item, EMERALD_TOKEN_ITEM)) {
             if (tokens.emeraldAmount >= item.amount) {
                 tokens.emeraldAmount -= item.amount;
                 container.setItem(index); // clear the slot

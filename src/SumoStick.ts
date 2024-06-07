@@ -6,7 +6,6 @@ import {
     MinecraftEntityTypes,
     MinecraftItemTypes
 } from '@minecraft/vanilla-data';
-import { getGameMode } from './utility.js';
 
 export const SUMO_STICK_ITEM = (() => {
     const item = new mc.ItemStack(MinecraftItemTypes.Stick, 1);
@@ -118,7 +117,7 @@ mc.world.beforeEvents.itemUse.subscribe((event) => {
 mc.system.runInterval(() => {
     const dimensions: Set<mc.Dimension> = new Set();
     for (const player of mc.world.getAllPlayers()) {
-        if (getGameMode(player) == mc.GameMode.spectator) continue;
+        if (player.getGameMode() == mc.GameMode.spectator) continue;
         dimensions.add(player.dimension);
 
         if (player[sumoStickCooldownSym] === undefined) {

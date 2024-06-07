@@ -1,0 +1,15 @@
+{
+	"resource_pack_name": "Amazing",
+	"texture_name": "atlas.items",
+	"texture_data": {
+		"fireball": { "textures": "textures/items/fireball" },
+		"bedwars_settings": { "textures": "textures/items/clock_item" },
+		"bridge_egg": { "textures": "textures/items/egg" },
+		"player_tracker": { "textures": "textures/blocks/deadbush" },
+		"knockback_stick": { "textures": "textures/items/stick" },
+		"iron_token": { "textures": "textures/items/iron_ingot" },
+		"gold_token": { "textures": "textures/items/gold_ingot" },
+		"diamond_token": { "textures": "textures/items/diamond" },
+		"emerald_token": { "textures": "textures/items/emerald" }
+	}
+}

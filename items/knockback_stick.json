@@ -2,11 +2,11 @@
 	"format_version": "1.20.80",
 	"minecraft:item": {
 		"description": {
-			"identifier": "amazing:fireball"
+			"identifier": "amazing:knockback_stick"
 		},
 		"components": {
 			"minecraft:icon": {
-				"textures": { "default": "fireball" }
+				"textures": { "default": "knockback_stick" }
 			}
 		}
 	}

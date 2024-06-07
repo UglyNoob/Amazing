@@ -6,23 +6,7 @@
 		},
 		"components": {
 			"minecraft:icon": {
-				"texture": "bridge_egg"
-			},
-			"minecraft:on_use": {
-				"on_use": {
-					"event": "throw"
-				}
-			}
-		},
-		"event": {
-			"throw": {
-				"shoot": {
-					"projectile": "minecraft:egg",
-					"launch_power": 2,
-					"angle_offset": 1
-				},
-				"swing": {},
-				"decrement_stack": {}
+				"textures": { "default": "bridge_egg" }
 			}
 		}
 	}

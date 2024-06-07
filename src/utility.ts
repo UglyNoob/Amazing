@@ -24,19 +24,6 @@ export function getPlayerByName(name: string): mc.Player | undefined {
     return mc.world.getPlayers({ name })[0];
 }
 
-export function getGameMode(player: mc.Player): mc.GameMode {
-    if (player.getGameMode) return player.getGameMode();
-    for (let gameMode of Object.values(mc.GameMode)) {
-        if (player.matches({ gameMode: gameMode })) return gameMode;
-    }
-    throw new Error("Player's gamemode doesn't match");
-}
-
-export function setGameMode(player: mc.Player, gameMode: mc.GameMode) {
-    if (player.setGameMode) return player.setGameMode(gameMode);
-    player.runCommand(`gamemode ${ gameMode }`);
-}
-
 export function capitalize(str: string) {
     return str.charAt(0).toUpperCase() + str.slice(1);
 }
@@ -228,8 +215,7 @@ export function consumeMainHandItem(player: mc.Player, consumeOnCreative = false
     if (consumeOnCreative) {
         consume = true;
     } else {
-        const gameMode = getGameMode(player);
-        switch (gameMode) {
+        switch (player.getGameMode()) {
             case mc.GameMode.adventure:
             case mc.GameMode.survival:
                 consume = true;

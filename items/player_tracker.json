@@ -6,7 +6,7 @@
 		},
 		"components": {
 			"minecraft:icon": {
-				"texture": "textures/blocks/deadbush"
+				"textures": { "default": "player_tracker" }
 			}
 		}
 	}
