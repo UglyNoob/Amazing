@@ -42,7 +42,7 @@ async function main() {
         copyFolder("entities", "out/AmazingBP/entities"),
         copyFolder("items", "out/AmazingBP/items"),
         copyFolder("structures", "out/AmazingBP/structures"),
-        copyFolder("resource_pack", "out/AmazingRP"),
+        copyFolder("resource_pack", "out/AmazingRP")
     ]);
 
     console.log("Publish complete");
