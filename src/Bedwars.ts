@@ -29,7 +29,9 @@ export const GOLD_TOKEN_ITEM = new mc.ItemStack("amazing:gold_token");
 export const DIAMOND_TOKEN_ITEM = new mc.ItemStack("amazing:diamond_token");
 export const EMERALD_TOKEN_ITEM = new mc.ItemStack("amazing:emerald_token");
 
-export const BRIDGE_EGG_ITEM = new mc.ItemStack("amazing:bridge_egg");
+export const BRIDGE_EGG_ITEM = new mc.ItemStack("minecraft:egg");
+BRIDGE_EGG_ITEM.nameTag = "§2Bridge Egg";
+BRIDGE_EGG_ITEM.setLore(["", "Build a bridge!"])
 const BRIDGE_EGG_COOLDOWN = 20; // in ticks
 
 export const FIRE_BALL_ITEM = new mc.ItemStack("amazing:fireball");
@@ -93,11 +95,8 @@ export const KNOCKBACK_STICK_ITEM = new mc.ItemStack("amazing:knockback_stick");
 
 export const TRACKER_ITEM = new mc.ItemStack("amazing:player_tracker");
 
-function isTrackerItem(item: mc.ItemStack) {
-    return item.typeId == "amazing:player_tracker";
-}
-
 const SETTINGS_ITEM = new mc.ItemStack("amazing:bedwars_settings");
+SETTINGS_ITEM.lockMode = mc.ItemLockMode.inventory;
 
 const OWNER_SYM = Symbol("owner of the entity");
 const SITTING_SYM = Symbol("is wolf sitting");
@@ -1518,7 +1517,7 @@ export class BedWarsGame {
                             equipment.getEquipmentSlot(slotName).setItem();
                             continue;
                         }
-                        if (playerInfo.trackingTarget && isTrackerItem(item)) {
+                        if (playerInfo.trackingTarget && itemEqual(TRACKER_ITEM, item)) {
                             trackerWorking = true;
                             if (mc.system.currentTick % 5 == 0) {
                                 const distanceVec = subtract(playerInfo.trackingTarget.player.location, player.location);
@@ -2379,14 +2378,14 @@ export class BedWarsGame {
             fireball[OWNER_SYM] = playerInfo;
             projectile.shoot(launchVelocity);
             fireball.setDynamicProperty(BEDWARS_GAMEID_PROP, this.id);
-
+            consumeMainHandItem(playerInfo.player);
             playerInfo.fireBallCooldown = FIRE_BALL_COOLDOWN;
         } else if (itemEqual(SETTINGS_ITEM, event.itemStack)) {
             event.cancel = true;
             await sleep(0);
 
             this.openSettingsMenu(playerInfo.player);
-        } else if (isTrackerItem(event.itemStack)) {
+        } else if (itemEqual(TRACKER_ITEM, event.itemStack)) {
             event.cancel = true;
 
             if (playerInfo.trackerChangeTargetCooldown > 0) return;
@@ -2462,7 +2461,7 @@ export class BedWarsGame {
             wolf[SITTING_SYM] = false;
             await sleep(0);
             wolf.getComponent("color")!.value = TEAM_CONSTANTS[playerInfo.team].color;
-        } else if (isTrackerItem(event.itemStack)) {
+        } else if (itemEqual(TRACKER_ITEM, event.itemStack)) {
             event.cancel = true;
         }
     }
