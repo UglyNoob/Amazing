@@ -30,8 +30,8 @@ export const DIAMOND_TOKEN_ITEM = new mc.ItemStack("amazing:diamond_token");
 export const EMERALD_TOKEN_ITEM = new mc.ItemStack("amazing:emerald_token");
 
 export const BRIDGE_EGG_ITEM = new mc.ItemStack("minecraft:egg");
-BRIDGE_EGG_ITEM.nameTag = "§2Bridge Egg";
-BRIDGE_EGG_ITEM.setLore(["", "Build a bridge!"])
+BRIDGE_EGG_ITEM.nameTag = "§r§2Bridge Egg";
+BRIDGE_EGG_ITEM.setLore(["", "§rBuild a bridge!"])
 const BRIDGE_EGG_COOLDOWN = 20; // in ticks
 
 export const FIRE_BALL_ITEM = new mc.ItemStack("amazing:fireball");
