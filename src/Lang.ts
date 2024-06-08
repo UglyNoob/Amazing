@@ -213,7 +213,7 @@ strings[Lang.en_US] = {
     openEnemyChestMessage: "§cYou can't open enemy's chest.",
     teamPurchaseMessage: "%s%s §ahas purchased §6%s",
     purchaseMessage: "§aYou purchased §6%s",
-    trapActivatedTitle: "§cTRAP ACTIVATED!",
+    trapActivatedTitle: "§cTRAP TRIGGERED!",
     alarmTrapSubtitle: "%s%s §7has entered your base!",
     trapActivatedMessage: "§7%s §chas been activated!",
     activatingTrapWarning: "§7You have activated §e%s!",
