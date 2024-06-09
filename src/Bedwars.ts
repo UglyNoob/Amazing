@@ -3030,7 +3030,7 @@ mc.system.afterEvents.scriptEventReceive.subscribe(event => {
             const multiplier = -d * d + 25;
             if (multiplier > 0) {
                 const { x, z } = subtract(player.location, explosionLocation);
-                player.applyKnockback(x, z, multiplier / 17.5, multiplier / 25);
+                player.applyKnockback(x, z, multiplier / 12.5, multiplier / 25);
             }
         }
         fireball.kill();
