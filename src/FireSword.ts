@@ -138,7 +138,7 @@ mc.system.runInterval(() => { // Runs every tick
         if (player[fireSwordCooldownSymbol] > 0) --player[fireSwordCooldownSymbol];
 
         const inventory = player.getComponent("minecraft:inventory")!.container!;
-        const selectedItem = inventory.getItem(player.selectedSlot);
+        const selectedItem = inventory.getItem(player.selectedSlotIndex);
         if (selectedItem && isFireSword(selectedItem)) {
             if (mc.system.currentTick % 4 == 0) {
                 showPlayerFireSwordCooldownStatus(player);

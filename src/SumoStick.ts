@@ -95,7 +95,7 @@ mc.world.beforeEvents.itemUse.subscribe((event) => {
         const cooldown = player[sumoStickCooldownSym];
         if (cooldown === undefined) return;
         if (cooldown != 0) {
-            player.onScreenDisplay.setActionBar(`§1§lEmerging... ${ (cooldown / 20).toFixed(1) }s`);
+            player.onScreenDisplay.setActionBar(`§1§lEmerging... ${(cooldown / 20).toFixed(1)}s`);
             return;
         }
 
@@ -127,12 +127,12 @@ mc.system.runInterval(() => {
 
         if (mc.system.currentTick % 4 == 0) {
             const inventory = player.getComponent("minecraft:inventory")!.container!;
-            const selectedItem = inventory.getItem(player.selectedSlot);
+            const selectedItem = inventory.getItem(player.selectedSlotIndex);
             if (selectedItem && isItemSumoStick(selectedItem)) {
                 if (player[sumoStickCooldownSym] == 0)
                     player.onScreenDisplay.setActionBar("§l§eSumo Stick §bis ready");
                 else
-                    player.onScreenDisplay.setActionBar(`§1§lEmerging... ${ (player[sumoStickCooldownSym] / 20).toFixed(1) }s`);
+                    player.onScreenDisplay.setActionBar(`§1§lEmerging... ${(player[sumoStickCooldownSym] / 20).toFixed(1)}s`);
             }
         }
     }

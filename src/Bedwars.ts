@@ -790,10 +790,10 @@ export class BedWarsGame {
     }
 
     setPlayer(player: mc.Player, teamType: TeamType) {
-        if (this.map.teams.find(t => t.type == teamType) == undefined) throw new Error(`No such team(${ TEAM_CONSTANTS[teamType].name }).`);
+        if (this.map.teams.find(t => t.type == teamType) == undefined) throw new Error(`No such team(${TEAM_CONSTANTS[teamType].name}).`);
 
         player.getTags().filter(s => s.startsWith("team")).forEach(s => player.removeTag(s));
-        player.addTag(`team${ teamType }`);
+        player.addTag(`team${teamType}`);
         let playerInfo = this.players.get(player.name);
         if (playerInfo) {
             playerInfo.team = teamType;
@@ -926,7 +926,7 @@ export class BedWarsGame {
                 checkForBlocks: false
             });
             itemShopVillager[CREATED_LOC_SYM] = itemShopLocation;
-            itemShopVillager.nameTag = `§6§lItem Shop\n§r§7of ${ t.colorPrefix + capitalize(t.name) }`;
+            itemShopVillager.nameTag = `§6§lItem Shop\n§r§7of ${t.colorPrefix + capitalize(t.name)}`;
             itemShopVillager[SHOP_TYPE_SYM] = "item";
 
             teamShopVillager.teleport(teamShopLocation, {
@@ -936,7 +936,7 @@ export class BedWarsGame {
                 checkForBlocks: false
             });
             teamShopVillager[CREATED_LOC_SYM] = teamShopLocation;
-            teamShopVillager.nameTag = `§3§lTeam Shop\n§r§7of ${ t.colorPrefix + capitalize(t.name) }`;
+            teamShopVillager.nameTag = `§3§lTeam Shop\n§r§7of ${t.colorPrefix + capitalize(t.name)}`;
             teamShopVillager[SHOP_TYPE_SYM] = "team";
         }
         for (const { teamChestLocation, bedLocation: mapBedLocation, type: teamType } of this.map.teams) {
@@ -945,14 +945,14 @@ export class BedWarsGame {
                 if (teamChestContainer) {
                     teamChestContainer.clearAll();
                 } else {
-                    throw new Error(`Team chest of team ${ TEAM_CONSTANTS[teamType].name } does not exist at ${ toString(teamChestLocation) }`);
+                    throw new Error(`Team chest of team ${TEAM_CONSTANTS[teamType].name} does not exist at ${toString(teamChestLocation)}`);
                 }
             }
 
             // Place the bed
             const bedLocation = this.fixOrigin(mapBedLocation);
             if (this.teams.get(teamType)!.state != TeamState.BedAlive) {
-                this.dimension.fillBlocks(bedLocation[0], bedLocation[1], MinecraftBlockTypes.Air);
+                this.dimension.fillBlocks(new mc.BlockVolume(bedLocation[0], bedLocation[1]), MinecraftBlockTypes.Air);
                 continue;
             }
             const directionVector = subtract(bedLocation[1], bedLocation[0]);
@@ -969,7 +969,7 @@ export class BedWarsGame {
             const permutation = mc.BlockPermutation.resolve(MinecraftBlockTypes.Bed, {
                 direction
             });
-            this.dimension.fillBlocks(bedLocation[1], bedLocation[1], permutation);
+            this.dimension.fillBlocks(new mc.BlockVolume(bedLocation[1], bedLocation[1]), permutation);
         }
 
         const mapArea = this.fixOrigin(this.map.playableArea);
@@ -1000,7 +1000,7 @@ export class BedWarsGame {
         let index = 2;
         for (const [teamType, { state }] of this.teams) {
             const t = TEAM_CONSTANTS[teamType];
-            let result = `${ t.colorPrefix }${ t.name.charAt(0).toUpperCase() } §r${ capitalize(t.name) }: `;
+            let result = `${t.colorPrefix}${t.name.charAt(0).toUpperCase()} §r${capitalize(t.name)}: `;
             switch (state) {
                 case TeamState.BedAlive:
                     // result += "§a✔";
@@ -1016,12 +1016,12 @@ export class BedWarsGame {
                         if (playerInfo.team != teamType) continue;
                         if (this.isPlayerPlaying(playerInfo)) ++aliveCount;
                     }
-                    result += `§a${ aliveCount }`;
+                    result += `§a${aliveCount}`;
             }
             this.scoreObj.setScore(result, ++index);
         }
         this.scoreObj.setScore(" ", ++index);
-        this.scoreObj.setScore(`§a${ timeToString(analyzeTime((mc.system.currentTick - this.startTime) * 50)) }`, ++index);
+        this.scoreObj.setScore(`§a${timeToString(analyzeTime((mc.system.currentTick - this.startTime) * 50))}`, ++index);
     }
 
     private respawnPlayer(playerInfo: PlayerGameInformation) {
@@ -1305,7 +1305,7 @@ export class BedWarsGame {
                 }
                 const teamMapInfo = this.map.teams.find(t => t.type == teamType)!;
                 const bedLocation = this.fixOrigin(teamMapInfo.bedLocation);
-                this.dimension.fillBlocks(bedLocation[0], bedLocation[1], MinecraftBlockTypes.Air);
+                this.dimension.fillBlocks(new mc.BlockVolume(bedLocation[0], bedLocation[1]), MinecraftBlockTypes.Air);
             }
         }
 
@@ -1340,7 +1340,7 @@ export class BedWarsGame {
             }
             for (const playerInfo of this.players.values()) {
                 for (const loc of playerInfo.placement) {
-                    this.dimension.fillBlocks(loc, loc, MinecraftBlockTypes.Air);
+                    this.dimension.fillBlocks(new mc.BlockVolume(loc, loc), MinecraftBlockTypes.Air);
                 }
             }
         }
@@ -1647,7 +1647,7 @@ export class BedWarsGame {
                     gen.indicator[CREATED_LOC_SYM] = loc;
                     gen.indicator.setDynamicProperty(BEDWARS_GAMEID_PROP, this.id);
                 }
-                gen.indicator.nameTag = `§eSpawns in §c${ gen.remainingCooldown / 20 } §eseconds`;
+                gen.indicator.nameTag = `§eSpawns in §c${gen.remainingCooldown / 20} §eseconds`;
             }
             if (gen.remainingCooldown > 0) {
                 --gen.remainingCooldown;
@@ -1758,7 +1758,7 @@ export class BedWarsGame {
                 const existingBlock = this.dimension.getBlock(location);
                 if (this.isBlockLocationPlayerPlacable(location) &&
                     (!existingBlock || existingBlock.type.id == MinecraftBlockTypes.Air)) {
-                    this.dimension.fillBlocks(location, location, TEAM_CONSTANTS[ownerInfo.team].woolName);
+                    this.dimension.fillBlocks(new mc.BlockVolume(location, location), TEAM_CONSTANTS[ownerInfo.team].woolName);
                     ownerInfo.placement.push(location);
                 }
             });
@@ -1800,7 +1800,7 @@ export class BedWarsGame {
                     const arrow = this.dimension.spawnEntity(MinecraftEntityTypes.Arrow, launchLocation);
                     const projectile = arrow.getComponent("projectile")!;
                     projectile.owner = wolf;
-                    arrow.addTag(`team${ ownerInfo.team }`);
+                    arrow.addTag(`team${ownerInfo.team}`);
                     arrow[OWNER_SYM] = ownerInfo;
                     projectile.shoot(scale(normalize(subtract(targetInfo.player.getHeadLocation(), launchLocation)), 1.5));
                 }
@@ -2004,7 +2004,7 @@ export class BedWarsGame {
 
     private resetNameTag(playerInfo: PlayerGameInformation) {
         const health = playerInfo.player.getComponent("health")!.currentValue.toFixed(0);
-        playerInfo.player.nameTag = `${ TEAM_CONSTANTS[playerInfo.team].colorPrefix }${ playerInfo.name }\n§c${ health }`;
+        playerInfo.player.nameTag = `${TEAM_CONSTANTS[playerInfo.team].colorPrefix}${playerInfo.name}\n§c${health}`;
     }
 
     afterEntityHurt(event: mc.EntityHurtAfterEvent) {
@@ -2193,7 +2193,7 @@ export class BedWarsGame {
 
             /* Clear the bed */
             const bedLocations = this.fixOrigin(destroyedTeam.bedLocation);
-            event.dimension.fillBlocks(...bedLocations, "minecraft:air");
+            event.dimension.fillBlocks(new mc.BlockVolume(...bedLocations), "minecraft:air");
 
             const t = TEAM_CONSTANTS[destroyedTeam.type];
 
@@ -2201,7 +2201,7 @@ export class BedWarsGame {
             const textDisplay = this.dimension.spawnEntity("amazing:text_display", loc);
             textDisplay.setDynamicProperty(BEDWARS_GAMEID_PROP, this.id);
             textDisplay[CREATED_LOC_SYM] = loc;
-            textDisplay.nameTag = `${ t.colorPrefix }${ capitalize(t.name) } Bed §7was destroyed by \n${ TEAM_CONSTANTS[destroyerInfo.team].colorPrefix }${ destroyerInfo.name } §7at §e${ timeToString(analyzeTime((mc.system.currentTick - this.startTime) * 50)) }`;
+            textDisplay.nameTag = `${t.colorPrefix}${capitalize(t.name)} Bed §7was destroyed by \n${TEAM_CONSTANTS[destroyerInfo.team].colorPrefix}${destroyerInfo.name} §7at §e${timeToString(analyzeTime((mc.system.currentTick - this.startTime) * 50))}`;
 
             if (destroyerInfo.armorDisabled) {
                 destroyerInfo.armorDisabled = false;
@@ -2373,7 +2373,7 @@ export class BedWarsGame {
             const location = add(playerInfo.player.getHeadLocation(), scale(launchVelocity, 0.5));
             const fireball = this.dimension.spawnEntity(MinecraftEntityTypes.Fireball, location);
             const projectile = fireball.getComponent("projectile")!;
-            fireball.addTag(`team${ playerInfo.team }`);
+            fireball.addTag(`team${playerInfo.team}`);
             projectile.owner = playerInfo.player;
             fireball[OWNER_SYM] = playerInfo;
             projectile.shoot(launchVelocity);
@@ -2442,21 +2442,17 @@ export class BedWarsGame {
         if (event.itemStack.typeId == MinecraftItemTypes.WolfSpawnEgg) {
             await sleep(0);
 
-            let wolfLocation = add(event.block.location, event.faceLocation);
+            const wolfLocation = add(event.block.location, event.faceLocation);
             const wolf = smallest(this.dimension.getEntities({ type: "minecraft:wolf" }).filter(e => !e[OWNER_SYM]), ({ location: a }, { location: b }) => {
                 return vecDistance(a, wolfLocation) - vecDistance(b, wolfLocation);
             });
             if (!wolf) return;
-            wolfLocation = wolf.location;
-            wolf.teleport(playerInfo.player.location);
-            // tame() method would make the wolf tamed to the nearest player
-            wolf.getComponent("tameable")!.tame();
-            wolf.teleport(wolfLocation);
+            wolf.getComponent("tameable")!.tame(playerInfo.player);
 
             wolf.triggerEvent("Amazing:wolf_spawned");
             wolf.triggerEvent("minecraft:ageable_grow_up");
-            wolf.addTag(`team${ playerInfo.team }`);
-            wolf.nameTag = `${ TEAM_CONSTANTS[playerInfo.team].colorPrefix + playerInfo.name }§7's Wolf`;
+            wolf.addTag(`team${playerInfo.team}`);
+            wolf.nameTag = `${TEAM_CONSTANTS[playerInfo.team].colorPrefix + playerInfo.name}§7's Wolf`;
             wolf[OWNER_SYM] = playerInfo;
             wolf[SITTING_SYM] = false;
             await sleep(0);
@@ -2506,7 +2502,7 @@ export class BedWarsGame {
                 });
             if (!arrowEntity) return;
             arrowEntity[OWNER_SYM] = playerInfo;
-            arrowEntity.addTag(`team${ playerInfo.team }`);
+            arrowEntity.addTag(`team${playerInfo.team}`);
             // arrowEntity.getComponent("rideable")!.addRider(playerInfo.player);
         }
     }
@@ -2600,7 +2596,7 @@ export class BedWarsGame {
         form.title(teleportMenuTitle);
         form.body(teleportMenuBody);
         for (const iPlayerInfo of players) {
-            form.button(`${ TEAM_CONSTANTS[iPlayerInfo.team].colorPrefix }${ iPlayerInfo.name }`);
+            form.button(`${TEAM_CONSTANTS[iPlayerInfo.team].colorPrefix}${iPlayerInfo.name}`);
         }
         playerInfo.player.sendMessage(closeChatMenuMessage);
         let response: ActionFormResponse;
@@ -2679,7 +2675,7 @@ export class BedWarsGame {
             message = message.slice(1);
         }
 
-        message = `<${ TEAM_CONSTANTS[senderInfo.team].colorPrefix }${ sender.name }§r> ${ message }`;
+        message = `<${TEAM_CONSTANTS[senderInfo.team].colorPrefix}${sender.name}§r> ${message}`;
         for (const playerInfo of this.players.values()) {
             if (!globalChat && playerInfo.team != senderInfo.team) continue;
             if (playerInfo.state == PlayerState.Offline) continue;
@@ -2689,7 +2685,7 @@ export class BedWarsGame {
                 globalChatPrefix,
                 spectatorChatPrefix
             } = strings[getPlayerLang(playerInfo.player)];
-            playerInfo.player.sendMessage(`${ spectate ? spectatorChatPrefix : "" }${ globalChat ? globalChatPrefix : teamChatPrefix }${ message }`);
+            playerInfo.player.sendMessage(`${spectate ? spectatorChatPrefix : ""}${globalChat ? globalChatPrefix : teamChatPrefix}${message}`);
         }
     }
 };
@@ -2709,7 +2705,7 @@ class ActionbarManager {
     private getInstance(descriptor: number) {
         const instance = this.instances.get(descriptor);
         if (!instance) {
-            throw new Error(`Can't find the instance of descriptor "${ descriptor }".`);
+            throw new Error(`Can't find the instance of descriptor "${descriptor}".`);
         }
         return instance;
     }
@@ -2878,7 +2874,7 @@ mc.world.beforeEvents.chatSend.subscribe(async event => {
 
         minimalPlayer = Number(settingResponse.formValues![0]);
         if (minimalPlayer < 0 || !Number.isInteger(minimalPlayer)) {
-            event.sender.sendMessage(`§c"${ settingResponse.formValues![0] }" is not a valid number, or a valid player count.`);
+            event.sender.sendMessage(`§c"${settingResponse.formValues![0]}" is not a valid number, or a valid player count.`);
             return;
         }
         fillBlankTeams = settingResponse.formValues![1] as boolean;

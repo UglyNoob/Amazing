@@ -30,9 +30,9 @@ export function setupGameTest(x: number, z: number, dimension: mc.Dimension) {
     z = Math.floor(z);
     x -= x % 32;
     z -= z % 32;
-    dimension.fillBlocks({ x: x, y: 317, z: z + 3 }, { x: x, y: 317, z: z + 3 }, MinecraftBlockTypes.Glass);
-    dimension.fillBlocks({ x: x, y: 318, z: z + 3 }, { x: x, y: 319, z: z + 3 }, MinecraftBlockTypes.Air);
-    dimension.runCommandAsync(`execute positioned ${ x } 319 ${ z } run gametest run AmazingSimulatedPlayerFunctionalityImplementation:Implementation`);
+    dimension.fillBlocks(new mc.BlockVolume({ x: x, y: 317, z: z + 3 }, { x: x, y: 317, z: z + 3 }), MinecraftBlockTypes.Glass);
+    dimension.fillBlocks(new mc.BlockVolume({ x: x, y: 318, z: z + 3 }, { x: x, y: 319, z: z + 3 }), MinecraftBlockTypes.Air);
+    dimension.runCommandAsync(`execute positioned ${x} 319 ${z} run gametest run AmazingSimulatedPlayerFunctionalityImplementation:Implementation`);
 }
 
 mc.world.beforeEvents.chatSend.subscribe(event => {

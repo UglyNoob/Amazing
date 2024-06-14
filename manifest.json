@@ -5,7 +5,7 @@
 		"description": "Just amazing",
 		"uuid": "4565303a-8b4a-4450-b2a4-2d97c753a7f6",
 		"version": [ 1, 0, 0 ],
-		"min_engine_version": [ 1, 20, 80 ]
+		"min_engine_version": [ 1, 21, 0 ]
 	},
 	"modules": [
 		{

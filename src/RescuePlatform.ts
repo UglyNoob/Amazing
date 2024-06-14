@@ -104,7 +104,7 @@ function tryAddingPlatform(location: mc.Vector3, dimension: mc.Dimension) {
             y: location.y,
             z: location.z + Math.floor(i / 5)
         };
-        dimension.fillBlocks(loc, loc, MinecraftBlockTypes.Slime);
+        dimension.fillBlocks(new mc.BlockVolume(loc, loc), MinecraftBlockTypes.Slime);
     }
     return succeed ? {
         location,
@@ -121,7 +121,7 @@ function removePlatform(platform: AlivePlatform) {
             if (!platform.blocks[x + z * 5]) continue;
             loc.x = platform.location.x + x;
             loc.z = platform.location.z + z;
-            platform.dimension.fillBlocks(loc, loc, MinecraftBlockTypes.Air);
+            platform.dimension.fillBlocks(new mc.BlockVolume(loc, loc), MinecraftBlockTypes.Air);
         }
     }
 }

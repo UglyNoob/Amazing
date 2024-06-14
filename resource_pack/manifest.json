@@ -5,7 +5,7 @@
 		"name": "Amazing Resource Pack",
 		"uuid": "a4507e6e-aac5-4442-a024-708ce6fe2878",
 		"version": [1, 0, 0],
-		"min_engine_version": [1, 20, 80]
+		"min_engine_version": [1, 21, 0]
 	},
 	"modules": [
 		{
