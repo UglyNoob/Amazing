@@ -2933,7 +2933,7 @@ mc.world.beforeEvents.chatSend.subscribe(async event => {
         }
     }
     game.start();
-    globalThis.game = game;
+    (globalThis as any).game = game;
 });
 
 mc.world.afterEvents.entityDie.subscribe(event => {
