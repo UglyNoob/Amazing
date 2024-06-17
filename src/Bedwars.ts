@@ -1891,12 +1891,14 @@ export class BedWarsGame {
             victimInfo.state = PlayerState.dead;
         }
         let killerStrings: Strings | null = null;
-        killerInfo && killerInfo.state != PlayerState.Offline && (killerStrings = strings[getPlayerLang(killerInfo.player)]);
+        if(killerInfo && killerInfo.state != PlayerState.Offline) {
+            killerStrings = strings[getPlayerLang(killerInfo.player)];
+        }
 
         if (this.teams.get(victimInfo.team)!.state == TeamState.BedAlive) {
             if (killerInfo) {
                 ++killerInfo.killCount;
-                if(killerString) {
+                if(killerStrings) {
                     killerInfo.actionbar.add(sprintf(
                         killerStrings.killNotification,
                         TEAM_CONSTANTS[victimInfo.team].colorPrefix,
@@ -1913,7 +1915,7 @@ export class BedWarsGame {
                     victimColor: TEAM_CONSTANTS[victimInfo.team].colorPrefix,
                     victim: victimInfo.name
                 });
-                if(killerString) {
+                if(killerStrings) {
                     killerInfo.actionbar.add(sprintf(
                         killerStrings.finalKillNotification,
                         TEAM_CONSTANTS[victimInfo.team].colorPrefix,
