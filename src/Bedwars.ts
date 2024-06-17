@@ -1389,6 +1389,7 @@ export class BedWarsGame {
             stayDuration: 50,
             fadeOutDuration: 10
         });
+        playerInfo.player.nameTag = `${TEAM_CONSTANTS[playerInfo.team].colorPrefix}${playerInfo.player.name}`;
     }
 
     tickEvent() {
