@@ -307,6 +307,8 @@ const WIND_CHARGE_ITEM = new mc.ItemStack(MinecraftItemTypes.WindCharge, 1);
 const WOLF_ARMOR_ITEM = new mc.ItemStack(MinecraftItemTypes.WolfArmor, 1);
 const LOYAL_WOLF_ITEM = new mc.ItemStack(MinecraftItemTypes.WolfSpawnEgg, 1);
 const HARDENED_CLAY_ITEM = new mc.ItemStack(MinecraftItemTypes.HardenedClay, 16);
+const SHEARS_ITEM = new mc.ItemStack(MinecraftItemTypes.Shears);
+SHEARS_ITEM.lockMode = mc.ItemLockMode.inventory;
 const BOW_POWERI_ITEM = (() => {
     const i = new mc.ItemStack(MinecraftItemTypes.Bow);
     i.getComponent("enchantable")!.addEnchantment({
@@ -1099,7 +1101,7 @@ function performAction(action: Action, playerInfo: PlayerGameInformation, teamIn
             break execute;
         }
         consumeToken(container, action.cost);
-        container.addItem(new mc.ItemStack(MinecraftItemTypes.Shears));
+        container.addItem(SHEARS_ITEM);
         player.sendMessage(sprintf(purchaseMessage, strs.shearsName));
         playerInfo.hasShear = true;
         result = true;
