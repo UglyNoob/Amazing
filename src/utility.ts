@@ -40,8 +40,8 @@ function realTypeof(value: any) {
 async function _showObjectToPlayer(player: mc.Player, object: any, deriving: any): Promise<boolean> {
     const data = new ui.ActionFormData();
     if (isPrimitive(object)) {
-        data.title(`Primitive ${ realTypeof(object) }`);
-        data.body(`§b${ object }`);
+        data.title(`Primitive ${realTypeof(object)}`);
+        data.body(`§b${object}`);
         data.button("§m§lBack");
         let response = await data.show(player);
         return response.canceled;
@@ -59,24 +59,24 @@ async function _showObjectToPlayer(player: mc.Player, object: any, deriving: any
     hasBackButton && data.button("§m§lBack→");
     hasCallButton && data.button("§sCall with No Argument");
 
-    let bodyText = `§pContent of §n${ objectName }§p:`;
+    let bodyText = `§pContent of §n${objectName}§p:`;
     const childObjects = [];
     const childFunctions: Function[] = [];
     const childFunctionNames: string[] = [];
     for (let key of Object.getOwnPropertyNames(object)) {
         const value = Reflect.get(object, key, deriving ?? object);
         if (isPrimitive(value)) {
-            bodyText += `\n§6Property §e${ key }§6 as §a${ typeof value }§6: §b${ value }\n`;
+            bodyText += `\n§6Property §e${key}§6 as §a${typeof value}§6: §b${value}\n`;
         } else if (typeof value == "function") {
             childFunctionNames.push(key);
             childFunctions.push(value);
         } else { // handle non-function object
             childObjects.push(value);
-            data.button(`§n${ getObjectName(value) } §e${ key }`);
+            data.button(`§n${getObjectName(value)} §e${key}`);
         }
     }
     for (let name of childFunctionNames) {
-        data.button(`§sFunction §e${ name }`);
+        data.button(`§sFunction §e${name}`);
     }
     data.body(bodyText);
 
@@ -113,7 +113,7 @@ async function _showObjectToPlayer(player: mc.Player, object: any, deriving: any
                 value = object.call(deriving);
             } catch (e) {
                 if (e instanceof Error) {
-                    value = `§c${ e.name }: ${ e.message }\n${ e?.stack }`;
+                    value = `§c${e.name}: ${e.message}\n${e?.stack}`;
                 } else {
                     value = e;
                 }
@@ -257,6 +257,24 @@ export function stackFirstContainerAdd(container: mc.Container, item: mc.ItemSta
     return container.addItem(tempItem);
 }
 
+export function givePlayerItems(player: mc.Player, item: mc.ItemStack): void;
+export function givePlayerItems(player: mc.Player, items: mc.ItemStack[]): void;
+
+export function givePlayerItems(player: mc.Player, items: mc.ItemStack | mc.ItemStack[]) {
+    const container = player.getComponent("inventory")!.container!;
+    if (!Array.isArray(items)) {
+        items = [items];
+    }
+    for (const item of items) {
+        const leftover = stackFirstContainerAdd(container, item);
+        if (leftover) { // if failed to add item
+            // spawn the item as entity
+            const entity = player.dimension.spawnItem(leftover, player.location);
+            entity.applyImpulse(v3.scale(entity.getVelocity(), -1));
+        }
+    }
+}
+
 export function sleep(ticks: number): Promise<void> {
     if (ticks)
         return new Promise(resolve => mc.system.runTimeout(resolve, ticks));
@@ -298,7 +316,7 @@ export function timeToString({ minutes, seconds }: {
     if (secondsStr.length == 1) secondsStr = "0" + secondsStr;
     let minutesStr = minutes.toString();
     if (minutesStr.length == 1) minutesStr = "0" + minutesStr;
-    return `${ minutesStr }:${ secondsStr }`;
+    return `${minutesStr}:${secondsStr}`;
 }
 
 export function vectorCompare(a: mc.Vector3, b: mc.Vector3) {

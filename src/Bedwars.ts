@@ -10,12 +10,12 @@ const {
     equals
 } = Vector3Utils;
 import * as mc from '@minecraft/server';
-import { itemEqual, Area, sleep, add, vectorWithinArea, containerIterator, capitalize, getPlayerByName, consumeMainHandItem, shuffle, randomInt, analyzeTime, vectorCompare, raycastHits, quickFind, getAngle, smallest, containerSlotIterator, timeToString } from './utility.js';
+import { itemEqual, Area, sleep, add, vectorWithinArea, containerIterator, capitalize, getPlayerByName, consumeMainHandItem, shuffle, randomInt, analyzeTime, vectorCompare, raycastHits, quickFind, getAngle, smallest, containerSlotIterator, timeToString, givePlayerItems, makeItem } from './utility.js';
 import { setupGameTest } from './GameTest.js';
 import { MinecraftBlockTypes, MinecraftEffectTypes, MinecraftEnchantmentTypes, MinecraftEntityTypes, MinecraftItemTypes } from '@minecraft/vanilla-data';
 
 import { sprintf, vsprintf } from 'sprintf-js';
-import { openItemShop, openTeamShop, TokenValue } from './BedwarsShop.js';
+import { calculateTokens, openItemShop, openTeamShop, TokenValue } from './BedwarsShop.js';
 import { isLocationPartOfAnyPlatforms } from './RescuePlatform.js';
 import { SimulatedPlayer } from '@minecraft/server-gametest';
 import { mapGarden, mapSteamPunk, mapWaterfall, mapEastwood, mapVaryth, mapInvasion, mapJurassic } from './BedwarsMaps.js';
@@ -31,7 +31,7 @@ export const EMERALD_TOKEN_ITEM = new mc.ItemStack("amazing:emerald_token");
 
 export const BRIDGE_EGG_ITEM = new mc.ItemStack("minecraft:egg");
 BRIDGE_EGG_ITEM.nameTag = "§r§2Bridge Egg";
-BRIDGE_EGG_ITEM.setLore(["", "§rBuild a bridge!"])
+BRIDGE_EGG_ITEM.setLore(["", "§rBuild a bridge!"]);
 const BRIDGE_EGG_COOLDOWN = 20; // in ticks
 
 export const FIRE_BALL_ITEM = new mc.ItemStack("amazing:fireball");
@@ -1892,14 +1892,14 @@ export class BedWarsGame {
             victimInfo.state = PlayerState.dead;
         }
         let killerStrings: Strings | null = null;
-        if(killerInfo && killerInfo.state != PlayerState.Offline) {
+        if (killerInfo && killerInfo.state != PlayerState.Offline) {
             killerStrings = strings[getPlayerLang(killerInfo.player)];
         }
 
         if (this.teams.get(victimInfo.team)!.state == TeamState.BedAlive) {
             if (killerInfo) {
                 ++killerInfo.killCount;
-                if(killerStrings) {
+                if (killerStrings) {
                     killerInfo.actionbar.add(sprintf(
                         killerStrings.killNotification,
                         TEAM_CONSTANTS[victimInfo.team].colorPrefix,
@@ -1909,19 +1909,47 @@ export class BedWarsGame {
         } else { // FINAL KILL
             if (killerInfo) {
                 ++killerInfo.finalKillCount;
-                ++killerInfo.killCount;
                 this.broadcast("finalKillMessage", {
                     killerColor: TEAM_CONSTANTS[killerInfo.team].colorPrefix,
                     killer: killerInfo.name,
                     victimColor: TEAM_CONSTANTS[victimInfo.team].colorPrefix,
                     victim: victimInfo.name
                 });
-                if(killerStrings) {
+                if (killerStrings) {
                     killerInfo.actionbar.add(sprintf(
                         killerStrings.finalKillNotification,
                         TEAM_CONSTANTS[victimInfo.team].colorPrefix,
                         victimInfo.name), 60);
                 }
+            }
+        }
+        if (killerInfo && killerInfo.state != PlayerState.Offline) {
+            killerInfo.player.playSound("random.orb");
+            if (killerInfo.state == PlayerState.Alive) {
+                const {
+                    ironAmount,
+                    goldAmount,
+                    diamondAmount,
+                    emeraldAmount
+                } = calculateTokens(victimInfo.player.getComponent("inventory")!.container!);
+                const items = [];
+                for (const [amount, item, name, color] of [
+                    [ironAmount, IRON_TOKEN_ITEM, killerStrings!.ironName, "§r"],
+                    [goldAmount, GOLD_TOKEN_ITEM, killerStrings!.goldName, "§6"],
+                    [diamondAmount, DIAMOND_TOKEN_ITEM, killerStrings!.diamondName, "§b"],
+                    [emeraldAmount, EMERALD_TOKEN_ITEM, killerStrings!.emeraldName, "§2"]
+                ] as const) {
+                    if (amount == 0) continue;
+
+                    const left = amount % 64;
+                    const stackCount = (amount - left) / 64;
+                    for (let i = 0; i < stackCount; ++i) {
+                        items.push(makeItem(item, 64));
+                    }
+                    if (left != 0) items.push(makeItem(item, left));
+                    killerInfo.player.sendMessage(`${color}+${amount}${name}`); // no space between
+                }
+                givePlayerItems(killerInfo.player, items);
             }
         }
         for (const playerInfo of this.players.values()) {
@@ -3015,8 +3043,7 @@ mc.system.afterEvents.scriptEventReceive.subscribe(event => {
     }
     if (event.id == "Amazing:fireball" && event.message == "explode") {
         const fireball = event.sourceEntity!;
-        // the script event would be called twice
-        // because of on_hit component occasionally
+        // the script event might be called twice
         // for the same fireball
         if (!fireball.isValid()) return;
         const explosionLocation = fireball.location;
