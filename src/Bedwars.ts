@@ -2575,7 +2575,9 @@ export class BedWarsGame {
         if (!playerInfo) return;
 
         if (isInvisiblilityPotionItem(event.itemStack)) {
-            playerInfo.player.addEffect(MinecraftEffectTypes.Invisibility, INVISIBLILITY_DURATION);
+            playerInfo.player.addEffect(MinecraftEffectTypes.Invisibility, INVISIBLILITY_DURATION, {
+                showParticles: false
+            });
             playerInfo.armorDisabled = true;
             playerInfo.armorToEnablingTicks = INVISIBLILITY_DURATION;
             const equip = playerInfo.player.getComponent('equippable')!;
