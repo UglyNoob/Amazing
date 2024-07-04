@@ -29,6 +29,8 @@ export interface Strings {
     languageChangedMessage: string;
     trackerFailedToFindTargetMessage: string;
     trackerChangeTargetMessage: string;
+    bedProtectionDisabledMessage: string;
+    bedAreProtectedMessage: string;
     trackerTrackingNotification: string;
     teamInformationNotification: string;
     killCountNotification: string;
@@ -221,6 +223,8 @@ strings[Lang.en_US] = {
     trackerFailedToFindTargetMessage: "§cFailed to find any enemy to track!",
     trackerChangeTargetMessage: "§6Now tracking %s%s§6.",
     trackerTrackingNotification: "§6TRACKING %s%s §a%d blocks §6§l%s",
+    bedProtectionDisabledMessage: "§cBeds are now breakable!",
+    bedAreProtectedMessage: "§6Beds are protected currently.",
     teamInformationNotification: "§7Your Team: %s%s",
     killCountNotification: "§7Kills: §a%d",
     finalKillCountNotification: "§7Final Kills: §a%d",
@@ -417,6 +421,8 @@ strings[Lang.zh_CN] = {
     trackerFailedToFindTargetMessage: "§c没有可以追踪的敌人！",
     trackerChangeTargetMessage: "§6正在追踪 %s%s§6。",
     trackerTrackingNotification: "§6追踪 %s%s §a%d米 §6§l%s",
+    bedProtectionDisabledMessage: "§c床的保护已消失！",
+    bedAreProtectedMessage: "§6床目前受到保护。",
     teamInformationNotification: "§7你的队伍：%s%s队",
     killCountNotification: "§7击杀数：§a%d",
     finalKillCountNotification: "§7最终击杀数：§a%d",

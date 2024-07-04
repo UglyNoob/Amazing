@@ -718,16 +718,27 @@ export interface TeamGameInformation {
     traps: TrapType[];
 }
 
+enum EventAction {
+    disableBedProtection
+}
+
+interface Event {
+    activateTime: number;
+    action: EventAction;
+}
+
 export class BedWarsGame {
     private readonly map: MapInformation;
     private players: Map<string, PlayerGameInformation>;
     private teams: Map<TeamType, TeamGameInformation>;
     private readonly originPos: mc.Vector3;
     private state: GameState;
+    private bedProtected: boolean;
     private dimension: mc.Dimension;
     private generators: GeneratorGameInformation[];
     private scoreObj: mc.ScoreboardObjective;
     private startTime: number;
+    private events: Event[];
     private readonly id: number;
 
     constructor({ map, originLocation, dimension, scoreboardObjective }: {
@@ -742,9 +753,11 @@ export class BedWarsGame {
         this.players = new Map();
         this.dimension = dimension;
         this.startTime = 0;
+        this.events = [];
         this.scoreObj = scoreboardObjective;
         this.teams = new Map();
         this.id = Math.random();
+        this.bedProtected = false;
         for (const team of this.map.teams) {
             this.teams.set(team.type, {
                 type: team.type,
@@ -829,9 +842,17 @@ export class BedWarsGame {
         playerInfo.basicNotificationD = playerInfo.actionbar.add("");
     }
 
-    start() {
+    start({
+        bedProtected = false,
+        events = null
+    }: {
+        bedProtected?: boolean;
+        events?: null | Event[];
+    }) {
         this.state = GameState.started;
+        this.bedProtected = bedProtected;
         this.startTime = mc.system.currentTick;
+        if (events) this.events = events;
         for (const playerInfo of this.players.values()) {
             if (!playerInfo.player.isValid()) {
                 playerInfo.state = PlayerState.Offline;
@@ -1021,7 +1042,22 @@ export class BedWarsGame {
             this.scoreObj.setScore(result, ++index);
         }
         this.scoreObj.setScore(" ", ++index);
-        this.scoreObj.setScore(`§a${timeToString(analyzeTime((mc.system.currentTick - this.startTime) * 50))}`, ++index);
+
+        const gameLastTicks = mc.system.currentTick - this.startTime;
+        const event = smallest(this.events.filter(e => e.activateTime > gameLastTicks), (a, b) => a.activateTime - b.activateTime);
+        if (event) {
+            this.scoreObj.setScore(`   §a${timeToString(analyzeTime((event.activateTime - gameLastTicks) * 50))}`, ++index);
+            let eventName: string;
+            switch (event.action) {
+                case EventAction.disableBedProtection:
+                    eventName = "Beds Breakable";
+                    break;
+            }
+            this.scoreObj.setScore(`§7${eventName}:`, ++index);
+            this.scoreObj.setScore("  ", ++index);
+        }
+
+        this.scoreObj.setScore(`§a${timeToString(analyzeTime(gameLastTicks * 50))}`, ++index);
     }
 
     private respawnPlayer(playerInfo: PlayerGameInformation) {
@@ -1392,9 +1428,29 @@ export class BedWarsGame {
         playerInfo.player.nameTag = `${TEAM_CONSTANTS[playerInfo.team].colorPrefix}${playerInfo.player.name}`;
     }
 
+    private activateEvent(action: EventAction) {
+        switch (action) {
+            case EventAction.disableBedProtection:
+                this.bedProtected = false;
+                this.broadcast("bedProtectionDisabledMessage");
+                break;
+        }
+    }
+
     tickEvent() {
         if (this.state != GameState.started) return;
 
+        const gameLastTicks = mc.system.currentTick - this.startTime;
+        if (this.events.length != 0) {
+            const resultEvents = [];
+            for (const event of this.events) {
+                if (event.activateTime < gameLastTicks) continue;
+                if (event.activateTime == gameLastTicks) {
+                    this.activateEvent(event.action);
+                } else resultEvents.push(event);
+            }
+            this.events = resultEvents;
+        }
         for (const playerInfo of this.players.values()) {
             const teamInfo = this.teams.get(playerInfo.team)!;
             if (playerInfo.state == PlayerState.Offline) {
@@ -1502,7 +1558,7 @@ export class BedWarsGame {
                 // player.onScreenDisplay.setActionBar(String(TEAM_CONSTANTS[playerInfo.teamAreaEntered!]?.name)); // DEBUG
                 let trackerWorking = false;
 
-                if (mc.system.currentTick % 20 == 0) {
+                if (gameLastTicks % 20 == 0) {
                     this.resetNameTag(playerInfo);
                 }
                 const equipment = player.getComponent("equippable")!;
@@ -1520,7 +1576,7 @@ export class BedWarsGame {
                         }
                         if (playerInfo.trackingTarget && itemEqual(TRACKER_ITEM, item)) {
                             trackerWorking = true;
-                            if (mc.system.currentTick % 5 == 0) {
+                            if (gameLastTicks % 5 == 0) {
                                 const distanceVec = subtract(playerInfo.trackingTarget.player.location, player.location);
                                 const viewDirection = player.getViewDirection();
                                 const PI = Math.PI;
@@ -1614,7 +1670,7 @@ export class BedWarsGame {
                     playerInfo.trackerNotificationD = undefined;
                 }
             }
-            if ((mc.system.currentTick - this.startTime) % 80 == 0) {
+            if (gameLastTicks % 80 == 0) {
                 // totem of undying may flush the effect
                 playerInfo.player.addEffect(MinecraftEffectTypes.Saturation, 1000000, {
                     amplifier: 100,
@@ -1622,7 +1678,7 @@ export class BedWarsGame {
                 });
                 const t = TEAM_CONSTANTS[playerInfo.team];
                 let result = sprintf(teamInformationNotification, t.colorPrefix, capitalize(strs[t.localName])) + " ";
-                switch ((mc.system.currentTick - this.startTime) % 240) {
+                switch (gameLastTicks % 240) {
                     case 0:
                         result += sprintf(killCountNotification, playerInfo.killCount);
                         playerInfo.actionbar.changeText(playerInfo.basicNotificationD, result);
@@ -1736,7 +1792,7 @@ export class BedWarsGame {
             }
         }
 
-        if ((mc.system.currentTick - this.startTime) % 20 == 0) {
+        if (gameLastTicks % 20 == 0) {
             this.updateScoreboard();
         }
         for (const eggEntity of this.dimension.getEntities({ type: "minecraft:egg" })) {
@@ -1785,7 +1841,7 @@ export class BedWarsGame {
                 windCharge.kill();
             }
         }
-        if (mc.system.currentTick % WOLF_GUARDING_INTERVAL == 0) {
+        if (gameLastTicks % WOLF_GUARDING_INTERVAL == 0) {
             for (const wolf of this.dimension.getEntities({ type: "minecraft:wolf" })) {
                 if (!wolf[OWNER_SYM]) continue;
                 const ownerInfo = wolf[OWNER_SYM];
@@ -1859,15 +1915,26 @@ export class BedWarsGame {
             }
 
             if (!fakePlayer.attackTarget) continue;
-            if (!fakePlayer.previousOnGround && fakePlayer.isOnGround || mc.system.currentTick % randomInt(7, 10) == 0) {
+            if (!fakePlayer.previousOnGround && fakePlayer.isOnGround || gameLastTicks % randomInt(7, 10) == 0) {
                 fakePlayer.navigateToEntity(fakePlayer.attackTarget.player as any);
             }
             if (vecDistance(fakePlayer.location, fakePlayer.attackTarget.player.location) < 2.95) {
-                if (mc.system.currentTick % randomInt(2, 3) == 0) {
+                if (gameLastTicks % randomInt(2, 3) == 0) {
                     fakePlayer.stopMoving();
                     const location = Object.assign({}, fakePlayer.attackTarget.player.getHeadLocation());
                     fakePlayer.lookAtLocation(test.relativeLocation(location as any));
-                    fakePlayer.attack();
+                    let attack = true;
+                    // TODO
+                    // const entityDistance = mc.Player.prototype.getEntitiesFromViewDirection()[0]?.distance;
+                    // const blockRayCastHit = mc.Player.prototype.getBlockFromViewDirection({
+                    //     includeLiquidBlocks: false,
+                    //     includePassableBlocks: false
+                    // });
+                    // if (entityDistance != null && blockRayCastHit) {
+                    //     const blockDistance = vecDistance(fakePlayer.getHeadLocation(), add(blockRayCastHit.block.location, blockRayCastHit.faceLocation));
+                    //     if (blockDistance < entityDistance) attack = false;
+                    // }
+                    if (attack) fakePlayer.attack();
                 }
             }
             fakePlayer.previousOnGround = fakePlayer.isOnGround;
@@ -2222,6 +2289,10 @@ export class BedWarsGame {
 
             if (!destroyerInfo) return;
             if (destroyedTeam.type == destroyerInfo.team) return;
+            if (this.bedProtected) {
+                destroyerInfo.player.sendMessage(strings[getPlayerLang(destroyerInfo.player)].bedAreProtectedMessage);
+                return;
+            }
             destroyedTeamInfo.state = TeamState.BedDestoryed;
             ++destroyerInfo.bedDestroyedCount;
             await sleep(0);
@@ -2879,6 +2950,7 @@ mc.world.beforeEvents.chatSend.subscribe(async event => {
     let originLocation: mc.Vector3;
     let minimalPlayer: number;
     let fillBlankTeams: boolean;
+    let bedBreakableMinutes: number;
     if (event.message == "start") {
         if (!event.sender.isOp()) return;
         await sleep(0);
@@ -2904,6 +2976,7 @@ mc.world.beforeEvents.chatSend.subscribe(async event => {
         settingForm.title(title);
         settingForm.textField("Minimal players of each team:", "Players count...", "1");
         settingForm.toggle("Fill blank teams with simulated players", true);
+        settingForm.slider("Minutes until the bed is breakable", 0, 12, 1, 0);
         const settingResponse = await settingForm.show(event.sender);
         if (settingResponse.canceled) return;
 
@@ -2913,6 +2986,7 @@ mc.world.beforeEvents.chatSend.subscribe(async event => {
             return;
         }
         fillBlankTeams = settingResponse.formValues![1] as boolean;
+        bedBreakableMinutes = settingResponse.formValues![2] as number;
     } else if (event.message == "DEBUG STICK") {
         await sleep(0);
         const container = event.sender.getComponent("inventory")!.container!;
@@ -2963,7 +3037,13 @@ mc.world.beforeEvents.chatSend.subscribe(async event => {
             game.setPlayer(p as any, teams[teamIndex]);
         }
     }
-    game.start();
+    game.start(bedBreakableMinutes == 0 ? { bedProtected: false } : {
+        bedProtected: true,
+        events: [{
+            activateTime: bedBreakableMinutes * 1200,
+            action: EventAction.disableBedProtection
+        }]
+    });
     (globalThis as any).game = game;
 });
 
