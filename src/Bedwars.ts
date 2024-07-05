@@ -1813,11 +1813,10 @@ export class BedWarsGame {
 
                 // distribute resources
                 outer: for (const item of items) {
-                    const sound = Math.random() > 0.5 ? "random.pop" : "random.pop2";
                     for (const [name, collect] of gen.recevierCollects.entries()) {
                         if (collect) {
                             const player = getPlayerByName(name)!;
-                            this.dimension.playSound(sound, player.location);
+                            this.dimension.playSound("random.pop", player.location);
                             givePlayerItems(player, item);
                             gen.recevierCollects.set(name, false);
                             continue outer;
@@ -1830,7 +1829,7 @@ export class BedWarsGame {
                         if (first) {
                             first = false;
                             const player = getPlayerByName(name)!;
-                            this.dimension.playSound(sound, player.location);
+                            this.dimension.playSound("random.pop", player.location);
                             givePlayerItems(player, item);
                         } else {
                             gen.recevierCollects.set(name, true);
