@@ -636,6 +636,11 @@ type GeneratorGameInformation = {
     interval: number;
     remainingCooldown: number;
     tokensGeneratedCount: number;
+    /**
+     * Used to evenly distribute tokens when there are multiple receiver
+     * True means could receive
+     */
+    recevierCollects: Map<string, boolean>;
     indicator?: mc.Entity;
 } & ({
     belongToTeam: true;
@@ -781,6 +786,7 @@ export class BedWarsGame {
                 interval: mapGenInfo.initialInterval,
                 remainingCooldown: 0,
                 tokensGeneratedCount: 0,
+                recevierCollects: new Map(),
                 belongToTeam: true,
                 team: teamInfo.type,
                 spawnExtraEmerald: false,
@@ -797,6 +803,7 @@ export class BedWarsGame {
                 interval: mapGenInfo.initialInterval,
                 remainingCooldown: 0,
                 tokensGeneratedCount: 0,
+                recevierCollects: new Map(),
                 belongToTeam: false
             });
         }
@@ -1697,6 +1704,18 @@ export class BedWarsGame {
 
         }
         for (const gen of this.generators) {
+            const spawnLocation = this.fixOrigin(gen.spawnLocation);
+            let spawnEmerald = false;
+            detectIfSpawnEmerald: if (gen.belongToTeam && gen.spawnExtraEmerald) {
+                if (gen.extraEmeraldRemainingCooldown > 0) {
+                    --gen.extraEmeraldRemainingCooldown;
+                    break detectIfSpawnEmerald;
+                }
+                spawnEmerald = true;
+                gen.extraEmeraldRemainingCooldown = gen.extraEmeraldInterval;
+            }
+
+            // update indicator
             if (gen.indicator && gen.remainingCooldown % 20 == 0) {
                 if (!gen.indicator.isValid()) {
                     const loc = this.fixOrigin(gen.mapInfo.indicatorLocation!);
@@ -1706,13 +1725,13 @@ export class BedWarsGame {
                 }
                 gen.indicator.nameTag = `§eSpawns in §c${gen.remainingCooldown / 20} §eseconds`;
             }
+
             if (gen.remainingCooldown > 0) {
                 --gen.remainingCooldown;
                 continue;
             }
 
             gen.remainingCooldown = gen.interval;
-            const spawnLocation = this.fixOrigin(gen.spawnLocation);
 
             // Detect if it reaches capacity
             let { producingArea, capacity } = GENERATOR_CONSTANTS[gen.type];
@@ -1745,38 +1764,78 @@ export class BedWarsGame {
             ++gen.tokensGeneratedCount;
 
             // Generate token item
-            let itemEntity: mc.Entity;
+            const items: mc.ItemStack[] = [];
             switch (gen.type) {
                 case GeneratorType.IronGold:
                     if (gen.tokensGeneratedCount % 4 == 0) {
-                        this.dimension.spawnItem(GOLD_TOKEN_ITEM, spawnLocation);
+                        items.push(GOLD_TOKEN_ITEM);
                     }
-                    itemEntity = this.dimension.spawnItem(IRON_TOKEN_ITEM, spawnLocation);
+                    items.push(IRON_TOKEN_ITEM);
                     break;
                 case GeneratorType.Diamond:
-                    itemEntity = this.dimension.spawnItem(DIAMOND_TOKEN_ITEM, spawnLocation);
+                    items.push(DIAMOND_TOKEN_ITEM);
                     break;
                 case GeneratorType.Emerald:
-                    itemEntity = this.dimension.spawnItem(EMERALD_TOKEN_ITEM, spawnLocation);
+                    items.push(EMERALD_TOKEN_ITEM);
                     break;
             }
-            if (gen.type != GeneratorType.IronGold) {
-                const v = itemEntity.getVelocity();
-                v.x = -v.x;
-                v.y = 0;
-                v.z = -v.z;
-                itemEntity.applyImpulse(v);
+            if (spawnEmerald) items.push(EMERALD_TOKEN_ITEM);
+            const receivers: PlayerGameInformation[] = [];
+            for (const playerInfo of this.players.values()) {
+                if (playerInfo.state != PlayerState.Alive) continue;
+                if (vectorWithinArea(playerInfo.player.location, producingArea)) receivers.push(playerInfo);
             }
-        }
-        for (const gen of this.generators) {
-            const spawnLocation = this.fixOrigin(gen.spawnLocation);
-            if (gen.belongToTeam && gen.spawnExtraEmerald) {
-                if (gen.extraEmeraldRemainingCooldown > 0) {
-                    --gen.extraEmeraldRemainingCooldown;
-                    continue;
+            if (receivers.length == 0) {
+                gen.recevierCollects.clear();
+                for (const item of items) {
+                    const itemEntity = this.dimension.spawnItem(item, spawnLocation);
+                    if (gen.type != GeneratorType.IronGold) {
+                        const v = itemEntity.getVelocity();
+                        v.x = -v.x;
+                        v.y = 0;
+                        v.z = -v.z;
+                        itemEntity.applyImpulse(v);
+                    }
                 }
-                this.dimension.spawnItem(EMERALD_TOKEN_ITEM, spawnLocation);
-                gen.extraEmeraldRemainingCooldown = gen.extraEmeraldInterval;
+            } else {
+                // synchornize receivers
+                for (const receiverName of gen.recevierCollects.keys()) {
+                    const index = receivers.findIndex(({ name }) => name == receiverName);
+                    if (index == -1) {
+                        gen.recevierCollects.delete(receiverName);
+                    } else {
+                        receivers.splice(index, 1);
+                    }
+                }
+                for (const receiver of receivers) {
+                    gen.recevierCollects.set(receiver.name, true);
+                }
+
+                // distribute resources
+                outer: for (const item of items) {
+                    for (const [name, collect] of gen.recevierCollects.entries()) {
+                        if (collect) {
+                            const player = getPlayerByName(name)!;
+                            this.dimension.playSound("random.pop", player.location);
+                            givePlayerItems(player, item);
+                            gen.recevierCollects.set(name, false);
+                            continue outer;
+                        }
+                    }
+
+                    // nobody has been given the item, clears the state
+                    let first = true;
+                    for (const name of gen.recevierCollects.keys()) {
+                        if (first) {
+                            first = false;
+                            const player = getPlayerByName(name)!;
+                            this.dimension.playSound("random.pop", player.location);
+                            givePlayerItems(player, item);
+                        } else {
+                            gen.recevierCollects.set(name, true);
+                        }
+                    }
+                }
             }
         }
 
@@ -2199,7 +2258,7 @@ export class BedWarsGame {
         if (event.block.typeId == MinecraftBlockTypes.Chest) {
             for (const team of this.map.teams) {
                 if (equals(event.block.location, this.fixOrigin(team.teamChestLocation))) {
-                    if (playerInfo.team != team.type) {
+                    if (playerInfo.team != team.type && this.teams.get(team.type)!.state != TeamState.Dead) {
                         playerInfo.player.sendMessage(strings[getPlayerLang(playerInfo.player)].openEnemyChestMessage);
                         event.cancel = true;
                     }

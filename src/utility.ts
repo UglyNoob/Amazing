@@ -145,6 +145,9 @@ export function showObjectToPlayer(player: mc.Player, object: any) {
     _showObjectToPlayer(player, object, null);
 }
 
+/**
+ * Detects whether vector statisfies [area[0], area[1])
+ */
 export function vectorWithinArea(vec: mc.Vector3, area: [mc.Vector3, mc.Vector3]) {
     const minX = Math.min(area[0].x, area[1].x);
     const minY = Math.min(area[0].y, area[1].y);
