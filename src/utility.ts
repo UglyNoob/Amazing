@@ -1,9 +1,13 @@
-import { Vector3Utils as v3 } from '@minecraft/math';
+import { Vector3Utils } from '@minecraft/math';
 import * as mc from '@minecraft/server';
 import { Direction } from '@minecraft/server';
 import * as ui from '@minecraft/server-ui';
 
 export type Area = [mc.Vector3, mc.Vector3];
+
+const {
+    scale, subtract, floor
+} = Vector3Utils;
 
 /**
  * Compares types, lores and name tags.
@@ -169,6 +173,10 @@ export function add(...vecs: mc.Vector3[]): mc.Vector3 {
     }
     return result;
 }
+export function transform(vec: mc.Vector3, xAxis: mc.Vector3, yAxis: mc.Vector3, zAxis: mc.Vector3) {
+    return add(scale(xAxis, vec.x), scale(yAxis, vec.y), scale(zAxis, vec.z));
+}
+
 export function getAngle(x: number, z: number) {
     const mag = Math.sqrt(x * x + z * z);
     // x /= mag;
@@ -273,7 +281,7 @@ export function givePlayerItems(player: mc.Player, items: mc.ItemStack | mc.Item
         if (leftover) { // if failed to add item
             // spawn the item as entity
             const entity = player.dimension.spawnItem(leftover, player.location);
-            entity.applyImpulse(v3.scale(entity.getVelocity(), -1));
+            entity.applyImpulse(scale(entity.getVelocity(), -1));
         }
     }
 }
@@ -299,7 +307,6 @@ export function shuffle(array: unknown[]) {
         array[i] = temp;
     }
 }
-
 export function analyzeTime(ms: number) {
     ms -= ms % 1000;
     ms /= 1000; // number is double in js
@@ -345,12 +352,12 @@ export function vectorCompare(a: mc.Vector3, b: mc.Vector3) {
 }
 
 export function closestLocationOnBlock(location: mc.Vector3, blockLoc: mc.Vector3) {
-    const reletiveVec = v3.subtract(location, blockLoc);
+    const reletiveVec = subtract(location, blockLoc);
     const closestReletive: mc.Vector3 = { x: 0, y: 0, z: 0 };
     closestReletive.x = Math.max(0, Math.min(1, reletiveVec.x));
     closestReletive.y = Math.max(0, Math.min(1, reletiveVec.y));
     closestReletive.z = Math.max(0, Math.min(1, reletiveVec.z));
-    return v3.add(blockLoc, closestReletive);
+    return add(blockLoc, closestReletive);
 }
 
 export function* raycastHits(loc: mc.Vector3, direction: mc.Vector3) {
@@ -363,10 +370,10 @@ export function* raycastHits(loc: mc.Vector3, direction: mc.Vector3) {
     if (direction.z < 0) possibleColidingFaces.push(Direction.North);
     if (possibleColidingFaces.length == 0) return;
 
-    const blockLoc = v3.floor(loc);
+    const blockLoc = floor(loc);
     yield Object.assign({}, blockLoc);
     while (true) {
-        const reletaiveLoc = v3.subtract(loc, blockLoc);
+        const reletaiveLoc = subtract(loc, blockLoc);
         const scales: number[] = [];
         for (const face of possibleColidingFaces) {
             switch (face) {

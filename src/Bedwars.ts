@@ -964,7 +964,7 @@ export class BedWarsGame {
                 checkForBlocks: false
             });
             teamShopVillager[CREATED_LOC_SYM] = teamShopLocation;
-            teamShopVillager.nameTag = `§3§lTeam Shop\n§r§7of ${t.colorPrefix + capitalize(t.name)}`;
+            teamShopVillager.nameTag = `§3§lTeam Upgrade\n§r§7of ${t.colorPrefix + capitalize(t.name)}`;
             teamShopVillager[SHOP_TYPE_SYM] = "team";
         }
         for (const { teamChestLocation, bedLocation: mapBedLocation, type: teamType } of this.map.teams) {
@@ -2251,7 +2251,11 @@ export class BedWarsGame {
             }
             return;
         }
-        if (event.block.typeId == MinecraftBlockTypes.BrewingStand) {
+        if (event.block.typeId == MinecraftBlockTypes.BrewingStand ||
+            event.block.typeId == MinecraftBlockTypes.Dispenser ||
+            event.block.typeId == MinecraftBlockTypes.Dropper ||
+            event.block.typeId == MinecraftBlockTypes.Hopper ||
+            event.block.typeId == MinecraftBlockTypes.FlowerPot) {
             event.cancel = true;
             return;
         }
