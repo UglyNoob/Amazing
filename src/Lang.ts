@@ -17,7 +17,8 @@ export interface Strings {
     finalKillNotification: string;
     disconnectedMessage: string;
     reconnectionMessage: string;
-    placingBlockIllagelMessage: string;
+    placeBlockIllagelMessage: string;
+    placeBlockOutOfMapMessage: string;
     gameEndedMessage: string;
     openEnemyChestMessage: string;
     teamPurchaseMessage: string;
@@ -210,7 +211,8 @@ strings[Lang.en_US] = {
     finalKillNotification: "§cFINAL KILL: %s%s",
     disconnectedMessage: "%s%s §7disconnected.",
     reconnectionMessage: "%s%s §ereconnected.",
-    placingBlockIllagelMessage: "§cYou can't place blocks here!",
+    placeBlockIllagelMessage: "§cYou can't place blocks here!",
+    placeBlockOutOfMapMessage: "§cYou can't place block outside the map!",
     gameEndedMessage: "\n§lGAME ENDED > §r%s%s §7is the winner!\n",
     openEnemyChestMessage: "§cYou cannot open enemy's chest while there are still alive players on that team!",
     teamPurchaseMessage: "%s%s §ahas purchased §6%s",
@@ -408,7 +410,8 @@ strings[Lang.zh_CN] = {
     finalKillNotification: "§c最终击杀: %s%s",
     disconnectedMessage: "%s%s §7断开了连接。",
     reconnectionMessage: "%s%s §e重新连接。",
-    placingBlockIllagelMessage: "§c你不能在这里放置方块！",
+    placeBlockIllagelMessage: "§c你不能在这里放置方块！",
+    placeBlockOutOfMapMessage: "§c你不能在地图外放方块！",
     gameEndedMessage: "\n§l游戏结束 > §r%s%s §7胜利！\n",
     openEnemyChestMessage: "§c你不能在敌队仍有玩家时打开敌队的箱子。",
     teamPurchaseMessage: "%s%s §a购买了 §6%s",

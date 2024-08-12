@@ -8,66 +8,70 @@ const EMERLAD_GENERATOR_INTERVAL = 1200;
  * playableArea should be the map's area extending 50 blocks
  * */
 
-export const mapGarden: MapInformation = {
-    playableArea: [{ x: 0, y: -64, z: 0 }, { x: 209, y: 101, z: 131 }],
-    fallbackRespawnPoint: { x: 0 + 104, y: 149 - 54, z: 0 + 65 },
-    voidY: -64,
+export const mapGardens: MapInformation = {
+    playableArea: [{ x: -154, y: -32, z: -115 }, { x: 155, y: 140, z: 115 }],
+    fallbackRespawnPoint: { x: 0, y: 149, z: 0 },
+    voidY: -32,
     teamExtraEmeraldGenInterval: EMERLAD_GENERATOR_INTERVAL,
     teams: [
         {
             type: TeamType.Red,
-            itemShopLocation: { x: 95.5 + 104, y: 79 - 54, z: 8.5 + 65 },
-            teamShopLocation: { x: 95.5 + 104, y: 79 - 54, z: -7.5 + 65 },
-            islandArea: [{ x: 70 + 104, y: 69 - 54, z: -17 + 65 }, { x: 106 + 104, y: 92 - 54, z: 16 + 65 }],
-            protectedArea: [{ x: 92 + 104, y: 79 - 54, z: -3 + 65 }, { x: 97 + 104, y: 84 - 54, z: 4 + 65 }],
+            itemShopLocation: { x: 94.5, y: 79, z: 8.5 },
+            teamShopLocation: { x: 94.5, y: 79, z: -7.5 },
+            islandArea: [{ x: 70, y: 69, z: -17 }, { x: 107, y: 92, z: 17 }],
+            protectedArea: [{ x: 92, y: 79, z: -2 }, { x: 97, y: 83, z: 3 }],
             teamGenerator: {
                 type: GeneratorType.IronGold,
-                spawnLocation: { x: 98.5 + 104, y: 78.5 - 54, z: 0.5 + 65 },
-                location: { x: 97 + 104, y: 78 - 54, z: -1 + 65 },
+                spawnLocation: { x: 98.5, y: 78.5, z: 0.5 },
+                location: { x: 97, y: 78, z: -1 },
                 initialInterval: IRONGOLD_GENERATOR_INTERVAL
             },
-            bedLocation: [{ x: 79 + 104, y: 77 - 54, z: 0 + 65 }, { x: 80 + 104, y: 77 - 54, z: 0 + 65 }],
-            playerSpawn: { x: 94.5 + 104, y: 79 - 54, z: 0.5 + 65 },
+            bedLocation: [{ x: 79, y: 77, z: 0 }, { x: 80, y: 77, z: 0 }],
+            playerSpawn: { x: 94.5, y: 79, z: 0.5 },
             playerSpawnViewDirection: { x: -1, y: 0, z: 0 },
-            teamChestLocation: { x: 91 + 104, y: 79 - 54, z: 4 + 65 },
+            teamChestLocation: { x: 91, y: 79, z: 4 },
         }, {
             type: TeamType.Blue,
-            itemShopLocation: { x: -94.5 + 104, y: 79 - 54, z: -8 + 65.5 },
-            teamShopLocation: { x: -94.5 + 104, y: 79 - 54, z: 8 + 65.5 },
-            islandArea: [{ x: -106 + 104, y: 69 - 54, z: -17 + 65 }, { x: -70 + 104, y: 92 - 54, z: 16 + 65 }],
-            protectedArea: [{ x: -96 + 104, y: 79 - 54, z: -3 + 65 }, { x: -91 + 104, y: 84 - 54, z: 4 + 65 }],
+            itemShopLocation: { x: -93.5, y: 79, z: -7.5 },
+            teamShopLocation: { x: -93.5, y: 79, z: 8.5 },
+            islandArea: [{ x: -106, y: 69, z: -17 }, { x: -69, y: 92, z: 17 }],
+            protectedArea: [{ x: -96, y: 79, z: -2 }, { x: -91, y: 83, z: 3 }],
             teamGenerator: {
                 type: GeneratorType.IronGold,
-                spawnLocation: { x: -97.5 + 104, y: 78.5 - 54, z: 0.5 + 65 },
-                location: { x: -99 + 104, y: 78 - 54, z: -1 + 65 },
+                spawnLocation: { x: -97.5, y: 78.5, z: 0.5 },
+                location: { x: -99, y: 78, z: -1 },
                 initialInterval: IRONGOLD_GENERATOR_INTERVAL
             },
-            bedLocation: [{ x: -79 + 104, y: 77 - 54, z: 0 + 65 }, { x: -80 + 104, y: 77 - 54, z: 0 + 65 }],
-            playerSpawn: { x: -93.5 + 104, y: 79 - 54, z: 0.5 + 65 },
+            bedLocation: [{ x: -79, y: 77, z: 0 }, { x: -80, y: 77, z: 0 }],
+            playerSpawn: { x: -93.5, y: 79, z: 0.5 },
             playerSpawnViewDirection: { x: 1, y: 0, z: 0 },
-            teamChestLocation: { x: -91 + 104, y: 79 - 54, z: 4 + 65 },
+            teamChestLocation: { x: -91, y: 79, z: 4 },
         }
     ],
     extraGenerators: [
         {
             type: GeneratorType.Diamond,
-            spawnLocation: { x: 0.5 + 104, y: 78 - 54, z: -51.5 + 65 },
-            location: { x: 0 + 104, y: 77 - 54, z: -52 + 65 },
+            spawnLocation: { x: 0.5, y: 78, z: -51.5 },
+            location: { x: 0, y: 77, z: -52 },
+            indicatorLocation: { x: 0.5, y: 81, z: -51.5 },
             initialInterval: DIAMOND_GENERATOR_INTERVAL
         }, {
             type: GeneratorType.Diamond,
-            spawnLocation: { x: 0.5 + 104, y: 78 - 54, z: 52.5 + 65 },
-            location: { x: 0 + 104, y: 77 - 54, z: 52 + 65 },
+            spawnLocation: { x: 0.5, y: 78, z: 52.5 },
+            location: { x: 0, y: 77, z: 52 },
+            indicatorLocation: { x: 0.5, y: 81, z: 52.5 },
             initialInterval: DIAMOND_GENERATOR_INTERVAL
         }, {
             type: GeneratorType.Emerald,
-            spawnLocation: { x: -20.5 + 104, y: 77 - 54, z: -20.5 + 65 },
-            location: { x: -21 + 104, y: 76 - 54, z: -21 + 65 },
+            spawnLocation: { x: -20.5, y: 77, z: -20.5 },
+            location: { x: -21, y: 76, z: -21 },
+            indicatorLocation: { x: -20.5, y: 80, z: -20.5 },
             initialInterval: EMERLAD_GENERATOR_INTERVAL
         }, {
             type: GeneratorType.Emerald,
-            spawnLocation: { x: 21.5 + 104, y: 77 - 54, z: 21.5 + 65 },
-            location: { x: 21 + 104, y: 76 - 54, z: 21 + 65 },
+            spawnLocation: { x: 21.5, y: 77, z: 21.5 },
+            location: { x: 21, y: 76, z: 21 },
+            indicatorLocation: { x: 21.5, y: 80, z: 21.5 },
             initialInterval: EMERLAD_GENERATOR_INTERVAL
         }
     ]

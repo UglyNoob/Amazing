@@ -35,7 +35,6 @@ import {
 } from "./Bedwars.js";
 import { ActionFormData } from "@minecraft/server-ui";
 import { containerIterator, containerSlotIterator, givePlayerItems, itemEqual, stackFirstContainerAdd } from './utility.js';
-import { Vector3Utils as v3 } from "@minecraft/math";
 import { MinecraftEnchantmentTypes, MinecraftItemTypes } from "@minecraft/vanilla-data";
 import { PLATFORM_ITEM } from "./RescuePlatform.js";
 import { sprintf } from "sprintf-js";
@@ -303,7 +302,6 @@ const GOLDEN_APPLE_ITEM = new mc.ItemStack(MinecraftItemTypes.GoldenApple, 1);
 const TOTEM_ITEM = new mc.ItemStack(MinecraftItemTypes.TotemOfUndying, 1);
 TOTEM_ITEM.lockMode = mc.ItemLockMode.slot;
 const ENDER_PEARL_ITEM = new mc.ItemStack(MinecraftItemTypes.EnderPearl, 1);
-const WIND_CHARGE_ITEM = new mc.ItemStack(MinecraftItemTypes.WindCharge, 1);
 const WOLF_ARMOR_ITEM = new mc.ItemStack(MinecraftItemTypes.WolfArmor, 1);
 const LOYAL_WOLF_ITEM = new mc.ItemStack(MinecraftItemTypes.WolfSpawnEgg, 1);
 const HARDENED_CLAY_ITEM = new mc.ItemStack(MinecraftItemTypes.HardenedClay, 16);
@@ -391,10 +389,6 @@ const generateItemShopData: () => Menu = () => ({
                     cost: { ironAmount: 40, goldAmount: 0, emeraldAmount: 0, diamondAmount: 0 },
                     item: FIRE_BALL_ITEM
                 }), () => "textures/items/fireball.png"),
-                generateBuyOneItemMenu({ local: "windChargeName" }, () => ({
-                    cost: { ironAmount: 20, goldAmount: 0, emeraldAmount: 0, diamondAmount: 0 },
-                    item: WIND_CHARGE_ITEM
-                }), () => "textures/items/wind_charge.png"),
                 generateBuyOneItemMenu({ local: "knockbackStickName" }, () => ({
                     cost: { ironAmount: 0, goldAmount: 5, emeraldAmount: 0, diamondAmount: 0 },
                     item: KNOCKBACK_STICK_ITEM

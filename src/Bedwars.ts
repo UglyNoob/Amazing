@@ -18,7 +18,7 @@ import { sprintf, vsprintf } from 'sprintf-js';
 import { calculateTokens, openItemShop, openTeamShop, TokenValue } from './BedwarsShop.js';
 import { isLocationPartOfAnyPlatforms } from './RescuePlatform.js';
 import { SimulatedPlayer } from '@minecraft/server-gametest';
-import { mapGarden, mapSteamPunk, mapWaterfall, mapEastwood, mapVaryth, mapInvasion, mapJurassic } from './BedwarsMaps.js';
+import { mapGardens, mapSteamPunk, mapWaterfall, mapEastwood, mapVaryth, mapInvasion, mapJurassic } from './BedwarsMaps.js';
 import { ActionFormData, ActionFormResponse, FormCancelationReason, ModalFormData } from '@minecraft/server-ui';
 import { Strings, Lang, fixPlayerSettings, getPlayerLang, setPlayerLang, strings } from './Lang.js';
 
@@ -684,6 +684,7 @@ export interface PlayerGameInformation {
     bridgeEggCooldown: number;
     fireBallCooldown: number;
     armorDisabled: boolean;
+    restoreTotemAfterRevealed: boolean;
     armorToEnablingTicks: number;
     teamAreaEntered?: TeamType;
     trackerChangeTargetCooldown: number;
@@ -840,6 +841,7 @@ export class BedWarsGame {
             bridgeEggCooldown: 0,
             fireBallCooldown: 0,
             armorDisabled: false,
+            restoreTotemAfterRevealed: false,
             armorToEnablingTicks: 0,
             trackerChangeTargetCooldown: 0,
             actionbar: new ActionbarManager(),
@@ -1106,13 +1108,26 @@ export class BedWarsGame {
         playerInfo.state = PlayerState.Alive;
     }
 
+    private revealInvisiblePlayer(playerInfo: PlayerGameInformation) {
+        playerInfo.armorDisabled = false;
+        playerInfo.armorToEnablingTicks = 0;
+        playerInfo.player.removeEffect(MinecraftEffectTypes.Resistance);
+        playerInfo.player.addEffect(MinecraftEffectTypes.Resistance, 1000000, {
+            showParticles: false,
+            amplifier: 0
+        });
+        if (playerInfo.restoreTotemAfterRevealed) {
+            playerInfo.restoreTotemAfterRevealed = false;
+            playerInfo.player.getComponent("equippable")!.setEquipment(mc.EquipmentSlot.Offhand, new mc.ItemStack(MinecraftItemTypes.TotemOfUndying));
+        }
+        this.resetArmor(playerInfo);
+    }
     /**
      * This method won't check playerInfo.armorDisabled
      */
     resetArmor(playerInfo: PlayerGameInformation) {
         const t = TEAM_CONSTANTS[playerInfo.team];
         const equipment = playerInfo.player.getComponent("minecraft:equippable")!;
-        equipment.setEquipment(mc.EquipmentSlot.Offhand);
         equipment.setEquipment(mc.EquipmentSlot.Head, t.leatherHelmet);
         equipment.setEquipment(mc.EquipmentSlot.Chest, t.leatherChestplate);
         if (playerInfo.armorLevel.level == 0) {
@@ -1138,6 +1153,8 @@ export class BedWarsGame {
     private resetInventory(playerInfo: PlayerGameInformation) {
         this.resetArmor(playerInfo);
         const container = playerInfo.player.getComponent("inventory")!.container!;
+        const equipment = playerInfo.player.getComponent("minecraft:equippable")!;
+        equipment.setEquipment(mc.EquipmentSlot.Offhand);
         let hasSword = false;
         let foundShear = false;
         let foundPickaxe = false;
@@ -1237,11 +1254,7 @@ export class BedWarsGame {
                 isDefensiveTrap = true;
                 break;
             case TrapType.Alarm:
-                if (playerInfo.armorDisabled) {
-                    playerInfo.armorDisabled = false;
-                    playerInfo.armorToEnablingTicks = 0;
-                    this.resetArmor(playerInfo);
-                }
+                this.revealInvisiblePlayer(playerInfo);
                 isAlarmTrap = true;
                 break;
             case TrapType.MinerFatigue:
@@ -1635,8 +1648,7 @@ export class BedWarsGame {
                     --playerInfo.armorToEnablingTicks;
                 } else { // enable the armor
                     if (playerInfo.armorDisabled) {
-                        playerInfo.armorDisabled = false;
-                        this.resetArmor(playerInfo);
+                        this.revealInvisiblePlayer(playerInfo);
                     }
                 }
                 if (playerInfo.invulnerableTime == 0) {
@@ -1872,8 +1884,8 @@ export class BedWarsGame {
             ].forEach(_pos => {
                 const location = add(baseLocation, _pos);
                 const existingBlock = this.dimension.getBlock(location);
-                if (this.isBlockLocationPlayerPlacable(location) &&
-                    (!existingBlock || existingBlock.type.id == MinecraftBlockTypes.Air)) {
+                if (this.checkBlockLocation(location).placeable &&
+                    existingBlock && existingBlock.type.id == MinecraftBlockTypes.Air) {
                     this.dimension.fillBlocks(new mc.BlockVolume(location, location), TEAM_CONSTANTS[ownerInfo.team].woolName);
                     ownerInfo.placement.push(location);
                 }
@@ -2051,7 +2063,7 @@ export class BedWarsGame {
         }
         if (killerInfo && killerInfo.state != PlayerState.Offline) {
             killerInfo.player.playSound("random.orb");
-            if (killerInfo.state == PlayerState.Alive) {
+            if (killerInfo.state == PlayerState.Alive && victimInfo.state != PlayerState.Offline) {
                 const {
                     ironAmount,
                     goldAmount,
@@ -2195,16 +2207,17 @@ export class BedWarsGame {
 
         victimInfo.lastHurtBy = hurterInfo;
         if (hurterInfo.armorDisabled) {
-            hurterInfo.armorDisabled = false;
-            hurterInfo.armorToEnablingTicks = 0;
-            this.resetArmor(hurterInfo);
+            this.revealInvisiblePlayer(hurterInfo);
+        }
+        if (victimInfo.armorDisabled) {
+            this.revealInvisiblePlayer(victimInfo);
         }
 
         const attackingItem = hurter.getComponent("equippable")!.getEquipment(mc.EquipmentSlot.Mainhand);
         if (attackingItem && itemEqual(KNOCKBACK_STICK_ITEM, attackingItem)) {
             const x = victim.location.x - hurter.location.x;
             const z = victim.location.z - hurter.location.z;
-            victim.applyKnockback(x, z, 1, 0.3);
+            victim.applyKnockback(x, z, 1.5, 0.5);
         }
         if (victim instanceof SimulatedPlayer) {
             if (!victim.attackTarget && victimInfo.team != hurterInfo.team) {
@@ -2215,27 +2228,6 @@ export class BedWarsGame {
     afterEntityHitEntity(event: mc.EntityHitEntityAfterEvent) {
     }
     afterProjectileHitEntity(event: mc.ProjectileHitEntityAfterEvent) {
-        if (event.dimension != this.dimension) return;
-        const victim = event.getEntityHit().entity;
-        if (!victim) return;
-        if (!(victim instanceof mc.Player)) return;
-        const victimInfo = this.players.get(victim.name);
-        if (!victimInfo) return;
-        if (event.source) {
-            if (event.source instanceof mc.Player) {
-                const hurterInfo = this.players.get(event.source.name);
-                if (hurterInfo && hurterInfo.team != victimInfo.team) {
-                    victimInfo.lastHurtBy = hurterInfo;
-                    if (hurterInfo.armorDisabled) {
-                        hurterInfo.armorDisabled = false;
-                        hurterInfo.armorToEnablingTicks = 0;
-                        this.resetArmor(hurterInfo);
-                    }
-                    return;
-                }
-            }
-            victimInfo.lastHurtBy = undefined;
-        }
     }
     async beforePlayerInteractWithBlock(event: mc.PlayerInteractWithBlockBeforeEvent) {
         if (this.state != GameState.started) return;
@@ -2373,9 +2365,7 @@ export class BedWarsGame {
             textDisplay.nameTag = `${t.colorPrefix}${capitalize(t.name)} Bed §7was destroyed by \n${TEAM_CONSTANTS[destroyerInfo.team].colorPrefix}${destroyerInfo.name} §7at §e${timeToString(analyzeTime((mc.system.currentTick - this.startTime) * 50))}`;
 
             if (destroyerInfo.armorDisabled) {
-                destroyerInfo.armorDisabled = false;
-                destroyerInfo.armorToEnablingTicks = 0;
-                this.resetArmor(destroyerInfo);
+                this.revealInvisiblePlayer(destroyerInfo);
             }
 
             /* Inform all the players */
@@ -2417,43 +2407,55 @@ export class BedWarsGame {
         }
     }
 
-    private isBlockLocationPlayerPlacable(location: mc.Vector3) {
-        if (location.y < this.map.voidY + this.originPos.y) return false;
+    private checkBlockLocation(location: mc.Vector3) {
+        const result = {
+            placeable: false,
+            outOfMap: false
+        };
+
+        if (location.y < this.map.voidY + this.originPos.y) {
+            result.outOfMap = true;
+            return result;
+        };
         for (const gen of this.generators) {
             const protectedArea = GENERATOR_CONSTANTS[gen.type].protectedArea.map(
                 vec => add(vec, gen.location, this.originPos)) as Area;
             if (vectorWithinArea(location, protectedArea)) {
-                return false;
+                return result;
             }
         }
         for (const teamMapInfo of this.map.teams) {
             if (!teamMapInfo.protectedArea) continue;
             if (vectorWithinArea(location, this.fixOrigin(teamMapInfo.protectedArea))) {
-                return false;
+                return result;
             }
         }
         // disallow the player to place block outside playable area
         if (!vectorWithinArea(location, this.fixOrigin(this.map.playableArea))) {
-            return false;
+            result.outOfMap = true;
+            return result;
         }
         const block = this.dimension.getBlock(location);
-        if (!block) return false;
-        if (block.typeId != MinecraftBlockTypes.Air) return false;
+        if (!block) return result;
+        if (block.typeId != MinecraftBlockTypes.Air &&
+            block.typeId != MinecraftBlockTypes.Fire &&
+            Array.from(this.players.values()).every(({ placement }) => !placement.has(location))) return result;
         // disallow the player to place block near cactus
         for (const offset of [
             { x: 1, y: 0, z: 0 },
             { x: -1, y: 0, z: 0 },
             { x: 0, y: 0, z: 1 },
-            { x: 0, y: 0, z: -1 },
+            { x: 0, y: 0, z: -1 }
         ]) {
             const block = this.dimension.getBlock(add(location, offset));
             if (!block) continue;
             // Maybe I need to look up the record
             if (block.typeId == MinecraftBlockTypes.Cactus) {
-                return false;
+                return result;
             }
         }
-        return true;
+        result.placeable = true;
+        return result;
     }
 
     async beforePlayerPlaceBlock(event: mc.PlayerPlaceBlockBeforeEvent) {
@@ -2478,12 +2480,14 @@ export class BedWarsGame {
             return;
         }
         // disallow the player to place block at some cases
-        if (!this.isBlockLocationPlayerPlacable(event.block.location)) {
+        const checkResult = this.checkBlockLocation(event.block.location);
+        if (!checkResult.placeable) {
             event.cancel = true;
-            if (!vectorWithinArea(event.block.location, this.fixOrigin(this.map.playableArea))) {
-                playerInfo.player.sendMessage("§cYou can't place block outside the map!");
+            const strs = strings[getPlayerLang(playerInfo.player)];
+            if (checkResult.outOfMap) {
+                playerInfo.player.sendMessage(strs.placeBlockOutOfMapMessage);
             } else {
-                playerInfo.player.sendMessage(strings[getPlayerLang(playerInfo.player)].placingBlockIllagelMessage);
+                playerInfo.player.sendMessage(strs.placeBlockIllagelMessage);
             }
             return;
         }
@@ -2641,10 +2645,15 @@ export class BedWarsGame {
             playerInfo.player.addEffect(MinecraftEffectTypes.Invisibility, INVISIBLILITY_DURATION, {
                 showParticles: false
             });
+            playerInfo.player.addEffect(MinecraftEffectTypes.Resistance, INVISIBLILITY_DURATION, {
+                showParticles: false,
+                amplifier: 3
+            });
             playerInfo.armorDisabled = true;
             playerInfo.armorToEnablingTicks = INVISIBLILITY_DURATION;
             const equip = playerInfo.player.getComponent('equippable')!;
-            [mc.EquipmentSlot.Head, mc.EquipmentSlot.Chest, mc.EquipmentSlot.Legs, mc.EquipmentSlot.Feet].forEach(slotName => {
+            playerInfo.restoreTotemAfterRevealed = equip.getEquipment(mc.EquipmentSlot.Offhand)?.typeId == MinecraftItemTypes.TotemOfUndying;
+            [mc.EquipmentSlot.Head, mc.EquipmentSlot.Chest, mc.EquipmentSlot.Legs, mc.EquipmentSlot.Feet, mc.EquipmentSlot.Offhand].forEach(slotName => {
                 equip.getEquipmentSlot(slotName).setItem();
             });
         } else if (isJumpBoostPotionItem(event.itemStack)) {
@@ -2997,7 +3006,7 @@ class BlockPlacementTracker {
 }
 
 const maps: [string, MapInformation, mc.Vector3][] = [
-    ["Garden", mapGarden, { x: -104, y: 54, z: -65 }],
+    ["Gardens", mapGardens, { x: 0, y: 0, z: 0 }],
     ["Steampunk", mapSteamPunk, { x: 0, y: 0, z: 0 }],
     ["Waterfall", mapWaterfall, { x: 0, y: 0, z: 0 }],
     ["Eastwood", mapEastwood, { x: 0, y: 0, z: 0 }],
@@ -3016,6 +3025,7 @@ mc.world.beforeEvents.chatSend.subscribe(async event => {
     let minimalPlayer: number;
     let fillBlankTeams: boolean;
     let bedBreakableMinutes: number;
+    let teams: TeamType[];
     if (event.message == "start") {
         if (!event.sender.isOp()) return;
         await sleep(0);
@@ -3036,12 +3046,17 @@ mc.world.beforeEvents.chatSend.subscribe(async event => {
         if (response.canceled) return;
         let title: string;
         [title, map, originLocation] = maps[response.selection!];
+        teams = map.teams.map(team => team.type);
 
         const settingForm = new ModalFormData();
         settingForm.title(title);
         settingForm.textField("Minimal players of each team:", "Players count...", "1");
         settingForm.toggle("Fill blank teams with simulated players", true);
         settingForm.slider("Minutes until the bed is breakable", 0, 12, 1, 0);
+        for (const teamType of teams) {
+            const t = TEAM_CONSTANTS[teamType];
+            settingForm.toggle(t.colorPrefix + capitalize(t.name), true);
+        }
         const settingResponse = await settingForm.show(event.sender);
         if (settingResponse.canceled) return;
 
@@ -3052,6 +3067,11 @@ mc.world.beforeEvents.chatSend.subscribe(async event => {
         }
         fillBlankTeams = settingResponse.formValues![1] as boolean;
         bedBreakableMinutes = settingResponse.formValues![2] as number;
+        teams = teams.filter((_, index) => settingResponse.formValues![index + 3]);
+        if (teams.length <= 1) {
+            event.sender.sendMessage("§cToo few teams are selected.");
+            return;
+        }
     } else if (event.message == "DEBUG STICK") {
         await sleep(0);
         const container = event.sender.getComponent("inventory")!.container!;
@@ -3062,7 +3082,6 @@ mc.world.beforeEvents.chatSend.subscribe(async event => {
     } else {
         return;
     }
-    const teams = map.teams.map(team => team.type);
     shuffle(teams);
 
     event.cancel = true;
@@ -3095,10 +3114,11 @@ mc.world.beforeEvents.chatSend.subscribe(async event => {
         teamIndex = switchTeam(teamIndex);
     }
     const maxPlayer = Math.max(minimalPlayer, ...teamPlayerCount);
+    let spawnIndex = 0;
     for (teamIndex = 0; teamIndex < teams.length; ++teamIndex) {
         if (!fillBlankTeams && teamPlayerCount[teamIndex] == 0) continue;
         for (let i = 0; i < maxPlayer - teamPlayerCount[teamIndex]; ++i) {
-            const p = globalThis.test.spawnSimulatedPlayer(event.sender.location as any, "a");
+            const p = globalThis.test.spawnSimulatedPlayer(event.sender.location as any, "Bot" + (spawnIndex++));
             game.setPlayer(p as any, teams[teamIndex]);
         }
     }
