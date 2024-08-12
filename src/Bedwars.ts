@@ -299,6 +299,9 @@ export const TEAM_CONSTANTS: Record<TeamType, {
         leatherBoots: setupItem(MinecraftItemTypes.LeatherBoots, TeamType.White)
     };
 }
+enum PlayerDieCause {
+    killed, disconnected, void, shot
+}
 interface GeneratorInformation {
     type: GeneratorType;
     spawnLocation: mc.Vector3;
@@ -1017,10 +1020,12 @@ export class BedWarsGame {
         // mc.world.gameRules.showRecipeMessages = false;
         // mc.world.gameRules.doLimitedCrafting = true;
         // mc.world.gameRules.doWeatherCycle = false;
+        // mc.world.gameRules.showDeathMessages = false;
         this.dimension.runCommand("gamerule recipesunlock true");
         this.dimension.runCommand("gamerule showrecipemessages false");
         this.dimension.runCommand("gamerule dolimitedcrafting true");
         this.dimension.runCommand("gamerule doweathercycle false");
+        this.dimension.runCommand("gamerule showdeathmessages false")
     }
 
     private updateScoreboard() {
@@ -1112,10 +1117,12 @@ export class BedWarsGame {
         playerInfo.armorDisabled = false;
         playerInfo.armorToEnablingTicks = 0;
         playerInfo.player.removeEffect(MinecraftEffectTypes.Resistance);
-        playerInfo.player.addEffect(MinecraftEffectTypes.Resistance, 1000000, {
-            showParticles: false,
-            amplifier: 0
-        });
+        if (playerInfo.armorLevel.level >= 1) {
+            playerInfo.player.addEffect(MinecraftEffectTypes.Resistance, 1000000, {
+                showParticles: false,
+                amplifier: 0
+            });
+        }
         if (playerInfo.restoreTotemAfterRevealed) {
             playerInfo.restoreTotemAfterRevealed = false;
             playerInfo.player.getComponent("equippable")!.setEquipment(mc.EquipmentSlot.Offhand, new mc.ItemStack(MinecraftItemTypes.TotemOfUndying));
@@ -1490,9 +1497,8 @@ export class BedWarsGame {
                 this.broadcast("reconnectionMessage", TEAM_CONSTANTS[playerInfo.team].colorPrefix, playerInfo.name);
             }
             const player = playerInfo.player;
-            if (!player.isValid()) {
-                playerInfo.state = PlayerState.Offline; // the player comes offline
-                this.onPlayerDieOrOffline(playerInfo, playerInfo.lastHurtBy);
+            if (!player.isValid()) { // the player comes offline
+                this.onPlayerDieOrOffline(playerInfo, PlayerDieCause.disconnected, playerInfo.lastHurtBy);
                 this.broadcast("disconnectedMessage", TEAM_CONSTANTS[playerInfo.team].colorPrefix, playerInfo.name);
                 continue;
             }
@@ -1513,7 +1519,7 @@ export class BedWarsGame {
 
             if (player.dimension != this.dimension) {
                 player.setGameMode(mc.GameMode.spectator);
-                this.onPlayerDieOrOffline(playerInfo, playerInfo.lastHurtBy);
+                this.onPlayerDieOrOffline(playerInfo, PlayerDieCause.killed, playerInfo.lastHurtBy);
                 const teamMapInfo = this.map.teams.find(t => t.type == playerInfo.team)!;
                 playerInfo.player.teleport(this.fixOrigin(teamMapInfo.playerSpawn), {
                     dimension: this.dimension,
@@ -1546,7 +1552,7 @@ export class BedWarsGame {
                 player.location.y < this.originPos.y + this.map.voidY) {
                 // The player falls to the void
                 player.setGameMode(mc.GameMode.spectator);
-                this.onPlayerDieOrOffline(playerInfo, playerInfo.lastHurtBy);
+                this.onPlayerDieOrOffline(playerInfo, PlayerDieCause.void, playerInfo.lastHurtBy);
                 if (teamInfo.state == TeamState.BedAlive) {
                     playerInfo.state = PlayerState.Respawning;
                 } else {
@@ -2016,14 +2022,15 @@ export class BedWarsGame {
      * This method defines actions to be performed right after the player dies or come offline
      * , and does not include all actions to get the player back into the game
      */
-    private onPlayerDieOrOffline(victimInfo: PlayerGameInformation, killerInfo?: PlayerGameInformation) {
+    private onPlayerDieOrOffline(victimInfo: PlayerGameInformation, cause: PlayerDieCause, killerInfo?: PlayerGameInformation) {
         victimInfo.deathTime = mc.system.currentTick;
         ++victimInfo.deathCount;
         victimInfo.lastHurtBy = undefined;
         victimInfo.teamAreaEntered = undefined;
-        if (victimInfo.state == PlayerState.Offline) {
+        if (cause == PlayerDieCause.disconnected) {
             const teamInfo = this.map.teams.find(ele => ele.type === victimInfo.team)!;
             victimInfo.deathLocation = this.fixOrigin(teamInfo.playerSpawn);
+            victimInfo.state = PlayerState.Offline;
         } else {
             victimInfo.deathLocation = victimInfo.player.location;
             victimInfo.deathRotaion = victimInfo.player.getRotation();
@@ -2034,8 +2041,9 @@ export class BedWarsGame {
             killerStrings = strings[getPlayerLang(killerInfo.player)];
         }
 
-        if (this.teams.get(victimInfo.team)!.state == TeamState.BedAlive) {
-            if (killerInfo) {
+        let finalKill = false;
+        if (killerInfo) {
+            if (this.teams.get(victimInfo.team)!.state == TeamState.BedAlive) {
                 ++killerInfo.killCount;
                 if (killerStrings) {
                     killerInfo.actionbar.add(sprintf(
@@ -2043,16 +2051,9 @@ export class BedWarsGame {
                         TEAM_CONSTANTS[victimInfo.team].colorPrefix,
                         victimInfo.name), 60);
                 }
-            }
-        } else { // FINAL KILL
-            if (killerInfo) {
+            } else { // FINAL KILL
+                finalKill = true;
                 ++killerInfo.finalKillCount;
-                this.broadcast("finalKillMessage", {
-                    killerColor: TEAM_CONSTANTS[killerInfo.team].colorPrefix,
-                    killer: killerInfo.name,
-                    victimColor: TEAM_CONSTANTS[victimInfo.team].colorPrefix,
-                    victim: victimInfo.name
-                });
                 if (killerStrings) {
                     killerInfo.actionbar.add(sprintf(
                         killerStrings.finalKillNotification,
@@ -2060,6 +2061,27 @@ export class BedWarsGame {
                         victimInfo.name), 60);
                 }
             }
+        }
+        const information = {
+            killerColor: killerInfo && TEAM_CONSTANTS[killerInfo.team].colorPrefix,
+            killer: killerInfo && killerInfo.name,
+            victimColor: TEAM_CONSTANTS[victimInfo.team].colorPrefix,
+            victim: victimInfo.name
+        };
+        for (const playerInfo of this.players.values()) {
+            if (playerInfo.state == PlayerState.Offline) continue;
+
+            const strs = strings[getPlayerLang(playerInfo.player)];
+            let deathMessage = "";
+            if (cause == PlayerDieCause.killed || cause == PlayerDieCause.disconnected) {
+                deathMessage += sprintf(killerInfo ? strs.killedByPlayerString : strs.killedString, information);
+            } else if (cause == PlayerDieCause.shot) {
+                deathMessage += sprintf(killerInfo ? strs.shotByPlayerString : strs.shotString, information);
+            } else if (cause == PlayerDieCause.void) {
+                deathMessage += sprintf(killerInfo ? strs.fallToVoidByPlayerString : strs.fallToVoidString, information);
+            }
+            if (finalKill) deathMessage += strs.finalKillString;
+            playerInfo.player.sendMessage(deathMessage);
         }
         if (killerInfo && killerInfo.state != PlayerState.Offline) {
             killerInfo.player.playSound("random.orb");
@@ -2172,7 +2194,7 @@ export class BedWarsGame {
         } else if (victimInfo.lastHurtBy) {
             killerInfo = victimInfo.lastHurtBy;
         }
-        this.onPlayerDieOrOffline(victimInfo, killerInfo);
+        this.onPlayerDieOrOffline(victimInfo, PlayerDieCause.killed, killerInfo);
     }
 
     private resetNameTag(playerInfo: PlayerGameInformation) {

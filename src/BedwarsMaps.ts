@@ -26,7 +26,7 @@ export const mapGardens: MapInformation = {
                 location: { x: 97, y: 78, z: -1 },
                 initialInterval: IRONGOLD_GENERATOR_INTERVAL
             },
-            bedLocation: [{ x: 79, y: 77, z: 0 }, { x: 80, y: 77, z: 0 }],
+            bedLocation: [{ x: 80, y: 77, z: 0 }, { x: 79, y: 77, z: 0 }],
             playerSpawn: { x: 94.5, y: 79, z: 0.5 },
             playerSpawnViewDirection: { x: -1, y: 0, z: 0 },
             teamChestLocation: { x: 91, y: 79, z: 4 },
@@ -42,7 +42,7 @@ export const mapGardens: MapInformation = {
                 location: { x: -99, y: 78, z: -1 },
                 initialInterval: IRONGOLD_GENERATOR_INTERVAL
             },
-            bedLocation: [{ x: -79, y: 77, z: 0 }, { x: -80, y: 77, z: 0 }],
+            bedLocation: [{ x: -80, y: 77, z: 0 }, { x: -79, y: 77, z: 0 }],
             playerSpawn: { x: -93.5, y: 79, z: 0.5 },
             playerSpawnViewDirection: { x: 1, y: 0, z: 0 },
             teamChestLocation: { x: -91, y: 79, z: 4 },

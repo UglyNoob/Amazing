@@ -11,7 +11,15 @@ export interface Strings {
     bedDestroyedSubtitle: string;
     teamBedDestroyedMessage: string;
     teamEliminationMessage: string;
-    finalKillMessage: string;
+
+    finalKillString: string;
+    killedString: string;
+    killedByPlayerString: string;
+    shotString: string;
+    shotByPlayerString: string;
+    fallToVoidString: string;
+    fallToVoidByPlayerString: string;
+
     breakingBlockInvalidMessage: string;
     killNotification: string;
     finalKillNotification: string;
@@ -205,7 +213,13 @@ strings[Lang.en_US] = {
     bedDestroyedSubtitle: "You will no longer respawn!",
     teamBedDestroyedMessage: "\n§lBED DESTRUCTION > §r%s%s Bed §7was destroyed by %s%s§7!\n ",
     teamEliminationMessage: "\n§lTEAM ELIMINATED > §r%s%s §chas been eliminated!\n ",
-    finalKillMessage: "%(victimColor)s%(victim)s §7was killed by %(killerColor)s%(killer)s§7. §b§lFINAL KILL!",
+    finalKillString: " §b§lFINAL KILL!",
+    killedString: "%(victimColor)s%(victim)s §7was killed.",
+    killedByPlayerString: "%(victimColor)s%(victim)s §7was killed by %(killerColor)s%(killer)s§7.",
+    shotString: "%(victimColor)s%(victim)s §7was shot.",
+    shotByPlayerString: "%(victimColor)s%(victim)s §7was shot by %(killerColor)s%(killer)s§7.",
+    fallToVoidString: "%(victimColor)s%(victim)s §7fell to the void.",
+    fallToVoidByPlayerString: "%(victimColor)s%(victim)s §7fell to the void while escaping %(killerColor)s%(killer)s§7.",
     breakingBlockInvalidMessage: "§cYou cannot break blocks that are not placed by players.",
     killNotification: "§cKILL: %s%s",
     finalKillNotification: "§cFINAL KILL: %s%s",
@@ -404,7 +418,13 @@ strings[Lang.zh_CN] = {
     bedDestroyedSubtitle: "你将无法重生！",
     teamBedDestroyedMessage: "\n§l床被摧毁 > §r%s%s的床 §7被 %s%s§7 摧毁！\n ",
     teamEliminationMessage: "\n§l队伍淘汰 > §r%s%s §c已被淘汰！\n ",
-    finalKillMessage: "%(victimColor)s%(victim)s §7被 %(killerColor)s%(killer)s§7 击杀。 §b§l最终击杀！",
+    finalKillString: "§b§l最终击杀！",
+    killedString: "%(victimColor)s%(victim)s §7被击杀。",
+    killedByPlayerString: "%(victimColor)s%(victim)s §7被 %(killerColor)s%(killer)s §7击杀。",
+    shotString: "%(victimColor)s%(victim)s §7被射中。",
+    shotByPlayerString: "%(victimColor)s%(victim)s §7被 %(killerColor)s%(killer)s §7射中。",
+    fallToVoidString: "%(victimColor)s%(victim)s §7掉出了这个世界。",
+    fallToVoidByPlayerString: "%(victimColor)s%(victim)s §7在逃离 %(killerColor)s%(killer)s §7的时候掉出了这个世界。",
     breakingBlockInvalidMessage: "§c你不能破坏非玩家放置的方块。",
     killNotification: "§c击杀: %s%s",
     finalKillNotification: "§c最终击杀: %s%s",
