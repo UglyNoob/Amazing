@@ -292,7 +292,7 @@ const HASTE_TO_NEXT_LEVEL_COSTS: TokenValue[] = [
 const HEAL_POOL_COST: TokenValue = { ironAmount: 0, goldAmount: 0, diamondAmount: 2, emeraldAmount: 0 };
 
 const TNT_ITEM = new mc.ItemStack(MinecraftItemTypes.Tnt);
-const PLANKS_ITEM = new mc.ItemStack(MinecraftItemTypes.Planks, 8);
+const PLANKS_ITEM = new mc.ItemStack(MinecraftItemTypes.OakPlanks, 8);
 const ENDSTONE_ITEM = new mc.ItemStack(MinecraftItemTypes.EndStone, 12);
 const LADDER_ITEM = new mc.ItemStack(MinecraftItemTypes.Ladder, 8);
 const OBSIDIAN_ITEM = new mc.ItemStack(MinecraftItemTypes.Obsidian, 4);

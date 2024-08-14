@@ -2194,7 +2194,7 @@ export class BedWarsGame {
         } else if (victimInfo.lastHurtBy) {
             killerInfo = victimInfo.lastHurtBy;
         }
-        this.onPlayerDieOrOffline(victimInfo, PlayerDieCause.killed, killerInfo);
+        this.onPlayerDieOrOffline(victimInfo, event.damageSource.damagingProjectile ? PlayerDieCause.shot : PlayerDieCause.killed, killerInfo);
     }
 
     private resetNameTag(playerInfo: PlayerGameInformation) {
