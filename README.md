@@ -1,6 +1,12 @@
-I don't know what to say in README. I don't think anyone would like to read this.
+# Amazing 😈😈😈💀💀💀☠️☠️☠️
 
-Well, to build, run
-npm install
-and then
-npm run publish
+Bedwars plugin for Minecraft:Bedrock Edition.
+
+I feel like a turtle 🐢🐢🐢 dunno what to say.
+
+## Build
+```sh
+$ npm install
+$ npm run publish
+```
+The behavior pack and resource pack should appear in the out/ directory.
